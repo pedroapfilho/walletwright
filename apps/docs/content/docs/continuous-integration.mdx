@@ -1,0 +1,60 @@
+---
+title: Continuous integration
+description: Run walletwright tests headed on CI with a virtual display, and cache the downloaded extensions between runs.
+---
+
+Approval popups only open in headed Chromium. A headless run loads the extension but never shows the
+connect/sign popup, so the tests hang. On a headless CI machine, give the browser a virtual display.
+
+## Headed via a virtual display
+
+On Linux CI, wrap the test command in `xvfb-run`:
+
+```bash
+xvfb-run --auto-servernum pnpm exec playwright test
+```
+
+`buildCache()` itself can run headless, since onboarding has no popups, but the tests that connect and
+sign must be headed.
+
+## GitHub Actions
+
+```yaml
+name: e2e
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: walletwright cache --setup ./wallet-setup.ts
+      - run: xvfb-run --auto-servernum pnpm exec playwright test
+```
+
+## Caching between runs
+
+`buildCache()` re-onboards the profile each run, but it reuses the extension it already downloaded,
+which is the slow part of a cold setup. Caching `.walletwright/` keeps that download between runs. The
+directory holds the onboarded profile and the extensions. There are no real funds in it, but treat the
+seed as a test secret.
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: .walletwright
+    key: walletwright-${{ runner.os }}-${{ hashFiles('wallet-setup.ts') }}
+```
+
+## Flakiness
+
+MV3 service workers can be timing-sensitive on cold launches. Set Playwright `retries` (2 is plenty)
+and keep `workers: 1` for wallet suites so several browsers don't contend for the display.
+walletwright already reloads patiently while it reaches the unlock screen.

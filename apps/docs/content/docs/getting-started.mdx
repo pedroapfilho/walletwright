@@ -1,0 +1,116 @@
+---
+title: Getting started
+description: Install walletwright, describe a wallet, build the onboarded cache once, and write your first connect-and-sign test.
+---
+
+This guide goes from an empty project to a passing connect-and-sign test against MetaMask. The same
+steps work for Phantom and Slush; see [Wallets](/wallets) for the differences.
+
+## Step 1: Install
+
+```bash
+pnpm add -D walletwright @playwright/test
+pnpm exec playwright install chromium
+```
+
+`@playwright/test` is a peer dependency, so you control the Playwright version. Run
+`playwright install chromium` once to download the browser.
+
+## Step 2: Describe the wallet
+
+A `WalletSetup` names the wallet and the credentials to import. Keep it in its own module so the cache
+build and your tests import the same object.
+
+```ts
+// wallet-setup.ts
+import type { WalletSetup } from "walletwright";
+
+export const metamask: WalletSetup = {
+  wallet: "metamask",
+  seedPhrase: "test test test test test test test test test test test junk",
+  password: "Tester@1234",
+};
+```
+
+<Callout type="info">
+  The famous `test test … junk` seed is fine for MetaMask. Phantom and Slush flag it as malicious
+  and drop the connection, so use a fresh, unfunded mnemonic for those two.
+</Callout>
+
+## Step 3: Build the cache
+
+Onboarding runs once and is saved to disk (`.walletwright/` by default). Do it from a script or the
+CLI before your tests run.
+
+```bash
+walletwright cache --setup ./wallet-setup.ts
+```
+
+Or call it from code, which works well as a Playwright global setup:
+
+```ts
+// scripts/build-cache.ts
+import { buildCache } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+await buildCache(metamask);
+```
+
+Add the cache directory to `.gitignore`:
+
+```bash
+echo ".walletwright/" >> .gitignore
+```
+
+## Step 4: Write a test
+
+`createWalletFixtures(setup)` returns a Playwright `test` whose `page` runs inside a Chromium with the
+wallet loaded and unlocked, plus a `wallet` fixture to approve popups.
+
+```ts
+// tests/connect.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("connect wallet and sign a message", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+  await expect(page.getByTestId("account")).toContainText("0x");
+
+  await page.getByTestId("sign").click();
+  await wallet.confirmSignature();
+  await expect(page.getByTestId("signature")).toContainText("0x");
+});
+```
+
+## Step 5: Configure Playwright (headed)
+
+Approval popups do not open headless, so run headed and give wallet flows a couple of retries:
+
+```ts
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./tests",
+  retries: 2,
+  workers: 1,
+  use: { baseURL: "http://localhost:3000" },
+  webServer: { command: "pnpm dev", url: "http://localhost:3000", reuseExistingServer: true },
+});
+```
+
+Run it:
+
+```bash
+walletwright cache --setup ./wallet-setup.ts   # once
+pnpm exec playwright test
+```
+
+That is the whole loop. Next, read [Wallets](/wallets) for Phantom and Slush, or
+[How it works](/how-it-works) for what happens under the hood.

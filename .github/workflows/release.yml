@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: release-${{ github.ref }}
+
+permissions:
+  contents: write # push the version commit and git tags
+  pull-requests: write # open/update the "Version Packages" PR
+  id-token: write # npm publish provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Dormant in the template: the example @acme/* packages are placeholders a
+    # fork renames before publishing. Forks activate releases by adding the
+    # NPM_TOKEN secret (otherwise changesets falls back to OIDC and tries to
+    # publish the placeholders). `secrets` is not a valid context in a job-level
+    # `if`, so the gate lives on the changesets step via env.
+    env:
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6 # version comes from packageManager in package.json
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24 # matches engines.node ">=24"
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: changesets/action@v1
+        if: env.HAS_NPM_TOKEN == 'true'
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # actions/setup-node generates an .npmrc that reads NODE_AUTH_TOKEN — must match.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

@@ -1,0 +1,115 @@
+---
+title: Wallets
+description: "MetaMask (EVM), Phantom (EVM + Solana), and Slush (Sui): supported flows, seed-phrase caveats, and pinning extension versions."
+---
+
+walletwright ships definitions for MetaMask, Phantom, and Slush. Pick one per `WalletSetup` with the
+`wallet` field; the runtime `wallet` fixture is the same regardless of chain. Each definition declares
+its `ecosystems` (`evm`, `svm`, `sui`, `dot`, `btc`), and `walletKindsByEcosystem(eco)` lists the
+wallets that drive a chain. The roadmap is the top 3 wallets per ecosystem, and a wallet ships only
+once its connect and sign are verified end-to-end.
+
+## MetaMask (EVM)
+
+```ts
+import type { WalletSetup } from "walletwright";
+
+export const metamask: WalletSetup = {
+  wallet: "metamask",
+  seedPhrase: "test test test test test test test test test test test junk",
+  password: "Tester@1234",
+};
+```
+
+- Drives `window.ethereum`: connect, `personal_sign` and `eth_signTypedData`, transaction approvals.
+- Downloaded from the MetaMask GitHub releases. A known-good version is pinned; override it with
+  `version` (for example `version: "13.35.1"`).
+- The public `test … junk` seed is fine here. Its first account is the well-known `0xf39F…2266`
+  Hardhat address.
+
+## Phantom (EVM + Solana)
+
+```ts
+import type { WalletSetup } from "walletwright";
+
+export const phantom: WalletSetup = {
+  wallet: "phantom",
+  // Not the famous public seed; see the callout below.
+  seedPhrase: "parade wire fork giggle foil sugar early record crew mesh excuse purse",
+  password: "Tester@1234",
+};
+```
+
+- Drives both `window.phantom.ethereum` (EVM) and `window.phantom.solana` (Solana). The same
+  `connectToDapp()` and `confirmSignature()` calls handle both chains.
+- Always uses the current Chrome Web Store build, so `version` is ignored for Phantom.
+
+<Callout type="warn">
+  Don't use the famous public test seed with Phantom. Phantom flags `test test … junk` as "might be
+  malicious" and silently drops dapp connections, so the request hangs with no popup. Use a fresh,
+  unfunded mnemonic instead.
+</Callout>
+
+### One test, both chains
+
+The popup-approval API is the same for every chain, so a single test can exercise EVM and Solana in
+sequence:
+
+```ts
+const test = createWalletFixtures(phantom);
+
+test("phantom EVM + Solana", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  // EVM
+  await page.getByTestId("phantom-evm-connect").click();
+  await wallet.connectToDapp();
+  await page.getByTestId("phantom-evm-sign").click();
+  await wallet.confirmSignature();
+
+  // Solana
+  await page.getByTestId("phantom-svm-connect").click();
+  await wallet.connectToDapp(); // may auto-approve an already-trusted site
+  await page.getByTestId("phantom-svm-sign").click();
+  await wallet.confirmSignature();
+});
+```
+
+<Callout type="info">
+  `connectToDapp()` tolerates a missing popup, since a wallet may auto-approve a site it already
+  trusts for a second chain. `confirmSignature()` requires a popup and fails if none appears.
+</Callout>
+
+## Slush (Sui)
+
+```ts
+import type { WalletSetup } from "walletwright";
+
+export const slush: WalletSetup = {
+  wallet: "slush",
+  // A fresh, unfunded mnemonic.
+  seedPhrase: "parade wire fork giggle foil sugar early record crew mesh excuse purse",
+  password: "Tester@1234",
+};
+```
+
+- Drives the Sui ecosystem through the Wallet Standard. Your dapp connects with
+  `@mysten/wallet-standard` or `@wallet-standard/app` and signs with the `sui:signPersonalMessage`
+  feature.
+- Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+
+<Callout type="info">
+  Slush re-prompts for the password when signing. walletwright handles that inside the `wallet`
+  fixture, so your test is still just `connectToDapp()` then `confirmSignature()`.
+</Callout>
+
+## Pinning versions
+
+`version` pins the extension build for reproducible runs (MetaMask only; Phantom and Slush track the
+Web Store). Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached
+profile, so bumping a version re-onboards automatically on the next `buildCache`.
+
+## Adding a wallet
+
+A wallet is a `WalletDefinition`: download, onboarding flow, unlock, and the confirm-button selectors,
+registered in the wallet registry. See [How it works](/how-it-works) for the shape.

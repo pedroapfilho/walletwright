@@ -1,0 +1,152 @@
+import { getWallets } from "@wallet-standard/app";
+
+type Eip1193Provider = {
+  request: (args: { method: string; params?: Array<unknown> }) => Promise<unknown>;
+};
+
+type SolanaProvider = {
+  connect: () => Promise<{ publicKey: { toString: () => string } }>;
+  signMessage: (message: Uint8Array, encoding?: string) => Promise<{ signature: Uint8Array }>;
+};
+
+type PhantomWindow = {
+  ethereum?: Eip1193Provider;
+  solana?: SolanaProvider;
+};
+
+const $ = <T extends HTMLElement>(id: string): T => document.querySelector<T>(id)!;
+
+// Injected providers appear asynchronously (the wallet's content script injects them after load),
+// so poll briefly before giving up.
+const waitFor = async <T>(get: () => T | undefined): Promise<T> => {
+  for (let i = 0; i < 50; i++) {
+    const value = get();
+    if (value) {
+      return value;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("Provider not found");
+};
+
+const toHex = (bytes: Uint8Array): string =>
+  `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+
+// --- MetaMask (EVM, window.ethereum) ---
+const getEthereum = () => waitFor(() => (window as { ethereum?: Eip1193Provider }).ethereum);
+let mmAccount = "";
+
+const handleConnect = async () => {
+  const accounts = (await (
+    await getEthereum()
+  ).request({ method: "eth_requestAccounts" })) as Array<string>;
+  mmAccount = accounts[0] ?? "";
+  $("#accounts").textContent = mmAccount;
+  $<HTMLButtonElement>("#signButton").disabled = mmAccount === "";
+};
+
+const handleSign = async () => {
+  const signature = (await (
+    await getEthereum()
+  ).request({
+    method: "personal_sign",
+    params: [$<HTMLInputElement>("#message").value, mmAccount],
+  })) as string;
+  $("#signature").textContent = signature;
+};
+
+// --- Phantom EVM (window.phantom.ethereum) ---
+const getPhantomEvm = () =>
+  waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.ethereum);
+let phantomEvmAccount = "";
+
+const handlePhantomEvmConnect = async () => {
+  const accounts = (await (
+    await getPhantomEvm()
+  ).request({ method: "eth_requestAccounts" })) as Array<string>;
+  phantomEvmAccount = accounts[0] ?? "";
+  $("#phantomEvmAccount").textContent = phantomEvmAccount;
+  $<HTMLButtonElement>("#phantomEvmSign").disabled = phantomEvmAccount === "";
+};
+
+const handlePhantomEvmSign = async () => {
+  const signature = (await (
+    await getPhantomEvm()
+  ).request({
+    method: "personal_sign",
+    params: ["Hello Phantom EVM", phantomEvmAccount],
+  })) as string;
+  $("#phantomEvmSignature").textContent = signature;
+};
+
+// --- Phantom Solana / SVM (window.phantom.solana) ---
+const getPhantomSolana = () =>
+  waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.solana);
+
+const handlePhantomSvmConnect = async () => {
+  const { publicKey } = await (await getPhantomSolana()).connect();
+  $("#phantomSvmAccount").textContent = publicKey.toString();
+  $<HTMLButtonElement>("#phantomSvmSign").disabled = false;
+};
+
+const handlePhantomSvmSign = async () => {
+  const message = new TextEncoder().encode("Hello Phantom Solana");
+  const { signature } = await (await getPhantomSolana()).signMessage(message, "utf8");
+  $("#phantomSvmSignature").textContent = toHex(signature);
+};
+
+// --- Slush / Sui (Wallet Standard, sui:* features) ---
+type SuiAccount = { address: string };
+type StandardWallet = {
+  accounts: ReadonlyArray<SuiAccount>;
+  chains: ReadonlyArray<string>;
+  features: Record<string, unknown>;
+  name: string;
+};
+
+const getSuiWallet = () =>
+  waitFor(
+    () =>
+      getWallets()
+        .get()
+        .find((wallet) =>
+          (wallet as StandardWallet).chains.some((chain) => chain.startsWith("sui:")),
+        ) as StandardWallet | undefined,
+  );
+
+let suiAccount: SuiAccount | undefined;
+
+const handleSuiConnect = async () => {
+  const wallet = await getSuiWallet();
+  const feature = wallet.features["standard:connect"] as {
+    connect: () => Promise<{ accounts: ReadonlyArray<SuiAccount> }>;
+  };
+  const { accounts } = await feature.connect();
+  suiAccount = accounts[0];
+  $("#suiAccount").textContent = suiAccount?.address ?? "";
+  $<HTMLButtonElement>("#suiSign").disabled = !suiAccount;
+};
+
+const handleSuiSign = async () => {
+  const wallet = await getSuiWallet();
+  const feature = wallet.features["sui:signPersonalMessage"] as {
+    signPersonalMessage: (input: {
+      account: SuiAccount;
+      message: Uint8Array;
+    }) => Promise<{ signature: string }>;
+  };
+  const { signature } = await feature.signPersonalMessage({
+    account: suiAccount as SuiAccount,
+    message: new TextEncoder().encode("Hello walletwright Sui"),
+  });
+  $("#suiSignature").textContent = signature;
+};
+
+$("#connectButton").addEventListener("click", handleConnect);
+$("#signButton").addEventListener("click", handleSign);
+$("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
+$("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
+$("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
+$("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
+$("#suiConnect").addEventListener("click", handleSuiConnect);
+$("#suiSign").addEventListener("click", handleSuiSign);

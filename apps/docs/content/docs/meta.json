@@ -1,0 +1,18 @@
+{
+  "title": "Docs",
+  "root": true,
+  "pages": [
+    "---Start here---",
+    "index",
+    "getting-started",
+    "---Guides---",
+    "wallets",
+    "continuous-integration",
+    "how-it-works",
+    "---Reference---",
+    "api-reference",
+    "---Background---",
+    "background",
+    "synpress-issues"
+  ]
+}

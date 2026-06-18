@@ -1,0 +1,57 @@
+---
+title: Introduction
+description: walletwright is Playwright wallet automation for MetaMask (EVM), Phantom (EVM + Solana), and Slush (Sui). Onboard once, then connect and sign in real browser extensions.
+---
+
+walletwright drives **real wallet extensions** in Playwright tests. It onboards a wallet from a seed
+phrase into a cached browser profile, then unlocks it and clicks through the extension's connect and
+signature popups against your dapp. There are no mocked providers and no forked test framework, just
+`@playwright/test` and the actual MetaMask, Phantom, and Slush extensions.
+
+It is a maintained alternative to Synpress, which is broken on its latest release and effectively
+unmaintained. walletwright keeps the idea that works (onboard once, cache the profile, drive the
+popups) and drops the fork and the version pinning.
+
+## At a glance
+
+- Real MetaMask, Phantom, and Slush builds, loaded unpacked into Chromium. No mocked providers.
+- One `wallet` fixture covers EVM (`window.ethereum`), Solana (`window.phantom.solana`), and Sui (the
+  Wallet Standard).
+- `buildCache()` imports the seed into a profile on disk once. Tests launch from a copy and only
+  unlock, so they start in seconds.
+- `createWalletFixtures(setup)` returns a `@playwright/test` `test` with a `wallet` fixture, so there
+  is no framework lock-in.
+
+## A test, end to end
+
+```ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "./wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("connect and sign", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Connect" }).click();
+  await wallet.connectToDapp();
+  await expect(page.locator("#account")).toContainText("0x");
+
+  await page.getByRole("button", { name: "Sign" }).click();
+  await wallet.confirmSignature();
+});
+```
+
+## Where to go next
+
+- [Getting started](/getting-started): install, describe the wallet, build the cache, write a test.
+- [Wallets](/wallets): MetaMask, Phantom, and Slush specifics, seeds, and versions.
+- [Continuous integration](/continuous-integration): running headed on CI and caching profiles.
+- [How it works](/how-it-works): the architecture and the extension-automation details.
+- [API reference](/api-reference): every export, the CLI, and the types.
+
+<Callout type="warn">
+  Wallet approval popups only open in **headed** Chromium. Run tests headed; on CI use a virtual
+  display such as `xvfb-run`. See [Continuous integration](/continuous-integration).
+</Callout>

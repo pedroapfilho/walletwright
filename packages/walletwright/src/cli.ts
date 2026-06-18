@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { buildCache } from "./internal/cache.ts";
+import type { WalletKind, WalletSetup } from "./types.ts";
+
+const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
+
+Usage:
+  walletwright cache --setup <file>            Build cache from a module's default-exported WalletSetup
+  walletwright cache --wallet <metamask|phantom> --seed "<phrase>" --password "<pw>" [--version <v>]
+
+Options:
+  --setup <file>     JS/MJS module whose default export is a WalletSetup
+  --wallet <kind>    metamask | phantom
+  --seed <phrase>    seed phrase to import
+  --password <pw>    wallet password
+  --version <v>      pin an extension version
+  --cache-dir <dir>  cache directory (default: .walletwright)
+  --headless         build the cache headless (onboarding only; tests still need headed)
+  -h, --help         show this help
+`;
+
+const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
+  const flags: Record<string, string | boolean> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (!token?.startsWith("--") && token !== "-h") {
+      continue;
+    }
+    const key = token.replace(/^--?/v, "");
+    const next = argv[i + 1];
+    if (next && !next.startsWith("--")) {
+      flags[key] = next;
+      i++;
+    } else {
+      flags[key] = true;
+    }
+  }
+  return flags;
+};
+
+const loadSetup = async (file: string): Promise<WalletSetup> => {
+  const resolved = pathToFileURL(path.resolve(file)).href;
+  const mod = (await import(resolved)) as { default?: WalletSetup };
+  if (!mod.default) {
+    throw new Error(`[walletwright] ${file} must default-export a WalletSetup`);
+  }
+  return mod.default;
+};
+
+const main = async (): Promise<void> => {
+  const [command, ...rest] = process.argv.slice(2);
+  const flags = parseFlags(rest);
+
+  if (!command || command === "help" || flags.help || flags.h) {
+    process.stdout.write(HELP);
+    return;
+  }
+  if (command !== "cache") {
+    throw new Error(`[walletwright] unknown command "${command}". Run \`walletwright --help\`.`);
+  }
+
+  let setup: WalletSetup;
+  if (typeof flags.setup === "string") {
+    setup = await loadSetup(flags.setup);
+  } else if (flags.wallet && flags.seed && flags.password) {
+    setup = {
+      password: flags.password as string,
+      seedPhrase: flags.seed as string,
+      wallet: flags.wallet as WalletKind,
+      ...(typeof flags.version === "string" ? { version: flags.version } : {}),
+      ...(typeof flags["cache-dir"] === "string" ? { cacheDir: flags["cache-dir"] } : {}),
+    };
+  } else {
+    throw new Error(
+      "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
+    );
+  }
+
+  process.stdout.write(`[walletwright] building ${setup.wallet} cache…\n`);
+  const profileDir = await buildCache(setup, { headless: Boolean(flags.headless) });
+  process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
+};
+
+try {
+  await main();
+} catch (error: unknown) {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exit(1);
+}

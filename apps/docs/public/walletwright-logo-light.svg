@@ -1,0 +1,5 @@
+<svg width="150" height="20" viewBox="0 0 150 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0.75" y="2.75" width="14.5" height="14.5" rx="4" stroke="#18181b" stroke-width="1.5"/>
+  <path d="M4.4 10.2l2.5 2.5 4.7-5" stroke="#18181b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="22" y="14.6" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="14" font-weight="600" letter-spacing="-0.4" fill="#18181b">walletwright</text>
+</svg>

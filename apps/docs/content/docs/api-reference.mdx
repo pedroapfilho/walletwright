@@ -1,0 +1,130 @@
+---
+title: API reference
+description: "Every walletwright export: buildCache, createWalletFixtures, launchWallet, the Wallet fixture, the CLI, and the types."
+---
+
+Everything is exported from the package root:
+
+```ts
+import {
+  buildCache,
+  createWalletFixtures,
+  launchWallet,
+  wallets,
+  walletKindsByEcosystem,
+  type Ecosystem,
+  type Wallet,
+  type WalletSetup,
+  type WalletKind,
+  type WalletDefinition,
+} from "walletwright";
+```
+
+## `WalletSetup`
+
+The wallet to import and the credentials to unlock it.
+
+```ts
+type Ecosystem = "evm" | "svm" | "sui" | "dot" | "btc";
+type WalletKind = "metamask" | "phantom" | "slush";
+
+type WalletSetup = {
+  wallet: WalletKind;
+  seedPhrase: string; // 12 or 24 words; use a fresh one for Phantom and Slush
+  password: string;
+  version?: string; // pin an extension version (MetaMask)
+  cacheDir?: string; // default ".walletwright"
+};
+```
+
+## `buildCache(setup, options?)`
+
+Imports the wallet and writes an onboarded profile to disk, then returns the profile directory. It
+reuses a previously downloaded extension but re-runs onboarding on each call.
+
+```ts
+await buildCache(setup);
+await buildCache(setup, { headless: true }); // onboarding only; tests still run headed
+```
+
+| Argument           | Type          | Description                               |
+| ------------------ | ------------- | ----------------------------------------- |
+| `setup`            | `WalletSetup` | The wallet to onboard.                    |
+| `options.headless` | `boolean`     | Build headless (faster). Default `false`. |
+
+## `createWalletFixtures(setup)`
+
+Returns a `@playwright/test` `test` whose `context` and `page` run in a persistent Chromium with the
+wallet loaded and unlocked, plus a `wallet` fixture.
+
+```ts
+const test = createWalletFixtures(setup);
+const { expect } = test;
+
+test("connect", async ({ page, wallet }) => {
+  // your test
+});
+```
+
+It needs a cache built for the same `setup`, via `buildCache` or the CLI.
+
+## The `wallet` fixture
+
+```ts
+type Wallet = {
+  connectToDapp: () => Promise<void>;
+  confirmSignature: () => Promise<void>;
+  approve: (options?: { optional?: boolean }) => Promise<void>;
+  readonly extensionId: string;
+};
+```
+
+| Member               | Description                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `connectToDapp()`    | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.           |
+| `confirmSignature()` | Approve a pending signature popup. Throws if no popup appears.                              |
+| `approve(options)`   | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none. |
+| `extensionId`        | The loaded extension id.                                                                    |
+
+## `launchWallet(setup)`
+
+The standalone launcher, without Playwright fixtures. It returns `{ context, wallet }`; close the
+context yourself.
+
+```ts
+const { context, wallet } = await launchWallet(setup);
+const page = await context.newPage();
+// drive the page and the wallet here
+await context.close();
+```
+
+## `wallets`
+
+The registry of built-in `WalletDefinition`s, keyed by `WalletKind` (`"metamask"`, `"phantom"`,
+`"slush"`). Useful for inspection or extension.
+
+## `walletKindsByEcosystem(ecosystem)`
+
+The wallet kinds that can drive a given `Ecosystem`.
+
+```ts
+walletKindsByEcosystem("evm"); // ["metamask", "phantom"]
+walletKindsByEcosystem("sui"); // ["slush"]
+```
+
+## CLI
+
+```bash
+walletwright cache --setup ./wallet-setup.ts
+walletwright cache --wallet metamask --seed "YOUR_SEED_HERE" --password "YOUR_PASSWORD_HERE"
+```
+
+| Flag                | Description                                       |
+| ------------------- | ------------------------------------------------- |
+| `--setup <file>`    | A module whose default export is a `WalletSetup`. |
+| `--wallet <kind>`   | `metamask`, `phantom`, or `slush`.                |
+| `--seed <phrase>`   | Seed phrase to import.                            |
+| `--password <pw>`   | Wallet password.                                  |
+| `--version <v>`     | Pin an extension version.                         |
+| `--cache-dir <dir>` | Cache directory (default `.walletwright`).        |
+| `--headless`        | Build the cache headless.                         |

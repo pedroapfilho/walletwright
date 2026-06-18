@@ -1,0 +1,69 @@
+---
+title: How it works
+description: The cache, launch, and drive phases, plus the hard-won details of automating real wallet extensions in Chromium.
+---
+
+walletwright is a small wallet-agnostic engine driven by one `WalletDefinition` per wallet. It works
+in three phases: build a cache, launch from it, and drive the popups.
+
+## The phases
+
+1. **Build the cache** (`buildCache`). Launch Chromium with the unpacked extension, navigate to the
+   onboarding page, run the import-from-seed flow, close the browser, then apply any post-close fix.
+   The onboarded profile is written to `.walletwright/<hash>`.
+2. **Launch** (`createWalletFixtures` or `launchWallet`). Copy the cached profile to a throwaway
+   directory, launch headed with the extension, resolve the extension id, reach the unlock screen, and
+   unlock. This returns a `Wallet`.
+3. **Drive** (the `wallet` fixture). For each `connectToDapp` or `confirmSignature`, find the wallet's
+   approval popup and click its confirm button.
+
+## The WalletDefinition
+
+Each wallet implements one object and the engine does the rest. To add a wallet, write one of these
+and register it.
+
+```ts
+type WalletDefinition = {
+  ecosystems: Ecosystem[]; // e.g. ["evm"], ["evm", "svm"], ["sui"]
+  extensionName: string;
+  prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
+  onboardingPage: string; // e.g. "home.html"
+  importWallet: (page, seedPhrase, password) => Promise<void>;
+  finalizeCache?: (profileDir, extensionId) => Promise<void>;
+  reachUnlockScreen: (context, extensionId) => Promise<Page>;
+  unlock: (page, password) => Promise<void>;
+  approve: (popup, password) => Promise<void>;
+  notificationMatch?: string; // popup URL token; defaults to "notification.html"
+};
+```
+
+## Details that make it work
+
+Each of these is load-bearing. Drop one and the wallet either drives the dapp or hangs forever.
+
+- **Headed only.** Connect/sign popups don't open in headless Chromium. Cache building can be
+  headless; the tests can't. See [Continuous integration](/continuous-integration).
+- **The extension id is derived, not queried.** `chrome://extensions` is blocked headless and the MV3
+  service worker starts lazily, so querying races. walletwright computes the id from the manifest's
+  public `key` if present (Phantom uses its fixed Web Store id) or from the absolute load path
+  (MetaMask has no key): sha256, first 16 bytes, each nibble mapped `0-f → a-p`.
+- **Navigate to onboarding; don't wait for it.** The extension's auto-opened tab is unreliable, so
+  walletwright opens `chrome-extension://<id>/<page>` itself and retries, because right after launch
+  the URL fails with `ERR_BLOCKED_BY_CLIENT` until the extension registers.
+- **Poll for the popup.** Approval popups open as `about:blank` and then navigate, so
+  `context.waitForEvent('page', { url })` misses them. walletwright polls `context.pages()` instead.
+  This is the exact bug that breaks Synpress's connect flow.
+- **MetaMask `completedOnboarding`.** After import, MetaMask's "wallet is ready" step goes through the
+  service worker and hangs under automation, leaving `completedOnboarding=false`, so the cached wallet
+  ignores dapp requests. walletwright writes the flag straight into the profile's LevelDB after the
+  browser closes.
+- **Confirm-button selectors per wallet.** MetaMask: connect `confirm-btn`, sign
+  `confirm-footer-button` (with the legacy `page-container-footer-next` as a fallback). Phantom:
+  `primary-button`. Slush: the text "Approve" or "Sign", then "Unlock" for the sign re-auth.
+- **Extraction.** Extensions are unzipped with `adm-zip`, after stripping the CRX binary header at the
+  ZIP signature.
+
+<Callout type="info">
+  The full background, including why Synpress doesn't work and the itemized evidence, is in
+  [Background](/background) and [Synpress issues](/synpress-issues).
+</Callout>

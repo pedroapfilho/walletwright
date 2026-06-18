@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Synpress Test Dapp</title>
+  </head>
+  <body>
+    <h1>Synpress Test Dapp</h1>
+
+    <section>
+      <h2>MetaMask (EVM)</h2>
+      <button id="connectButton">Connect Wallet</button>
+      <p>Account: <span id="accounts"></span></p>
+      <input id="message" value="Hello Synpress" />
+      <button id="signButton" disabled>Sign Message</button>
+      <p>Signature: <span id="signature"></span></p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2>Phantom — EVM</h2>
+      <button id="phantomEvmConnect">Connect Phantom (EVM)</button>
+      <p>Account: <span id="phantomEvmAccount"></span></p>
+      <button id="phantomEvmSign" disabled>Sign Message</button>
+      <p>Signature: <span id="phantomEvmSignature"></span></p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2>Phantom — Solana (SVM)</h2>
+      <button id="phantomSvmConnect">Connect Phantom (Solana)</button>
+      <p>Account: <span id="phantomSvmAccount"></span></p>
+      <button id="phantomSvmSign" disabled>Sign Message</button>
+      <p>Signature: <span id="phantomSvmSignature"></span></p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2>Slush — Sui (SUI)</h2>
+      <button id="suiConnect">Connect Slush (Sui)</button>
+      <p>Account: <span id="suiAccount"></span></p>
+      <button id="suiSign" disabled>Sign Message</button>
+      <p>Signature: <span id="suiSignature"></span></p>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
