@@ -14,4 +14,6 @@ jobs:
         with:
           runtime: node@24
           cache: true
-      - run: pnpm test
+      # Unit tests only. The demo wallet E2E needs a headed browser (see apps/demo);
+      # run it locally or under a virtual display, not on this gate.
+      - run: pnpm turbo run test --filter=walletwright

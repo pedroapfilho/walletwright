@@ -17,15 +17,15 @@ export default defineConfig({
     // console logging that demonstrates callbacks firing.
     {
       files: ["apps/**/*.ts", "apps/**/*.tsx"],
+      // Demo dapp + Playwright specs: ergonomic patterns over preset strictness.
       rules: {
         "max-lines": "off",
-        "no-console": "off",
-        // Demo dapp + Playwright specs: ergonomic patterns over preset strictness.
-        "no-await-in-loop": "off",
-        "react-doctor/async-await-in-loop": "off",
-        "no-non-null-assertion": "off",
         "no-await-expression-member": "off",
+        "no-await-in-loop": "off",
+        "no-console": "off",
+        "no-non-null-assertion": "off",
         "no-promise-executor-return": "off",
+        "react-doctor/async-await-in-loop": "off",
         "require-unicode-regexp": "off",
       },
     },
@@ -37,9 +37,9 @@ export default defineConfig({
       rules: {
         "no-await-in-loop": "off",
         "react-doctor/async-await-in-loop": "off",
-        "react-doctor/server-sequential-independent-await": "off",
-        "react-doctor/no-dynamic-import-path": "off",
         "react-doctor/js-index-maps": "off",
+        "react-doctor/no-dynamic-import-path": "off",
+        "react-doctor/server-sequential-independent-await": "off",
         "react-hooks/rules-of-hooks": "off",
       },
     },
