@@ -35,10 +35,16 @@ pnpm test          # connect and sign on each wallet
 ## Docs and context
 
 - [`apps/docs`](./apps/docs) is the documentation site (Fumadocs); run it with
-  `pnpm --filter docs dev`. It includes a Background page on why walletwright exists and a Synpress
-  issues page with the evidence that Synpress 4.1.2 is broken and unmaintained.
+  `pnpm --filter docs dev`. It covers getting started, the wallets, CI, and how the engine works.
 - [`AGENTS.md`](./AGENTS.md), symlinked as `CLAUDE.md`, is the guide for contributors and agents. It
   covers the wallet-automation gotchas that took real debugging to find.
 
 This repo was generated from a turborepo template (pnpm, turbo, tsdown, oxlint/oxfmt, changesets,
 vitest).
+
+## Inspiration
+
+walletwright is inspired by [Synpress](https://github.com/Synthetixio/synpress) and the approach it
+pioneered: onboard a wallet once, cache the profile, then unlock and drive the extension's approval
+popups. walletwright rebuilds that idea from scratch on plain `@playwright/test`, with current wallet
+and Chromium versions and no patched dependencies.

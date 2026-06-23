@@ -79,14 +79,14 @@ const FEATURES: Array<Feature> = [
   },
   {
     description:
-      "A focused replacement for Synpress on current wallet and Chromium versions, with no fork and no dependency overrides.",
+      "Built on current wallet and Chromium versions, with no fork and no dependency overrides to maintain.",
     icon: (
       <svg {...ICON_PROPS}>
         <path d="M12 3a12 12 0 0 0 8.5 3A12 12 0 0 1 12 21 12 12 0 0 1 3.5 6 12 12 0 0 0 12 3Z" />
         <path d="m9 12 2 2 4-4" />
       </svg>
     ),
-    title: "A maintained alternative",
+    title: "Current versions, no fork",
   },
 ];
 

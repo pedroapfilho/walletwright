@@ -1,0 +1,13 @@
+{
+  // tsdown reads this build config at build time; it's an entry point, not dead code.
+  "entry": ["packages/walletwright/tsdown.config.ts"],
+  // Consumed by `vitest run --coverage` via the v8 provider, referenced by name not import.
+  "ignoreDependencies": ["@vitest/coverage-v8"],
+  // Next.js calls this route export at build time.
+  "ignoreExports": [
+    {
+      "file": "apps/docs/app/llms.mdx/**/route.ts",
+      "exports": ["generateStaticParams"],
+    },
+  ],
+}

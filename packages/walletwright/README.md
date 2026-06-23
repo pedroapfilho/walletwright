@@ -1,8 +1,7 @@
 # walletwright
 
 Playwright wallet automation for **MetaMask (EVM)**, **Phantom (EVM + Solana)**, and **Slush (Sui)**.
-It connects and signs in the real browser extensions, and works as a maintained alternative to
-Synpress.
+It connects and signs in the real browser extensions.
 
 - Real extensions, no mocks: MetaMask, Phantom, and Slush on their current versions.
 - EVM, Solana, and Sui from one fixture: `window.ethereum`, `window.phantom.solana`, and the Sui

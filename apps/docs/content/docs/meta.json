@@ -6,13 +6,11 @@
     "index",
     "getting-started",
     "---Guides---",
+    "examples",
     "wallets",
     "continuous-integration",
     "how-it-works",
     "---Reference---",
-    "api-reference",
-    "---Background---",
-    "background",
-    "synpress-issues"
+    "api-reference"
   ]
 }

@@ -11,6 +11,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
+    "fallow:dead": "fallow dead-code",
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
+    "fallow": "^2.101.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "oxfmt": "^0.52.0",
