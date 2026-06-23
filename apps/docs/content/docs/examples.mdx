@@ -1,0 +1,227 @@
+---
+title: Examples
+description: Copy-paste recipes for walletwright — connect and sign, one test across two chains, transactions, building the cache in global setup, and driving a wallet without fixtures.
+---
+
+Every recipe below uses the same `wallet` fixture API. The wallet-side calls (`connectToDapp()`,
+`confirmSignature()`, `approve()`) are identical across MetaMask, Phantom, and Slush; only your
+dapp-side selectors change. The `getByTestId(...)` calls here are your dapp's own elements, not
+walletwright's.
+
+## A shared wallet-setup module
+
+Keep every `WalletSetup` in one module so the cache build and your specs import the same objects. A
+change to `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached profile.
+
+```ts
+// wallet-setup.ts
+import type { WalletSetup } from "walletwright";
+
+export const metamask: WalletSetup = {
+  wallet: "metamask",
+  seedPhrase: "test test test test test test test test test test test junk",
+  password: "Tester@1234",
+};
+
+// Phantom and Slush flag the famous public seed as malicious and drop the connection.
+// Use a fresh, unfunded mnemonic for both.
+export const phantom: WalletSetup = {
+  wallet: "phantom",
+  seedPhrase: "parade wire fork giggle foil sugar early record crew mesh excuse purse",
+  password: "Tester@1234",
+};
+
+export const slush: WalletSetup = {
+  wallet: "slush",
+  seedPhrase: "parade wire fork giggle foil sugar early record crew mesh excuse purse",
+  password: "Tester@1234",
+};
+```
+
+## Connect and sign (MetaMask)
+
+The core loop: click your dapp's button, then approve the wallet popup. `connectToDapp()` clears the
+connection popup; `confirmSignature()` clears the signature popup.
+
+```ts
+// tests/metamask.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+// The first account of the public test seed is the well-known Hardhat address.
+const ACCOUNT = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+
+test("connect and sign", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+  await expect(page.getByTestId("account")).toHaveText(ACCOUNT);
+
+  await page.getByTestId("sign").click();
+  await wallet.confirmSignature();
+  await expect(page.getByTestId("signature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
+});
+```
+
+## One test, two chains (Phantom EVM + Solana)
+
+Phantom drives both `window.phantom.ethereum` and `window.phantom.solana`. The same two calls handle
+each chain, so a single spec can connect and sign on EVM and then on Solana.
+
+```ts
+// tests/phantom.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { phantom } from "../wallet-setup";
+
+const test = createWalletFixtures(phantom);
+const { expect } = test;
+
+test("phantom EVM + Solana", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  // EVM (window.phantom.ethereum)
+  await page.getByTestId("phantom-evm-connect").click();
+  await wallet.connectToDapp();
+  await page.getByTestId("phantom-evm-sign").click();
+  await wallet.confirmSignature();
+
+  // Solana (window.phantom.solana)
+  await page.getByTestId("phantom-svm-connect").click();
+  await wallet.connectToDapp(); // may auto-approve a site Phantom already trusts
+  await page.getByTestId("phantom-svm-sign").click();
+  await wallet.confirmSignature();
+});
+```
+
+<Callout type="info">
+  `connectToDapp()` resolves quietly when no popup appears, because a wallet may auto-approve a site
+  it already trusts on a second chain. `confirmSignature()` requires a popup and throws if none
+  shows up.
+</Callout>
+
+## Sui (Slush)
+
+Slush connects through the Wallet Standard and re-prompts for the password when signing. The fixture
+handles the re-auth, so the test is still just connect then sign.
+
+```ts
+// tests/slush.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { slush } from "../wallet-setup";
+
+const test = createWalletFixtures(slush);
+const { expect } = test;
+
+test("connect and sign on Sui", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("sui-connect").click();
+  await wallet.connectToDapp();
+  await expect(page.getByTestId("sui-account")).toHaveText(/^0x[0-9a-fA-F]+$/);
+
+  await page.getByTestId("sui-sign").click();
+  await wallet.confirmSignature();
+  await expect(page.getByTestId("sui-signature")).not.toBeEmpty();
+});
+```
+
+## Approving a transaction
+
+`approve()` clears any pending popup, whether it is a connect, a signature, or a transaction. Use it
+for transaction approvals, which `confirmSignature()` doesn't specifically name.
+
+```ts
+test("send a transaction", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await page.getByTestId("send-tx").click();
+  await wallet.approve(); // approve the transaction popup
+
+  await expect(page.getByTestId("tx-hash")).toHaveText(/^0x[0-9a-fA-F]{64}$/);
+});
+```
+
+<Callout type="info">
+  Pass `approve({ optional: true })` when a popup may or may not appear (for example a second
+  approval the wallet already trusts). It resolves quietly instead of throwing when none is pending.
+</Callout>
+
+## Build the cache in Playwright global setup
+
+Instead of a separate `walletwright cache` step, onboard every wallet from Playwright's `globalSetup`
+so a single `playwright test` does everything. Cache building can run headless; the tests stay headed.
+
+```ts
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./tests",
+  globalSetup: "./global-setup.ts",
+  retries: 2,
+  workers: 1,
+  use: { baseURL: "http://localhost:3000" },
+  webServer: { command: "pnpm dev", url: "http://localhost:3000", reuseExistingServer: true },
+});
+```
+
+```ts
+// global-setup.ts
+import { buildCache } from "walletwright";
+import { metamask, phantom, slush } from "./wallet-setup";
+
+const globalSetup = async () => {
+  for (const setup of [metamask, phantom, slush]) {
+    await buildCache(setup, { headless: true });
+  }
+};
+
+export default globalSetup;
+```
+
+## Driving multiple wallets in one suite
+
+There is no special multi-wallet runner — give each wallet its own spec, each calling
+`createWalletFixtures` with its own setup. They share the cache built above and run under the same
+`workers: 1` config so browsers don't contend for the display.
+
+```
+tests/
+  metamask.spec.ts   // createWalletFixtures(metamask)
+  phantom.spec.ts    // createWalletFixtures(phantom)
+  slush.spec.ts      // createWalletFixtures(slush)
+```
+
+## Without fixtures: `launchWallet`
+
+For a one-off script or a custom runner, `launchWallet(setup)` returns `{ context, wallet }` directly.
+You open the pages and close the context yourself.
+
+```ts
+// scripts/manual-check.ts
+import { launchWallet } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+const { context, wallet } = await launchWallet(metamask);
+const page = await context.newPage();
+await page.goto("http://localhost:3000");
+
+await page.getByTestId("connect").click();
+await wallet.connectToDapp();
+console.log("connected; extension id:", wallet.extensionId);
+
+await context.close();
+```
+
+<Callout type="warn">
+  `launchWallet` needs a cache already built for the same setup (via `buildCache` or the CLI), and
+  it launches headed, so run it on a machine with a display or under a virtual one such as
+  `xvfb-run`.
+</Callout>

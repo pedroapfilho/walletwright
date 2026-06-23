@@ -8,9 +8,9 @@ phrase into a cached browser profile, then unlocks it and clicks through the ext
 signature popups against your dapp. There are no mocked providers and no forked test framework, just
 `@playwright/test` and the actual MetaMask, Phantom, and Slush extensions.
 
-It is a maintained alternative to Synpress, which is broken on its latest release and effectively
-unmaintained. walletwright keeps the idea that works (onboard once, cache the profile, drive the
-popups) and drops the fork and the version pinning.
+The approach is simple and proven: onboard once, cache the profile, drive the popups. walletwright
+runs it on plain `@playwright/test` with current wallet and Chromium versions, with no fork and no
+version pinning to maintain.
 
 ## At a glance
 
@@ -46,6 +46,7 @@ test("connect and sign", async ({ page, wallet }) => {
 ## Where to go next
 
 - [Getting started](/getting-started): install, describe the wallet, build the cache, write a test.
+- [Examples](/examples): copy-paste recipes for connect/sign, transactions, global setup, and more.
 - [Wallets](/wallets): MetaMask, Phantom, and Slush specifics, seeds, and versions.
 - [Continuous integration](/continuous-integration): running headed on CI and caching profiles.
 - [How it works](/how-it-works): the architecture and the extension-automation details.

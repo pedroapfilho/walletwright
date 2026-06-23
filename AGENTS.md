@@ -9,13 +9,9 @@ this file.
 (EVM + Solana)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
 unlocks and drives the extension's connect/sign approval popups against a dapp under test.
 
-It exists because **Synpress (`@synthetixio/synpress@4.1.2`) is broken and effectively
-unmaintained**. Its own E2E CI is red at the release commit, the connect flow fails on its pinned
-stack even on Linux, the Phantom download URL is dead, and there have been no commits in months. The
-full evidence and journey are in the docs site (`apps/docs/content/docs/background.mdx` and
-`synpress-issues.mdx`). walletwright keeps the idea that works (onboard once, cache the profile,
-drive the popups) and drops the fork and version pinning: plain `@playwright/test`, current wallet
-and Chromium versions, no patched dependencies.
+walletwright takes the approach that works — onboard once, cache the profile, drive the popups — and
+rebuilds it clean: plain `@playwright/test`, current wallet and Chromium versions, no fork and no
+patched dependencies.
 
 ## Layout
 
@@ -66,7 +62,7 @@ To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register i
 
 The target is the top 3 wallets per ecosystem. A wallet enters `WalletKind` and the registry only
 once its **connect and sign are verified end-to-end**. Looking done is not enough; verifying it is
-the whole point of walletwright over Synpress. Everything else is roadmap.
+the whole point of walletwright. Everything else is roadmap.
 
 | Ecosystem | Verified | Roadmap (next)                   |
 | --------- | -------- | -------------------------------- |
@@ -153,10 +149,3 @@ Each item below cost real debugging time. Don't "simplify" them away.
   build, MIT.
 - Build artifacts emit `.mjs`/`.d.mts`, so package.json `exports`/`bin`/`types` must match.
 - Publishing goes through changesets; `@repo/*` configs stay `private`.
-
-## Background
-
-The docs site's Background and Synpress issues pages
-(`apps/docs/content/docs/background.mdx`, `apps/docs/content/docs/synpress-issues.mdx`) cover the
-Synpress investigation, including the red CI, the matching upstream bug reports, and the Linux
-reproduction, and the decision to build walletwright.

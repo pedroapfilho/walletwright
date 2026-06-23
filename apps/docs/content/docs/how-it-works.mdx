@@ -52,7 +52,6 @@ Each of these is load-bearing. Drop one and the wallet either drives the dapp or
   the URL fails with `ERR_BLOCKED_BY_CLIENT` until the extension registers.
 - **Poll for the popup.** Approval popups open as `about:blank` and then navigate, so
   `context.waitForEvent('page', { url })` misses them. walletwright polls `context.pages()` instead.
-  This is the exact bug that breaks Synpress's connect flow.
 - **MetaMask `completedOnboarding`.** After import, MetaMask's "wallet is ready" step goes through the
   service worker and hangs under automation, leaving `completedOnboarding=false`, so the cached wallet
   ignores dapp requests. walletwright writes the flag straight into the profile's LevelDB after the
@@ -62,8 +61,3 @@ Each of these is load-bearing. Drop one and the wallet either drives the dapp or
   `primary-button`. Slush: the text "Approve" or "Sign", then "Unlock" for the sign re-auth.
 - **Extraction.** Extensions are unzipped with `adm-zip`, after stripping the CRX binary header at the
   ZIP signature.
-
-<Callout type="info">
-  The full background, including why Synpress doesn't work and the itemized evidence, is in
-  [Background](/background) and [Synpress issues](/synpress-issues).
-</Callout>

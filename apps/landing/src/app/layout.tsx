@@ -21,7 +21,6 @@ const metadata: Metadata = {
     "Phantom Playwright",
     "wallet automation",
     "e2e web3 testing",
-    "Synpress alternative",
     "dapp testing",
     "EVM testing",
     "Solana testing",
