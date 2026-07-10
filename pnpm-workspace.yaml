@@ -6,9 +6,13 @@ allowBuilds:
   # Prebuilt binaries ship via optionalDependencies; the build script is only
   # a node-gyp fallback and the watcher is only used by `tailwindcss --watch`.
   "@parcel/watcher": false
+  "@reown/appkit": false
+  bufferutil: false
   classic-level: true
   esbuild: true
+  keccak: false
   sharp: true
+  utf-8-validate: false
 
 onlyBuiltDependencies:
   - "@tailwindcss/oxide"
