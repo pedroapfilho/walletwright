@@ -2,7 +2,10 @@ import { PrivyProvider, useLogin, usePrivy, useWallets } from "@privy-io/react-a
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 
-const appId = import.meta.env.VITE_PRIVY_APP_ID as string | undefined;
+// Privy's public test app id works only from http://localhost:3000 (heavily rate-limited, data wiped
+// periodically). Override with your own app id via VITE_PRIVY_APP_ID for CI or a different origin.
+const PRIVY_TEST_APP_ID = "clpispdty00ycl80fpueukbhl";
+const appId = (import.meta.env.VITE_PRIVY_APP_ID as string | undefined) ?? PRIVY_TEST_APP_ID;
 
 const Dapp = () => {
   const { authenticated, ready, user } = usePrivy();
@@ -59,10 +62,6 @@ const Dapp = () => {
 };
 
 const App = () => {
-  if (!appId) {
-    return <p data-testid="privy-missing">Set VITE_PRIVY_APP_ID to enable the Privy section.</p>;
-  }
-
   return (
     <PrivyProvider
       appId={appId}

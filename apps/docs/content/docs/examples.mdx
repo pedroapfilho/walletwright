@@ -179,6 +179,25 @@ test("log in with Privy via MetaMask", async ({ page, wallet }) => {
   walletwright to drive.
 </Callout>
 
+You need a Privy **app id** (the public client-side identifier from
+[dashboard.privy.io](https://dashboard.privy.io), no app secret). Privy also publishes a shared
+**test app id** — `clpispdty00ycl80fpueukbhl` — that works only from `http://localhost:3000`; the
+demo page defaults to it so `pnpm dev` lets you click the flow by hand. That shared id is heavily
+rate-limited, though, so its connect and SIWE round-trips can each take tens of seconds — too slow to
+drive a reliable automated test. The spec therefore runs only when you point `VITE_PRIVY_APP_ID` at
+your own app:
+
+```bash
+pnpm test:cache
+VITE_PRIVY_APP_ID=your-app-id pnpm test tests/privy.spec.ts
+```
+
+<Callout type="info">
+  Because Privy's connect and SIWE popups can arrive with variable delay, the demo spec drives
+  whatever approval popup is pending until the account appears, rather than assuming a fixed
+  connect-then-sign order. See `apps/demo/tests/privy.spec.ts`.
+</Callout>
+
 The demo app has a runnable version of this recipe (`apps/demo/privy.html` and
 `tests/privy.spec.ts`); set `VITE_PRIVY_APP_ID` to a Privy app id with wallet login enabled to run
 it.
