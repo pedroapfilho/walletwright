@@ -34,19 +34,29 @@ export const createWallet = ({
     // Required popups get 30s: the MV3 service worker spawns them slowly after the wallet's own UI
     // has been driven. Optional ones keep the short wait, since "no popup" is a normal outcome
     // there (e.g. Phantom auto-approving a trusted site) and the extra wait would just be latency.
-    const popup = await findNotificationPopup(
-      context,
-      extensionId,
-      match,
-      optional ? 10_000 : 30_000,
-    );
+    const find = () =>
+      findNotificationPopup(context, extensionId, match, optional ? 10_000 : 30_000);
+    const popup = await find();
     if (!popup) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
       }
       throw new Error("[walletwright] approval popup did not appear");
     }
-    await settle(popup);
+    try {
+      await settle(popup);
+    } catch (error) {
+      // The finder can grab the previous popup in its final moments (the window closes right after
+      // its own approval resolves). If ours died under us, one fresh find gets the real popup.
+      if (!popup.isClosed()) {
+        throw error;
+      }
+      const fresh = await find();
+      if (!fresh) {
+        throw error;
+      }
+      await settle(fresh);
+    }
 
     // Wait for the popup to close so the next approval doesn't grab a stale page.
     const deadline = Date.now() + 15_000;
@@ -95,6 +105,7 @@ export const createWallet = ({
   return {
     approve,
     confirmSignature: () => approve({ optional: false }),
+    confirmTransaction: () => approve({ optional: false }),
     // Connect may auto-approve on some wallets, so a missing popup is not an error here.
     connectToDapp: () => approve({ optional: true }),
     extensionId,
@@ -106,6 +117,7 @@ export const createWallet = ({
     reject,
     rejectConnection: () => reject({ optional: false }),
     rejectSignature: () => reject({ optional: false }),
+    rejectTransaction: () => reject({ optional: false }),
     settings: {
       lock: action(definition.actions?.settings?.lock, "settings.lock"),
       unlock: action(definition.actions?.settings?.unlock, "settings.unlock"),

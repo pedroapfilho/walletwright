@@ -196,7 +196,30 @@ const handleSuiSign = async () => {
 
 $("#connectButton").addEventListener("click", handleConnect);
 $("#signButton").addEventListener("click", handleSign);
+const handleSendTx = async () => {
+  $("#error").textContent = "";
+  try {
+    const hash = (await (
+      await getEthereum()
+    ).request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: mmAccount,
+          // 0.001 ETH to the second anvil test account.
+          to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+          value: "0x38d7ea4c68000",
+        },
+      ],
+    })) as string;
+    $("#txHash").textContent = hash;
+  } catch (error) {
+    showError(error);
+  }
+};
+
 $("#switchChainButton").addEventListener("click", handleSwitchChain);
+$("#sendTxButton").addEventListener("click", handleSendTx);
 $("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
 $("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
 $("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);

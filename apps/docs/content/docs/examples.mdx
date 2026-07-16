@@ -225,10 +225,11 @@ test("switch to the local chain", async ({ page, wallet }) => {
 asks for it, e.g. testing how your dapp behaves when the user already has the chain configured. The
 runnable version of both flows is `apps/demo/tests/metamask-network.spec.ts`.
 
-## Approving a transaction
+## Sending a transaction
 
-`approve()` clears any pending popup, whether it is a connect, a signature, or a transaction. Use it
-for transaction approvals, which `confirmSignature()` doesn't specifically name.
+Transactions need a chain where the sender holds funds; combine this with the local chain from the
+previous recipe. `confirmTransaction()` approves the popup, `rejectTransaction()` cancels it, and
+the generic `approve()`/`reject()` still work when you don't care about the request type.
 
 ```ts
 test("send a transaction", async ({ page, wallet }) => {
@@ -236,13 +237,18 @@ test("send a transaction", async ({ page, wallet }) => {
 
   await page.getByTestId("connect").click();
   await wallet.connectToDapp();
+  await page.getByTestId("switch-chain").click();
+  await wallet.approve();
 
   await page.getByTestId("send-tx").click();
-  await wallet.approve(); // approve the transaction popup
+  await wallet.confirmTransaction();
 
   await expect(page.getByTestId("tx-hash")).toHaveText(/^0x[0-9a-fA-F]{64}$/);
 });
 ```
+
+The runnable version, including asserting the receipt on the local chain and the rejection path, is
+`apps/demo/tests/metamask-transaction.spec.ts`.
 
 <Callout type="info">
   Pass `approve({ optional: true })` when a popup may or may not appear (for example a second

@@ -74,9 +74,11 @@ It needs a cache built for the same `setup`, via `buildCache` or the CLI.
 type Wallet = {
   connectToDapp: () => Promise<void>;
   confirmSignature: () => Promise<void>;
+  confirmTransaction: () => Promise<void>;
   approve: (options?: { optional?: boolean }) => Promise<void>;
   rejectConnection: () => Promise<void>;
   rejectSignature: () => Promise<void>;
+  rejectTransaction: () => Promise<void>;
   reject: (options?: { optional?: boolean }) => Promise<void>;
   network: {
     add: (config: NetworkConfig) => Promise<void>;
@@ -96,20 +98,22 @@ type NetworkConfig = {
 };
 ```
 
-| Member                | Description                                                                                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `connectToDapp()`     | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
-| `confirmSignature()`  | Approve a pending signature popup. Throws if no popup appears.                                                   |
-| `approve(options)`    | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none.                      |
-| `rejectConnection()`  | Reject a pending connection popup.                                                                               |
-| `rejectSignature()`   | Reject a pending signature popup.                                                                                |
-| `reject(options)`     | Reject any pending popup. The counterpart of `approve`.                                                          |
-| `network.add(config)` | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
-| `network.switch(id)`  | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
-| `settings.lock()`     | Lock the wallet from its own UI.                                                                                 |
-| `settings.unlock()`   | Unlock it again with the setup's password.                                                                       |
-| `home`                | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
-| `extensionId`         | The loaded extension id.                                                                                         |
+| Member                 | Description                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `connectToDapp()`      | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
+| `confirmSignature()`   | Approve a pending signature popup. Throws if no popup appears.                                                   |
+| `confirmTransaction()` | Approve a pending transaction popup. Throws if no popup appears.                                                 |
+| `rejectTransaction()`  | Reject a pending transaction popup.                                                                              |
+| `approve(options)`     | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none.                      |
+| `rejectConnection()`   | Reject a pending connection popup.                                                                               |
+| `rejectSignature()`    | Reject a pending signature popup.                                                                                |
+| `reject(options)`      | Reject any pending popup. The counterpart of `approve`.                                                          |
+| `network.add(config)`  | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
+| `network.switch(id)`   | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
+| `settings.lock()`      | Lock the wallet from its own UI.                                                                                 |
+| `settings.unlock()`    | Unlock it again with the setup's password.                                                                       |
+| `home`                 | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
+| `extensionId`          | The loaded extension id.                                                                                         |
 
 ### Capabilities are per-wallet
 

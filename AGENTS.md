@@ -171,7 +171,12 @@ Each item below cost real debugging time. Don't "simplify" them away.
     is intercepted until it is accepted, and its Accept button is disabled until the notice is
     scrolled to the bottom. Its buttons have no testids. MetaMask's `approve` handles it
     (`wallets/metamask/approve.ts`).
-18. **After driving the wallet's own UI, popups spawn late and the extension tab steals them.**
+18. **Gas presets don't render on a legacy-fee local chain.** The transaction popup's gas editor
+    (`edit-gas-fee-icon` → `gas-fee-estimates-modal`) offers only `gas-option-gasPrice` ("Network
+    suggested") and `gas-option-advanced` against anvil. Synpress-style low/market/aggressive
+    presets (`gas-option-<key>`) need EIP-1559 fee history to appear, so `confirmTransaction`
+    ships without a gas argument until those can be driven for real.
+19. **After driving the wallet's own UI, popups spawn late and the extension tab steals them.**
     While an extension page is the active tab, MetaMask renders new approvals inline there instead
     of opening `notification.html`, so the action binder re-fronts the dapp when an action ends
     (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
