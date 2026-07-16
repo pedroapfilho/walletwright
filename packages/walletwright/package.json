@@ -38,6 +38,10 @@
     "./chain": {
       "types": "./dist/chain.d.mts",
       "default": "./dist/chain.mjs"
+    },
+    "./mock": {
+      "types": "./dist/mock.d.mts",
+      "default": "./dist/mock.mjs"
     }
   },
   "publishConfig": {
@@ -66,14 +70,19 @@
     "@types/node": "^25.9.1",
     "prool": "^0.2.10",
     "typescript": "^6.0.3",
+    "viem": "^2.21.0",
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.48",
-    "prool": ">=0.2"
+    "prool": ">=0.2",
+    "viem": ">=2"
   },
   "peerDependenciesMeta": {
     "prool": {
+      "optional": true
+    },
+    "viem": {
       "optional": true
     }
   }

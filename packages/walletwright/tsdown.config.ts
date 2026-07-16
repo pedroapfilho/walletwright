@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   clean: false,
   dts: true,
-  entry: ["src/index.ts", "src/cli.ts", "src/chain.ts"],
+  entry: ["src/index.ts", "src/cli.ts", "src/chain.ts", "src/mock.ts"],
   format: "esm",
   minify: false,
   platform: "node",

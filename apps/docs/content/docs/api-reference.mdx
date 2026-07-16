@@ -180,6 +180,37 @@ await chain.stop();
 The default mnemonic pre-funds `0xf39F…92266` with 10000 ETH, the same account the MetaMask
 `WalletSetup` in these docs imports, so specs can assert against it with no extra funding step.
 
+## `walletwright/mock`
+
+A headless injected-wallet fake for dapp tests that don't need a real extension, so they run in
+plain (even headless) Chromium in a second or two. It announces itself over EIP-6963, answers the
+EIP-1193 requests a connect/sign flow makes, and signs with a real key so signatures verify. Needs
+`viem` (optional peer). Install it before `goto`, on the context or a single page.
+
+```ts
+import { test, expect } from "@playwright/test";
+import { installMockWallet } from "walletwright/mock";
+
+test("connect and sign, no extension", async ({ page }) => {
+  const address = await installMockWallet(page.context());
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("account")).toHaveText(new RegExp(address, "i"));
+});
+```
+
+| Option       | Default                 | Description                                |
+| ------------ | ----------------------- | ------------------------------------------ |
+| `privateKey` | anvil/hardhat account 0 | Key the mock signs with; sets the account. |
+| `chainId`    | `31337`                 | Chain id reported to the dapp.             |
+| `name`       | `Walletwright Mock`     | Name announced over EIP-6963.              |
+
+It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_sign`, and no-ops the
+chain-switch methods. It is a connect/sign stand-in, not an EVM: it does not execute transactions.
+For anything real (transactions, balances, receipts), drive an actual extension against
+`walletwright/chain`.
+
 ## `wallets`
 
 The registry of built-in `WalletDefinition`s, keyed by `WalletKind` (`"metamask"`, `"phantom"`,
