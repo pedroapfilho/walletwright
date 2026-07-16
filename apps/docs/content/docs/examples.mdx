@@ -129,6 +129,51 @@ test("connect and sign on Sui", async ({ page, wallet }) => {
 });
 ```
 
+## Rejecting a request
+
+Every approval has a counterpart: `rejectConnection()`, `rejectSignature()`, and the generic
+`reject()`. Rejection is what your dapp's unhappy path is made of, and it is worth testing, because
+the wallet rejects the provider promise with an EIP-1193 error object (`{ code: 4001, message }`)
+rather than an `Error`. Read `error.message`, or you will render `[object Object]`.
+
+```ts
+test("shows an error when the user rejects the signature", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await page.getByTestId("sign").click();
+  await wallet.rejectSignature();
+
+  await expect(page.getByTestId("error")).toContainText(/reject/i);
+});
+```
+
+## Locking the wallet
+
+`settings.lock()` locks the wallet from its own UI, which is how you test that your dapp handles a
+wallet that locked mid-session. `settings.unlock()` reverses it with the password from your setup.
+
+```ts
+test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await wallet.settings.lock();
+  // …assert your dapp's locked-wallet handling here
+  await wallet.settings.unlock();
+});
+```
+
+<Callout type="info">
+  Capabilities are per-wallet. A wallet declares an action only once it has been driven against the
+  real extension, so calling one it hasn't declared throws (`[walletwright] Slush does not support
+  reject()`) instead of quietly doing nothing. `reject` is verified on MetaMask and Phantom;
+  `settings` on MetaMask.
+</Callout>
+
 ## Approving a transaction
 
 `approve()` clears any pending popup, whether it is a connect, a signature, or a transaction. Use it

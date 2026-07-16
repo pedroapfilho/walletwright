@@ -83,4 +83,8 @@ export const phantom: WalletDefinition = {
   approve: async (popup) => {
     await popup.getByTestId("primary-button").click({ timeout: 15_000 });
   },
+
+  reject: async (popup) => {
+    await popup.getByTestId("secondary-button").click({ timeout: 15_000 });
+  },
 };

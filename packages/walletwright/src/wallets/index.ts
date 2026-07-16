@@ -1,6 +1,6 @@
 import type { Ecosystem, WalletDefinition, WalletKind } from "../types.ts";
 
-import { metamask } from "./metamask.ts";
+import { metamask } from "./metamask/index.ts";
 import { phantom } from "./phantom.ts";
 import { slush } from "./slush.ts";
 

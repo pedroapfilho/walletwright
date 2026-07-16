@@ -3,18 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Synpress Test Dapp</title>
+    <title>walletwright Test Dapp</title>
   </head>
   <body>
-    <h1>Synpress Test Dapp</h1>
+    <h1>walletwright Test Dapp</h1>
 
     <section>
       <h2>MetaMask (EVM)</h2>
       <button id="connectButton">Connect Wallet</button>
       <p>Account: <span id="accounts"></span></p>
-      <input id="message" value="Hello Synpress" />
+      <input id="message" value="Hello walletwright" />
       <button id="signButton" disabled>Sign Message</button>
       <p>Signature: <span id="signature"></span></p>
+      <p>Error: <span id="error"></span></p>
     </section>
 
     <hr />
@@ -25,6 +26,7 @@
       <p>Account: <span id="phantomEvmAccount"></span></p>
       <button id="phantomEvmSign" disabled>Sign Message</button>
       <p>Signature: <span id="phantomEvmSignature"></span></p>
+      <p>Error: <span id="phantomEvmError"></span></p>
     </section>
 
     <hr />

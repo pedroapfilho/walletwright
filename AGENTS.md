@@ -22,7 +22,7 @@ packages/
     src/types.ts         WalletSetup, WalletDefinition, Wallet
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
-    src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, slush.ts) + registry
+    src/wallets/         per-wallet definitions (metamask/, phantom.ts, slush.ts) + registry
     src/internal/        engine: cache (build), launch, controller, download, onboarding-patch, utils
   config-typescript/   @repo/typescript-config (tsconfig presets)
   config-vitest/        @repo/config-vitest (node vitest preset)
@@ -52,7 +52,16 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   returns a `Wallet`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
   `approve` by finding the approval popup and clicking the wallet's confirm button.
-- `wallets/{metamask,phantom,slush}.ts` hold the per-wallet selectors and flows.
+- `wallets/metamask/` (and `wallets/{phantom,slush}.ts`) hold the per-wallet selectors and flows.
+  MetaMask is a directory because it carries the most actions: `onboarding.ts`, `approve.ts`, and
+  one file per capability under `actions/`. The others stay single files until they grow.
+
+Beyond connect and sign, capabilities are **optional and per-wallet**. `WalletDefinition.actions`
+groups them (`settings`, and later `network`/`accounts`/`tokens`), and `reject` is optional too. The
+engine mirrors what a wallet declares onto `Wallet` and throws
+`[walletwright] <wallet> does not support <action>()` for the rest. This keeps the registry honest:
+`addNetwork` is meaningless for Slush (Sui), and a wallet only declares an action once it has been
+driven end-to-end.
 
 To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register it in
 `src/wallets/index.ts`. Each definition declares its `ecosystems` (`evm`/`svm`/`sui`/`dot`/`btc`), and
@@ -135,6 +144,16 @@ Each item below cost real debugging time. Don't "simplify" them away.
 11. **Resolve symlinks for the path-derived id.** Chrome hashes the extension's real path, so
     `extensionIdFromPath` runs `realpathSync` first. Without it, a cache under a symlinked dir (macOS
     `/tmp` → `/private/tmp`) yields the wrong id and every navigation hits `ERR_BLOCKED_BY_CLIENT`.
+12. **You can't `page.evaluate()` inside MetaMask.** It runs LavaMoat in scuttling mode, so
+    `evaluate` dies with `property "setInterval" of globalThis is inaccessible under scuttling mode`.
+    Read its UI with locators. This applies to the wallet's own pages, not to the dapp.
+13. **MetaMask's approval popup opens before it renders.** The window appears at bare
+    `notification.html` (no route hash, zero buttons) and only later routes to the request. Anything
+    sampling the popup too early sees an empty page, which is why `approve`/`reject` wait on the
+    button rather than on the popup existing.
+14. **Wallets reject with an EIP-1193 error object, not an `Error`.** A rejected request rejects the
+    provider promise with `{ code: 4001, message }`, so a dapp doing `String(error)` renders
+    `[object Object]`. The demo reads `error.message` explicitly (`apps/demo/src/main.ts`).
 
 ## Conventions
 

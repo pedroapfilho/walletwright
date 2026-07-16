@@ -3,7 +3,7 @@ import { cp, mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { type BrowserContext, chromium } from "@playwright/test";
+import { type BrowserContext, chromium, type Page } from "@playwright/test";
 
 import type { Wallet, WalletSetup } from "../types.ts";
 import { wallets } from "../wallets/index.ts";
@@ -21,6 +21,27 @@ const launchArgs = (extensionPath: string): Array<string> => [
   // Required: current Chromium does NOT auto-load the cached unpacked extension without this.
   `--load-extension=${extensionPath}`,
 ];
+
+/**
+ * Drop the tabs nobody drives: Chromium's initial `about:blank` and the extension's own auto-opened
+ * tab. We navigate a tab of our own to the wallet instead of adopting that one (it's unreliable, see
+ * `reachUnlockScreen`), which otherwise leaves a second, still-locked wallet tab open all run.
+ * Approval popups are unaffected: they're matched by URL, not by being the only extension page.
+ */
+const closeStrayPages = async (context: BrowserContext, home: Page): Promise<void> => {
+  const isStray = (page: Page): boolean =>
+    page !== home &&
+    !page.isClosed() &&
+    (page.url() === "about:blank" || page.url().startsWith("chrome-extension://"));
+
+  const closing: Array<Promise<void>> = [];
+  for (const page of context.pages()) {
+    if (isStray(page)) {
+      closing.push(page.close());
+    }
+  }
+  await Promise.allSettled(closing);
+};
 
 /**
  * Launch a fresh persistent context from the onboarded cache and return an unlocked wallet
@@ -50,10 +71,15 @@ export const launchWalletContext = async (setup: WalletSetup): Promise<LaunchedW
 
   const extensionId = extensionIdFromPath(extensionPath);
 
+  // Kept open (not closed after unlock): the settings/network/account actions drive this page.
   const home = await definition.reachUnlockScreen(context, extensionId);
   await definition.unlock(home, setup.password);
+  await closeStrayPages(context, home);
 
-  return { context, wallet: createWallet(context, definition, extensionId, setup.password) };
+  return {
+    context,
+    wallet: createWallet({ context, definition, extensionId, home, password: setup.password }),
+  };
 };
 
 /** Standalone launcher (outside Playwright fixtures). Remember to `context.close()` when done. */

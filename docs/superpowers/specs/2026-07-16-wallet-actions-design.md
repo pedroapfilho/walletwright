@@ -19,8 +19,8 @@ Out of scope, decided: **no Cypress runner**. Playwright only. It contradicts th
 
 `AGENTS.md`: a capability lands only once it is verified end-to-end. Looking done is not enough.
 
-Synpress pins Playwright 1.48.2 and older wallet builds. Their selectors are evidence of *where to
-look*, not a source of truth. MetaMask 13.35's gas and settings UI in particular has moved. Every
+Synpress pins Playwright 1.48.2 and older wallet builds. Their selectors are evidence of _where to
+look_, not a source of truth. MetaMask 13.35's gas and settings UI in particular has moved. Every
 action is therefore discovered by driving the real extension, and anything that cannot be verified
 gets reported rather than merged.
 
