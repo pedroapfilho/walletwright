@@ -1,10 +1,10 @@
-import { downloadAndExtractExtension } from "../../internal/download.ts";
-import { markMetaMaskOnboarded } from "../../internal/onboarding-patch.ts";
-import type { WalletDefinition } from "../../types.ts";
+import { downloadAndExtractExtension } from "../internal/download.ts";
+import { markMetaMaskOnboarded } from "../internal/onboarding-patch.ts";
+import type { WalletDefinition } from "../types.ts";
 
-import { settings } from "./actions/settings.ts";
-import { approve, reject } from "./approve.ts";
-import { importWallet, reachUnlockScreen, unlock } from "./onboarding.ts";
+import { settings } from "./metamask/actions/settings.ts";
+import { approve, reject } from "./metamask/approve.ts";
+import { importWallet, reachUnlockScreen, unlock } from "./metamask/onboarding.ts";
 
 const DEFAULT_VERSION = "13.35.1";
 

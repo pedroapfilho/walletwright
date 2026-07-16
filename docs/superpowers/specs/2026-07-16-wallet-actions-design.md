@@ -74,36 +74,49 @@ be a footgun.
 
 ### File layout
 
-`wallets/metamask.ts` is ~120 lines and would blow past the 400-line limit, so it becomes a
-directory. Phantom follows when it grows; Slush stays a single file.
+`wallets/metamask.ts` is ~120 lines and would blow past the 400-line limit once it carries network,
+accounts, tokens, and settings. Helpers move to a folder of the same name, and the definition file
+stays the import site, so the registry import never changes and there is no `index.ts` barrel.
 
 ```
+src/wallets/metamask.ts        assembles the WalletDefinition
 src/wallets/metamask/
-  index.ts        assembles the WalletDefinition
-  onboarding.ts   importWallet, finalizeCache, reachUnlockScreen, unlock
-  approve.ts      approve/reject popup buttons
+  onboarding.ts                importWallet, reachUnlockScreen, unlock
+  approve.ts                   approve/reject popup buttons
   actions/network.ts, accounts.ts, tokens.ts, settings.ts
 ```
 
-### Anvil
+Phantom follows the same shape when it grows; Slush stays a single file.
 
-`@viem/anvil` needs the Foundry binary present on the machine. A core dependency would mean everyone
-installing walletwright to click a connect button needs Foundry. It ships as a **subpath export**
-(`walletwright/anvil`) with `@viem/anvil` as an optional peer, so it stays out of the default install
-and CI only pays for it where used.
+### The local chain
+
+`confirmTransaction` cannot be verified without a transaction to confirm, and that needs a chain the
+wallet can reach, an account funded to pay gas, and instant mining to assert against. A public
+testnet is the wrong tool (faucet-funded accounts, 12s blocks, rate-limited RPCs), and mocking the
+RPC does not work either: MetaMask queries the chain for balance, nonce, and gas estimates to render
+the popup under test.
+
+**Hardhat's node, not Anvil.** Synpress uses `@viem/anvil`, but that is only a wrapper around the
+`anvil` binary, which means every contributor and CI job installs Foundry via `curl | bash` to run
+the suite. Hardhat's node is plain npm: slower to boot (~1s vs instant) and a heavier dependency, but
+no system binary and no extra CI step. Both default to the `test test … junk` mnemonic and pre-fund
+account #0 as `0xf39F…92266`, the account `metamaskSetup` already uses.
+
+It ships as a **subpath export** (`walletwright/hardhat`) with the chain dependency as an optional
+peer, so installing walletwright to click a connect button doesn't drag in an EVM.
 
 ## Verification
 
 Every action needs demo dapp surface to drive plus a real-extension run. The demo has connect and
 sign only, so most of the work is dapp surface, not porting. Transactions and token permissions
-cannot be verified without a local chain, which is what pulls Anvil in at phase 2.
+cannot be verified without a local chain, which is what pulls one in at phase 2.
 
 ## PR sequence
 
 Each is verified end-to-end before the next starts.
 
 1. **Foundation**: capability model, `reject*`, `wallet.home`, MetaMask restructure.
-2. **Transactions**: `walletwright/anvil`, `confirmTransaction` with gas settings, demo tx section.
+2. **Transactions**: `walletwright/hardhat` (local chain), `confirmTransaction` with gas settings, demo tx section.
 3. **Networks**: `addNetwork`, `switchNetwork`, and their approve/reject popups.
 4. **Accounts, tokens, settings.**
 5. **Wallet mock**: `walletwright/mock`, a headless injected-provider fake.

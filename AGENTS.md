@@ -22,7 +22,7 @@ packages/
     src/types.ts         WalletSetup, WalletDefinition, Wallet
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
-    src/wallets/         per-wallet definitions (metamask/, phantom.ts, slush.ts) + registry
+    src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, slush.ts) + registry
     src/internal/        engine: cache (build), launch, controller, download, onboarding-patch, utils
   config-typescript/   @repo/typescript-config (tsconfig presets)
   config-vitest/        @repo/config-vitest (node vitest preset)
@@ -52,9 +52,10 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   returns a `Wallet`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
   `approve` by finding the approval popup and clicking the wallet's confirm button.
-- `wallets/metamask/` (and `wallets/{phantom,slush}.ts`) hold the per-wallet selectors and flows.
-  MetaMask is a directory because it carries the most actions: `onboarding.ts`, `approve.ts`, and
-  one file per capability under `actions/`. The others stay single files until they grow.
+- `wallets/{metamask,phantom,slush}.ts` hold the per-wallet definitions. A wallet with more than a
+  file's worth of flow keeps its helpers in a folder of the same name, so the definition file stays
+  the import site: `metamask.ts` assembles, `metamask/onboarding.ts` and `metamask/approve.ts` and
+  `metamask/actions/*.ts` implement.
 
 Beyond connect and sign, capabilities are **optional and per-wallet**. `WalletDefinition.actions`
 groups them (`settings`, and later `network`/`accounts`/`tokens`), and `reject` is optional too. The
