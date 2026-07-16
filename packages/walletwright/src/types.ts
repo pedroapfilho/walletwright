@@ -33,6 +33,21 @@ export type WalletActionContext = {
   password: string;
 };
 
+/** A custom EVM network, as the wallet's add-network form expects it. */
+export type NetworkConfig = {
+  blockExplorerUrl?: string;
+  chainId: number;
+  name: string;
+  rpcUrl: string;
+  symbol: string;
+};
+
+/** Add a custom network and switch the active one, from the wallet's own UI. */
+export type NetworkActions = {
+  add?: (ctx: WalletActionContext, config: NetworkConfig) => Promise<void>;
+  switch?: (ctx: WalletActionContext, chainId: number) => Promise<void>;
+};
+
 /** Lock and unlock the wallet itself, from its own UI. */
 export type SettingsActions = {
   lock?: (ctx: WalletActionContext) => Promise<void>;
@@ -42,10 +57,11 @@ export type SettingsActions = {
 /**
  * Optional, per-wallet capabilities beyond the universal connect/sign flow. A wallet declares only
  * what has actually been driven against the real extension, so the registry never claims support it
- * doesn't have: `addNetwork` is meaningless for Slush (Sui), and Phantom's settings UI has no
- * analogue for much of MetaMask's. Anything undeclared throws a clear error at call time.
+ * doesn't have: `network` is meaningless for Slush (Sui), and Phantom's settings UI has no analogue
+ * for much of MetaMask's. Anything undeclared throws a clear error at call time.
  */
 export type WalletActions = {
+  network?: NetworkActions;
   settings?: SettingsActions;
 };
 
@@ -99,6 +115,12 @@ export type SettingsApi = {
   unlock: () => Promise<void>;
 };
 
+/** Add and switch networks from the wallet's own UI. Throws if the wallet doesn't declare support. */
+export type NetworkApi = {
+  add: (config: NetworkConfig) => Promise<void>;
+  switch: (chainId: number) => Promise<void>;
+};
+
 /** Drives an unlocked wallet against a dapp under test. */
 export type Wallet = {
   /** Approve whatever approval popup is currently pending (connect, sign, tx…). */
@@ -114,6 +136,7 @@ export type Wallet = {
    * `page` already means the dapp under test in every spec.
    */
   readonly home: Page;
+  network: NetworkApi;
   /** Reject whatever approval popup is currently pending (connect, sign, tx…). */
   reject: (options?: { optional?: boolean }) => Promise<void>;
   /** Reject a pending connection request popup. */

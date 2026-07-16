@@ -174,6 +174,57 @@ test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
   `settings` on MetaMask.
 </Callout>
 
+## Networks and a local chain
+
+Network and transaction tests need a chain the wallet can actually reach: MetaMask validates a
+custom network's RPC before saving it, and reads balance and nonce off the chain to render its
+popups. `walletwright/chain` boots a local node (Foundry's `anvil` via `prool`) whose default
+mnemonic pre-funds the same account the MetaMask setup imports.
+
+```ts
+// global-setup.ts
+import { createLocalChain } from "walletwright/chain";
+
+const chain = await createLocalChain(); // http://127.0.0.1:8545, chain id 31337
+```
+
+`network.add` drives the wallet's own add-network form:
+
+```ts
+await wallet.network.add({
+  name: "Walletwright Local",
+  chainId: 31337,
+  rpcUrl: "http://127.0.0.1:8545",
+  symbol: "ETH",
+});
+```
+
+Switching is different. MetaMask 13.x scopes the active chain per dapp and has no wallet-side
+selector anymore, so the dapp initiates the switch and the wallet approves it. Have the dapp call
+`wallet_addEthereumChain` rather than a bare EIP-3326 `wallet_switchEthereumChain`: the add is
+idempotent (it adds when missing and switches when present), and in MetaMask 13.x a bare switch
+request to a wallet-added custom chain hangs with no popup and no error.
+
+```ts
+test("switch to the local chain", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  // Your dapp calls wallet_addEthereumChain with the local chain's config on this click.
+  await page.getByTestId("switch-chain").click();
+  // MetaMask confirms the add and the switch in a single popup. The first request routed through
+  // a protocol Snap also shows a "Third-party software notice", which approve() handles.
+  await wallet.approve();
+
+  await expect(page.getByTestId("chain-id")).toHaveText("0x7a69");
+});
+```
+
+`wallet.network.add` is for the cases where the network must exist in the wallet before the dapp
+asks for it, e.g. testing how your dapp behaves when the user already has the chain configured. The
+runnable version of both flows is `apps/demo/tests/metamask-network.spec.ts`.
+
 ## Approving a transaction
 
 `approve()` clears any pending popup, whether it is a connect, a signature, or a transaction. Use it

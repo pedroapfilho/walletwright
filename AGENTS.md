@@ -155,6 +155,28 @@ Each item below cost real debugging time. Don't "simplify" them away.
 14. **Wallets reject with an EIP-1193 error object, not an `Error`.** A rejected request rejects the
     provider promise with `{ code: 4001, message }`, so a dapp doing `String(error)` renders
     `[object Object]`. The demo reads `error.message` explicitly (`apps/demo/src/main.ts`).
+15. **MetaMask 13.x has no wallet-side network switch.** The active chain is scoped per dapp. The
+    header's network manager (`sort-by-networks`) is an asset filter plus registry: selecting a
+    network there does not change any dapp's chain, and neither does toggling the site's permitted
+    networks in `#/permissions` (both verified empirically; the dapp's `eth_chainId` stays put).
+    Custom networks are added under the manager's "Custom" tab; the RPC must be live, since
+    MetaMask validates it before saving. The old `#/connections` route hard-errors;
+    `#/permissions` is the connections page now.
+16. **Switch chains with `wallet_addEthereumChain`, not bare EIP-3326.** A
+    `wallet_switchEthereumChain` request for a wallet-added custom chain hangs: no popup, no error,
+    the promise just never settles. `wallet_addEthereumChain` is idempotent (adds when missing,
+    switches when present) and confirms both in one popup.
+17. **A Snap "Third-party software notice" can cover the confirm.** The first custom-chain request
+    routed through a protocol Snap opens a terms modal over the popup's footer; every confirm click
+    is intercepted until it is accepted, and its Accept button is disabled until the notice is
+    scrolled to the bottom. Its buttons have no testids. MetaMask's `approve` handles it
+    (`wallets/metamask/approve.ts`).
+18. **After driving the wallet's own UI, popups spawn late and the extension tab steals them.**
+    While an extension page is the active tab, MetaMask renders new approvals inline there instead
+    of opening `notification.html`, so the action binder re-fronts the dapp when an action ends
+    (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
+    required popups wait 30s, and `findNotificationPopup` returns a popup only once a button is
+    visible, since the window opens as a bare shell and routes later.
 
 ## Conventions
 

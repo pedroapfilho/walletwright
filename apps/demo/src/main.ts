@@ -74,6 +74,34 @@ const handleSign = async () => {
   }
 };
 
+// A local dev chain (anvil/hardhat defaults), for the network and transaction recipes.
+const LOCAL_CHAIN = {
+  chainId: "0x7a69",
+  chainName: "Walletwright Local",
+  nativeCurrency: { decimals: 18, name: "Ether", symbol: "ETH" },
+  rpcUrls: ["http://127.0.0.1:8545"],
+};
+
+const refreshChainId = async () => {
+  const chainId = (await (await getEthereum()).request({ method: "eth_chainId" })) as string;
+  $("#chainId").textContent = chainId;
+};
+
+// `wallet_addEthereumChain` rather than EIP-3326 `wallet_switchEthereumChain`: it is idempotent
+// (adds when missing, switches when present), and in MetaMask 13.x a bare switch request to a
+// wallet-added custom chain hangs with no popup and no error.
+const handleSwitchChain = async () => {
+  $("#error").textContent = "";
+  try {
+    await (
+      await getEthereum()
+    ).request({ method: "wallet_addEthereumChain", params: [LOCAL_CHAIN] });
+    await refreshChainId();
+  } catch (error) {
+    showError(error);
+  }
+};
+
 // --- Phantom EVM (window.phantom.ethereum) ---
 const getPhantomEvm = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.ethereum);
@@ -168,6 +196,7 @@ const handleSuiSign = async () => {
 
 $("#connectButton").addEventListener("click", handleConnect);
 $("#signButton").addEventListener("click", handleSign);
+$("#switchChainButton").addEventListener("click", handleSwitchChain);
 $("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
 $("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
 $("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
