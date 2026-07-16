@@ -80,6 +80,12 @@ type Wallet = {
   rejectSignature: () => Promise<void>;
   rejectTransaction: () => Promise<void>;
   reject: (options?: { optional?: boolean }) => Promise<void>;
+  accounts: {
+    add: () => Promise<void>;
+    switch: (index: number) => Promise<void>;
+    rename: (options: { index: number; name: string }) => Promise<void>;
+    importPrivateKey: (privateKey: string) => Promise<void>;
+  };
   network: {
     add: (config: NetworkConfig) => Promise<void>;
     switch: (chainId: number) => Promise<void>;
@@ -98,22 +104,26 @@ type NetworkConfig = {
 };
 ```
 
-| Member                 | Description                                                                                                      |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `connectToDapp()`      | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
-| `confirmSignature()`   | Approve a pending signature popup. Throws if no popup appears.                                                   |
-| `confirmTransaction()` | Approve a pending transaction popup. Throws if no popup appears.                                                 |
-| `rejectTransaction()`  | Reject a pending transaction popup.                                                                              |
-| `approve(options)`     | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none.                      |
-| `rejectConnection()`   | Reject a pending connection popup.                                                                               |
-| `rejectSignature()`    | Reject a pending signature popup.                                                                                |
-| `reject(options)`      | Reject any pending popup. The counterpart of `approve`.                                                          |
-| `network.add(config)`  | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
-| `network.switch(id)`   | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
-| `settings.lock()`      | Lock the wallet from its own UI.                                                                                 |
-| `settings.unlock()`    | Unlock it again with the setup's password.                                                                       |
-| `home`                 | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
-| `extensionId`          | The loaded extension id.                                                                                         |
+| Member                           | Description                                                                                                      |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `connectToDapp()`                | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
+| `confirmSignature()`             | Approve a pending signature popup. Throws if no popup appears.                                                   |
+| `confirmTransaction()`           | Approve a pending transaction popup. Throws if no popup appears.                                                 |
+| `rejectTransaction()`            | Reject a pending transaction popup.                                                                              |
+| `approve(options)`               | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none.                      |
+| `rejectConnection()`             | Reject a pending connection popup.                                                                               |
+| `rejectSignature()`              | Reject a pending signature popup.                                                                                |
+| `reject(options)`                | Reject any pending popup. The counterpart of `approve`.                                                          |
+| `accounts.add()`                 | Derive the next HD account from the seed.                                                                        |
+| `accounts.switch(i)`             | Make the account at index `i` (order in the wallet's list) the active one.                                       |
+| `accounts.rename({index, name})` | Rename the account at that index.                                                                                |
+| `accounts.importPrivateKey(key)` | Import an account from a raw private key.                                                                        |
+| `network.add(config)`            | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
+| `network.switch(id)`             | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
+| `settings.lock()`                | Lock the wallet from its own UI.                                                                                 |
+| `settings.unlock()`              | Unlock it again with the setup's password.                                                                       |
+| `home`                           | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
+| `extensionId`                    | The loaded extension id.                                                                                         |
 
 ### Capabilities are per-wallet
 
@@ -125,8 +135,8 @@ declared throws rather than silently doing nothing:
 [walletwright] Slush does not support reject()
 ```
 
-Today `reject` is verified on MetaMask and Phantom, and `settings` and `network.add` on MetaMask.
-Slush's onboarding can't currently be driven, so it declares none of them.
+Today `reject` is verified on MetaMask and Phantom, and `settings`, `network.add`, and `accounts`
+on MetaMask. Slush's onboarding can't currently be driven, so it declares none of them.
 
 `network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
 and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls

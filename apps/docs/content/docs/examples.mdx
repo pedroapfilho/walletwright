@@ -225,6 +225,32 @@ test("switch to the local chain", async ({ page, wallet }) => {
 asks for it, e.g. testing how your dapp behaves when the user already has the chain configured. The
 runnable version of both flows is `apps/demo/tests/metamask-network.spec.ts`.
 
+## Managing accounts
+
+`accounts` drives MetaMask's account list: `add()` derives the next HD account, `switch(index)`
+makes one active, `rename({ index, name })` renames it, and `importPrivateKey(key)` adds an account
+from a raw key. Indexes follow the order shown in the wallet's own list.
+
+```ts
+test("second account signs", async ({ page, wallet }) => {
+  await wallet.accounts.add(); // derive Account 2 from the seed
+  await wallet.accounts.switch(1); // make it active
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+  // …the dapp now sees the second account's address
+});
+```
+
+`importPrivateKey` is handy for funding a known account on a local chain:
+
+```ts
+await wallet.accounts.importPrivateKey(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
+```
+
 ## Sending a transaction
 
 Transactions need a chain where the sender holds funds; combine this with the local chain from the
