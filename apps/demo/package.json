@@ -10,6 +10,7 @@
     "lint": "oxlint src tests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:cache": "node scripts/build-cache.ts",
+    "test:cache:one": "node scripts/cache-one.ts",
     "test": "playwright test"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "^6.0.3",
+    "viem": "^2.21.0",
     "vite": "^8.0.16",
     "walletwright": "workspace:*"
   }

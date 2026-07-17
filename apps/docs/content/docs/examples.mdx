@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Copy-paste recipes for walletwright — connect and sign, one test across two chains, Privy with external wallets, transactions, building the cache in global setup, and driving a wallet without fixtures.
+description: "Copy-paste recipes for walletwright: connect and sign, connector libraries, Privy, multi-chain, transactions with on-chain assertions, accounts and networks, the mock wallet, custom fixtures, and page objects."
 ---
 
 Every recipe below uses the same `wallet` fixture API. The wallet-side calls (`connectToDapp()`,
@@ -66,6 +66,40 @@ test("connect and sign", async ({ page, wallet }) => {
   await expect(page.getByTestId("signature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
 });
 ```
+
+## Connecting through a connector library (wagmi, RainbowKit, ...)
+
+Most real dapps connect through a library rather than calling `window.ethereum` directly. The
+wallet-side calls do not change: click the library's connect button, pick the wallet in its modal,
+then approve. Because walletwright loads the real MetaMask extension, the library's EIP-6963
+discovery finds it like any user's wallet.
+
+```ts
+// tests/rainbowkit.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("connect through the RainbowKit modal", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Connect Wallet" }).click();
+  await page.getByRole("button", { name: "MetaMask" }).click(); // the connector's modal
+  await wallet.connectToDapp();
+
+  await expect(page.getByText(/0x[0-9a-fA-F]{4}/)).toBeVisible(); // the truncated address in the UI
+});
+```
+
+<Callout type="info">
+  The same shape works for wagmi, ConnectKit, Web3Modal / Reown AppKit, Dynamic, and Privy: they all
+  end at the injected provider (or EIP-6963) and the extension's approval popup. Only the modal's
+  button label changes. For a Privy external-wallet flow, its login modal also raises a SIWE
+  `personal_sign` right after connect, so approve twice: `connectToDapp()` then
+  `confirmSignature()`.
+</Callout>
 
 ## One test, two chains (Phantom EVM + Solana)
 
@@ -135,7 +169,7 @@ A dapp using [Privy](https://privy.io) with external wallets enabled doesn't cha
 drives: Privy talks to the same injected provider, and the extension opens its usual popups. Your
 test clicks through Privy's login modal (it renders in the page's DOM, so plain locators work), and
 the wallet calls stay the same. The one Privy-specific detail is that it authenticates external
-wallets with a SIWE message, so a connect popup and a `personal_sign` popup arrive back to back —
+wallets with a SIWE message, so a connect popup and a `personal_sign` popup arrive back to back;
 the login isn't complete until both are approved.
 
 ```tsx
@@ -175,15 +209,15 @@ test("log in with Privy via MetaMask", async ({ page, wallet }) => {
 
 <Callout type="warn">
   This covers Privy's external-wallet path only. Embedded wallets (email, social, passkey login)
-  keep their keys inside Privy's own iframe — there is no extension popup, so there is nothing for
+  keep their keys inside Privy's own iframe: there is no extension popup, so there is nothing for
   walletwright to drive.
 </Callout>
 
 You need a Privy **app id** (the public client-side identifier from
 [dashboard.privy.io](https://dashboard.privy.io), no app secret). Privy also publishes a shared
-**test app id** — `clpispdty00ycl80fpueukbhl` — that works only from `http://localhost:3000`; the
+**test app id** (`clpispdty00ycl80fpueukbhl`) that works only from `http://localhost:3000`; the
 demo page defaults to it so `pnpm dev` lets you click the flow by hand. That shared id is heavily
-rate-limited, though, so its connect and SIWE round-trips can each take tens of seconds — too slow to
+rate-limited, though, so its connect and SIWE round-trips can each take tens of seconds, too slow to
 drive a reliable automated test. The spec therefore runs only when you point `VITE_PRIVY_APP_ID` at
 your own app:
 
@@ -202,10 +236,133 @@ The demo app has a runnable version of this recipe (`apps/demo/privy.html` and
 `tests/privy.spec.ts`); set `VITE_PRIVY_APP_ID` to a Privy app id with wallet login enabled to run
 it.
 
-## Approving a transaction
+## Rejecting a request
 
-`approve()` clears any pending popup, whether it is a connect, a signature, or a transaction. Use it
-for transaction approvals, which `confirmSignature()` doesn't specifically name.
+Every approval has a counterpart: `rejectConnection()`, `rejectSignature()`, and the generic
+`reject()`. Rejection is what your dapp's unhappy path is made of, and it is worth testing, because
+the wallet rejects the provider promise with an EIP-1193 error object (`{ code: 4001, message }`)
+rather than an `Error`. Read `error.message`, or you will render `[object Object]`.
+
+```ts
+test("shows an error when the user rejects the signature", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await page.getByTestId("sign").click();
+  await wallet.rejectSignature();
+
+  await expect(page.getByTestId("error")).toContainText(/reject/i);
+});
+```
+
+## Locking the wallet
+
+`settings.lock()` locks the wallet from its own UI, which is how you test that your dapp handles a
+wallet that locked mid-session. `settings.unlock()` reverses it with the password from your setup.
+
+```ts
+test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await wallet.settings.lock();
+  // …assert your dapp's locked-wallet handling here
+  await wallet.settings.unlock();
+});
+```
+
+<Callout type="info">
+  Capabilities are per-wallet. A wallet declares an action only once it has been driven against the
+  real extension, so calling one it hasn't declared throws (`[walletwright] Slush does not support
+  reject()`) instead of quietly doing nothing. `reject` is verified on MetaMask and Phantom;
+  `settings` on MetaMask.
+</Callout>
+
+## Networks and a local chain
+
+Network and transaction tests need a chain the wallet can actually reach: MetaMask validates a
+custom network's RPC before saving it, and reads balance and nonce off the chain to render its
+popups. `walletwright/chain` boots a local node (Foundry's `anvil` via `prool`) whose default
+mnemonic pre-funds the same account the MetaMask setup imports.
+
+```ts
+// global-setup.ts
+import { createLocalChain } from "walletwright/chain";
+
+const chain = await createLocalChain(); // http://127.0.0.1:8545, chain id 31337
+```
+
+`network.add` drives the wallet's own add-network form:
+
+```ts
+await wallet.network.add({
+  name: "Walletwright Local",
+  chainId: 31337,
+  rpcUrl: "http://127.0.0.1:8545",
+  symbol: "ETH",
+});
+```
+
+Switching is different. MetaMask 13.x scopes the active chain per dapp and has no wallet-side
+selector anymore, so the dapp initiates the switch and the wallet approves it. Have the dapp call
+`wallet_addEthereumChain` rather than a bare EIP-3326 `wallet_switchEthereumChain`: the add is
+idempotent (it adds when missing and switches when present), and in MetaMask 13.x a bare switch
+request to a wallet-added custom chain hangs with no popup and no error.
+
+```ts
+test("switch to the local chain", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  // Your dapp calls wallet_addEthereumChain with the local chain's config on this click.
+  await page.getByTestId("switch-chain").click();
+  // MetaMask confirms the add and the switch in a single popup. The first request routed through
+  // a protocol Snap also shows a "Third-party software notice", which approve() handles.
+  await wallet.approve();
+
+  await expect(page.getByTestId("chain-id")).toHaveText("0x7a69");
+});
+```
+
+`wallet.network.add` is for the cases where the network must exist in the wallet before the dapp
+asks for it, e.g. testing how your dapp behaves when the user already has the chain configured. The
+runnable version of both flows is `apps/demo/tests/metamask-network.spec.ts`.
+
+## Managing accounts
+
+`accounts` drives MetaMask's account list: `add()` derives the next HD account, `switch(index)`
+makes one active, `rename({ index, name })` renames it, and `importPrivateKey(key)` adds an account
+from a raw key. Indexes follow the order shown in the wallet's own list.
+
+```ts
+test("second account signs", async ({ page, wallet }) => {
+  await wallet.accounts.add(); // derive Account 2 from the seed
+  await wallet.accounts.switch(1); // make it active
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+  // …the dapp now sees the second account's address
+});
+```
+
+`importPrivateKey` is handy for funding a known account on a local chain:
+
+```ts
+await wallet.accounts.importPrivateKey(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
+```
+
+## Sending a transaction
+
+Transactions need a chain where the sender holds funds; combine this with the local chain from the
+previous recipe. `confirmTransaction()` approves the popup, `rejectTransaction()` cancels it, and
+the generic `approve()`/`reject()` still work when you don't care about the request type.
 
 ```ts
 test("send a transaction", async ({ page, wallet }) => {
@@ -213,18 +370,210 @@ test("send a transaction", async ({ page, wallet }) => {
 
   await page.getByTestId("connect").click();
   await wallet.connectToDapp();
+  await page.getByTestId("switch-chain").click();
+  await wallet.approve();
 
   await page.getByTestId("send-tx").click();
-  await wallet.approve(); // approve the transaction popup
+  await wallet.confirmTransaction();
 
   await expect(page.getByTestId("tx-hash")).toHaveText(/^0x[0-9a-fA-F]{64}$/);
 });
 ```
 
+The runnable version, including asserting the receipt on the local chain and the rejection path, is
+`apps/demo/tests/metamask-transaction.spec.ts`.
+
 <Callout type="info">
   Pass `approve({ optional: true })` when a popup may or may not appear (for example a second
   approval the wallet already trusts). It resolves quietly instead of throwing when none is pending.
 </Callout>
+
+## Rejecting a transaction
+
+The reject counterparts mirror the confirmations. `rejectTransaction()` cancels the transaction
+popup, and the dapp receives the EIP-1193 rejection (`{ code: 4001 }`).
+
+```ts
+test("rejecting a transaction surfaces an error", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await page.getByTestId("send-tx").click();
+  await wallet.rejectTransaction();
+
+  await expect(page.getByTestId("error")).toContainText(/reject|denied/i);
+  await expect(page.getByTestId("tx-hash")).toBeEmpty();
+});
+```
+
+## Asserting on-chain state with viem
+
+Approving a popup proves the wallet signed, not that the transaction landed. Pair
+`walletwright/chain` with [viem](https://viem.sh) to read the chain directly and assert the receipt.
+Putting the chain in a fixture starts it with the suite and stops it after.
+
+```ts
+// tests/onchain.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { createLocalChain, type LocalChain } from "walletwright/chain";
+import { createPublicClient, http } from "viem";
+import { metamask } from "../wallet-setup";
+
+const test = createWalletFixtures(metamask).extend<{ chain: LocalChain }>({
+  chain: async ({}, use) => {
+    const chain = await createLocalChain();
+    await use(chain);
+    await chain.stop();
+  },
+});
+const { expect } = test;
+
+test("the transfer is mined", async ({ page, wallet, chain }) => {
+  const client = createPublicClient({ transport: http(chain.rpcUrl) });
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+  await page.getByTestId("switch-chain").click();
+  await wallet.approve();
+
+  await page.getByTestId("send-tx").click();
+  await wallet.confirmTransaction();
+
+  const hash = (await page.getByTestId("tx-hash").textContent()) as `0x${string}`;
+  const receipt = await client.waitForTransactionReceipt({ hash });
+  expect(receipt.status).toBe("success");
+});
+```
+
+<Callout type="warn">
+  `createLocalChain` uses port 8545 by default, and a persistent-context wallet run is `workers: 1`,
+  so one chain per suite is the right granularity. If you run several chain-backed suites, give each
+  a distinct `port` (and point your dapp's config at it) so they don't collide.
+</Callout>
+
+## Without an extension: the mock wallet
+
+Not every dapp test needs a real extension. When you're testing your dapp's connect-and-sign wiring,
+not the wallet, `walletwright/mock` injects a headless EIP-1193 provider (announced over EIP-6963)
+that signs with a real key. These specs use plain `@playwright/test`, run headless, and finish in a
+second or two.
+
+```ts
+import { test, expect } from "@playwright/test";
+import { installMockWallet } from "walletwright/mock";
+import { verifyMessage } from "viem";
+
+test("connect and sign, no extension", async ({ page }) => {
+  const address = await installMockWallet(page.context());
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("account")).toHaveText(new RegExp(address, "i"));
+
+  await page.getByTestId("sign").click();
+  const signature = await page.getByTestId("signature").textContent();
+  expect(await verifyMessage({ address, message: "Hello", signature })).toBe(true);
+});
+```
+
+The mock is a connect/sign stand-in, not an EVM: it doesn't execute transactions. When you need real
+transactions, balances, or receipts, drive an actual extension against the local chain (see above).
+
+`installMockWallet` takes options to control the account, chain, and announced name:
+
+```ts
+const address = await installMockWallet(page.context(), {
+  // anvil/hardhat account #1; the mock signs with this key so signatures verify.
+  privateKey: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+  chainId: 1, // what the dapp sees from eth_chainId
+  name: "My Test Wallet", // announced over EIP-6963
+});
+```
+
+## Composing your own fixtures
+
+`createWalletFixtures(setup)` returns a normal `@playwright/test` `test`, so extend it with your own
+fixtures. Here a `connected` fixture connects the wallet once so each test starts already connected.
+
+```ts
+// tests/fixtures.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+export const test = createWalletFixtures(metamask).extend<{ connected: void }>({
+  connected: [
+    async ({ page, wallet }, use) => {
+      await page.goto("/");
+      await page.getByTestId("connect").click();
+      await wallet.connectToDapp();
+      await use();
+    },
+    { auto: true }, // run for every test in files that import this `test`
+  ],
+});
+export const { expect } = test;
+```
+
+```ts
+// tests/signing.spec.ts
+import { test, expect } from "./fixtures";
+
+test("sign, already connected", async ({ page, wallet }) => {
+  await page.getByTestId("sign").click();
+  await wallet.confirmSignature();
+  await expect(page.getByTestId("signature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
+});
+```
+
+## A wallet page object
+
+For a larger suite, wrap the dapp interaction and the wallet approval together so specs read at one
+level of abstraction. The `wallet` fixture is just an object you can pass into a page object.
+
+```ts
+// tests/dapp.page.ts
+import type { Page } from "@playwright/test";
+import type { Wallet } from "walletwright";
+
+export class DappPage {
+  constructor(
+    private readonly page: Page,
+    private readonly wallet: Wallet,
+  ) {}
+
+  async connect(): Promise<void> {
+    await this.page.goto("/");
+    await this.page.getByTestId("connect").click();
+    await this.wallet.connectToDapp();
+  }
+
+  async sign(message: string): Promise<string> {
+    await this.page.getByTestId("message").fill(message);
+    await this.page.getByTestId("sign").click();
+    await this.wallet.confirmSignature();
+    return (await this.page.getByTestId("signature").textContent()) ?? "";
+  }
+}
+```
+
+```ts
+// tests/dapp.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+import { DappPage } from "./dapp.page";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("connect and sign through the page object", async ({ page, wallet }) => {
+  const dapp = new DappPage(page, wallet);
+  await dapp.connect();
+  const signature = await dapp.sign("Hello walletwright");
+  expect(signature).toMatch(/^0x[0-9a-fA-F]{130}$/);
+});
+```
 
 ## Build the cache in Playwright global setup
 
@@ -261,7 +610,7 @@ export default globalSetup;
 
 ## Driving multiple wallets in one suite
 
-There is no special multi-wallet runner — give each wallet its own spec, each calling
+There is no special multi-wallet runner. Give each wallet its own spec, each calling
 `createWalletFixtures` with its own setup. They share the cache built above and run under the same
 `workers: 1` config so browsers don't contend for the display.
 

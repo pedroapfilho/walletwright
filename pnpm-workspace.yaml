@@ -24,3 +24,6 @@ onlyBuiltDependencies:
 
 ignoredBuiltDependencies:
   - "@parcel/watcher"
+
+minimumReleaseAgeExclude:
+  - prool@0.2.10

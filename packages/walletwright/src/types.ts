@@ -22,10 +22,66 @@ export type WalletSetup = {
 };
 
 /**
+ * Everything an action needs to drive the wallet's own UI (as opposed to an approval popup). Passed
+ * as one object so a new dependency doesn't churn every wallet's action signatures.
+ */
+export type WalletActionContext = {
+  context: BrowserContext;
+  extensionId: string;
+  /** The wallet's own extension page, kept open after unlock. */
+  home: Page;
+  password: string;
+};
+
+/** Create, import, rename, and switch accounts from the wallet's own UI. */
+export type AccountActions = {
+  /** Derive the next HD account from the seed. */
+  add?: (ctx: WalletActionContext) => Promise<void>;
+  importPrivateKey?: (ctx: WalletActionContext, privateKey: string) => Promise<void>;
+  rename?: (ctx: WalletActionContext, options: { index: number; name: string }) => Promise<void>;
+  /** Make the account at `index` (order shown in the wallet's account list) the active one. */
+  switch?: (ctx: WalletActionContext, index: number) => Promise<void>;
+};
+
+/** A custom EVM network, as the wallet's add-network form expects it. */
+export type NetworkConfig = {
+  chainId: number;
+  name: string;
+  rpcUrl: string;
+  symbol: string;
+};
+
+/** Add a custom network and switch the active one, from the wallet's own UI. */
+export type NetworkActions = {
+  add?: (ctx: WalletActionContext, config: NetworkConfig) => Promise<void>;
+  switch?: (ctx: WalletActionContext, chainId: number) => Promise<void>;
+};
+
+/** Lock and unlock the wallet itself, from its own UI. */
+export type SettingsActions = {
+  lock?: (ctx: WalletActionContext) => Promise<void>;
+  unlock?: (ctx: WalletActionContext) => Promise<void>;
+};
+
+/**
+ * Optional, per-wallet capabilities beyond the universal connect/sign flow. A wallet declares only
+ * what has actually been driven against the real extension, so the registry never claims support it
+ * doesn't have: `network` is meaningless for Slush (Sui), and Phantom's settings UI has no analogue
+ * for much of MetaMask's. Anything undeclared throws a clear error at call time.
+ */
+export type WalletActions = {
+  accounts?: AccountActions;
+  network?: NetworkActions;
+  settings?: SettingsActions;
+};
+
+/**
  * Everything wallet-specific that the generic engine needs. One implementation per wallet lives in
  * `src/wallets/*`.
  */
 export type WalletDefinition = {
+  /** Optional capabilities beyond connect/sign. Omit a group the wallet can't (or doesn't) drive. */
+  actions?: WalletActions;
   /**
    * Click the approve/confirm button in an approval popup (connect or sign). `password` is provided
    * because some wallets (e.g. Slush) re-prompt for it to authorize a signature.
@@ -54,18 +110,61 @@ export type WalletDefinition = {
   prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
   /** Navigate to the home/unlock page and return true once the password screen is rendered. */
   reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
+  /**
+   * Click the cancel/reject button in an approval popup, the counterpart of `approve`. Optional:
+   * a wallet declares it only once it has been driven against the real extension.
+   */
+  reject?: (popup: Page) => Promise<void>;
   /** Unlock the wallet on its (already-open) home page. */
   unlock: (page: Page, password: string) => Promise<void>;
 };
 
+/** Lock and unlock the wallet from its own UI. Throws if the wallet doesn't declare support. */
+export type SettingsApi = {
+  lock: () => Promise<void>;
+  unlock: () => Promise<void>;
+};
+
+/** Add and switch networks from the wallet's own UI. Throws if the wallet doesn't declare support. */
+export type NetworkApi = {
+  add: (config: NetworkConfig) => Promise<void>;
+  switch: (chainId: number) => Promise<void>;
+};
+
+/** Manage accounts from the wallet's own UI. Throws if the wallet doesn't declare support. */
+export type AccountsApi = {
+  add: () => Promise<void>;
+  importPrivateKey: (privateKey: string) => Promise<void>;
+  rename: (options: { index: number; name: string }) => Promise<void>;
+  switch: (index: number) => Promise<void>;
+};
+
 /** Drives an unlocked wallet against a dapp under test. */
 export type Wallet = {
+  accounts: AccountsApi;
   /** Approve whatever approval popup is currently pending (connect, sign, tx…). */
   approve: (options?: { optional?: boolean }) => Promise<void>;
   /** Approve a pending signature request popup. */
   confirmSignature: () => Promise<void>;
+  /** Approve a pending transaction request popup. */
+  confirmTransaction: () => Promise<void>;
   /** Approve a pending connection request popup. Resolves quietly if the wallet auto-approved. */
   connectToDapp: () => Promise<void>;
   /** The loaded extension id. */
   readonly extensionId: string;
+  /**
+   * The wallet's own extension page, kept open after unlock. Named `home` rather than `page` because
+   * `page` already means the dapp under test in every spec.
+   */
+  readonly home: Page;
+  network: NetworkApi;
+  /** Reject whatever approval popup is currently pending (connect, sign, tx…). */
+  reject: (options?: { optional?: boolean }) => Promise<void>;
+  /** Reject a pending connection request popup. */
+  rejectConnection: () => Promise<void>;
+  /** Reject a pending signature request popup. */
+  rejectSignature: () => Promise<void>;
+  /** Reject a pending transaction request popup. */
+  rejectTransaction: () => Promise<void>;
+  settings: SettingsApi;
 };

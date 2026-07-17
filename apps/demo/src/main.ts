@@ -36,23 +36,70 @@ const toHex = (bytes: Uint8Array): string =>
 const getEthereum = () => waitFor(() => (window as { ethereum?: Eip1193Provider }).ethereum);
 let mmAccount = "";
 
+// A rejected request rejects the provider promise, so surface it: a test asserting on a rejection
+// needs something to read, and an unhandled rejection would look like nothing happened.
+// Wallets reject with an EIP-1193 error object ({ code: 4001, message }) rather than an Error, so
+// `String(error)` would render "[object Object]".
+const showError = (error: unknown, target = "#error") => {
+  const { message } = (error ?? {}) as { message?: string };
+  $(target).textContent = error instanceof Error ? error.message : (message ?? String(error));
+};
+
 const handleConnect = async () => {
-  const accounts = (await (
-    await getEthereum()
-  ).request({ method: "eth_requestAccounts" })) as Array<string>;
-  mmAccount = accounts[0] ?? "";
-  $("#accounts").textContent = mmAccount;
-  $<HTMLButtonElement>("#signButton").disabled = mmAccount === "";
+  $("#error").textContent = "";
+  try {
+    const accounts = (await (
+      await getEthereum()
+    ).request({ method: "eth_requestAccounts" })) as Array<string>;
+    mmAccount = accounts[0] ?? "";
+    $("#accounts").textContent = mmAccount;
+    $<HTMLButtonElement>("#signButton").disabled = mmAccount === "";
+  } catch (error) {
+    showError(error);
+  }
 };
 
 const handleSign = async () => {
-  const signature = (await (
-    await getEthereum()
-  ).request({
-    method: "personal_sign",
-    params: [$<HTMLInputElement>("#message").value, mmAccount],
-  })) as string;
-  $("#signature").textContent = signature;
+  $("#error").textContent = "";
+  try {
+    const signature = (await (
+      await getEthereum()
+    ).request({
+      method: "personal_sign",
+      params: [$<HTMLInputElement>("#message").value, mmAccount],
+    })) as string;
+    $("#signature").textContent = signature;
+  } catch (error) {
+    showError(error);
+  }
+};
+
+// A local dev chain (anvil/hardhat defaults), for the network and transaction recipes.
+const LOCAL_CHAIN = {
+  chainId: "0x7a69",
+  chainName: "Walletwright Local",
+  nativeCurrency: { decimals: 18, name: "Ether", symbol: "ETH" },
+  rpcUrls: ["http://127.0.0.1:8545"],
+};
+
+const refreshChainId = async () => {
+  const chainId = (await (await getEthereum()).request({ method: "eth_chainId" })) as string;
+  $("#chainId").textContent = chainId;
+};
+
+// `wallet_addEthereumChain` rather than EIP-3326 `wallet_switchEthereumChain`: it is idempotent
+// (adds when missing, switches when present), and in MetaMask 13.x a bare switch request to a
+// wallet-added custom chain hangs with no popup and no error.
+const handleSwitchChain = async () => {
+  $("#error").textContent = "";
+  try {
+    await (
+      await getEthereum()
+    ).request({ method: "wallet_addEthereumChain", params: [LOCAL_CHAIN] });
+    await refreshChainId();
+  } catch (error) {
+    showError(error);
+  }
 };
 
 // --- Phantom EVM (window.phantom.ethereum) ---
@@ -61,12 +108,17 @@ const getPhantomEvm = () =>
 let phantomEvmAccount = "";
 
 const handlePhantomEvmConnect = async () => {
-  const accounts = (await (
-    await getPhantomEvm()
-  ).request({ method: "eth_requestAccounts" })) as Array<string>;
-  phantomEvmAccount = accounts[0] ?? "";
-  $("#phantomEvmAccount").textContent = phantomEvmAccount;
-  $<HTMLButtonElement>("#phantomEvmSign").disabled = phantomEvmAccount === "";
+  $("#phantomEvmError").textContent = "";
+  try {
+    const accounts = (await (
+      await getPhantomEvm()
+    ).request({ method: "eth_requestAccounts" })) as Array<string>;
+    phantomEvmAccount = accounts[0] ?? "";
+    $("#phantomEvmAccount").textContent = phantomEvmAccount;
+    $<HTMLButtonElement>("#phantomEvmSign").disabled = phantomEvmAccount === "";
+  } catch (error) {
+    showError(error, "#phantomEvmError");
+  }
 };
 
 const handlePhantomEvmSign = async () => {
@@ -144,6 +196,30 @@ const handleSuiSign = async () => {
 
 $("#connectButton").addEventListener("click", handleConnect);
 $("#signButton").addEventListener("click", handleSign);
+const handleSendTx = async () => {
+  $("#error").textContent = "";
+  try {
+    const hash = (await (
+      await getEthereum()
+    ).request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: mmAccount,
+          // 0.001 ETH to the second anvil test account.
+          to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+          value: "0x38d7ea4c68000",
+        },
+      ],
+    })) as string;
+    $("#txHash").textContent = hash;
+  } catch (error) {
+    showError(error);
+  }
+};
+
+$("#switchChainButton").addEventListener("click", handleSwitchChain);
+$("#sendTxButton").addEventListener("click", handleSendTx);
 $("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
 $("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
 $("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);

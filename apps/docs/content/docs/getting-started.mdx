@@ -39,14 +39,8 @@ export const metamask: WalletSetup = {
 
 ## Step 3: Build the cache
 
-Onboarding runs once and is saved to disk (`.walletwright/` by default). Do it from a script or the
-CLI before your tests run.
-
-```bash
-walletwright cache --setup ./wallet-setup.ts
-```
-
-Or call it from code, which works well as a Playwright global setup:
+Onboarding runs once and is saved to disk (`.walletwright/` by default). The simplest way is a small
+script that imports your setup module, which also works as a Playwright global setup later:
 
 ```ts
 // scripts/build-cache.ts
@@ -54,6 +48,19 @@ import { buildCache } from "walletwright";
 import { metamask } from "../wallet-setup";
 
 await buildCache(metamask);
+```
+
+```bash
+node scripts/build-cache.ts
+```
+
+There is also a CLI. It either takes the wallet inline, or loads a file that **default-exports** a
+`WalletSetup` (a shared module with named exports, like the one above, is driven from code instead):
+
+```bash
+walletwright cache --wallet metamask \
+  --seed "test test test test test test test test test test test junk" \
+  --password "Tester@1234"
 ```
 
 Add the cache directory to `.gitignore`:
@@ -108,7 +115,7 @@ export default defineConfig({
 Run it:
 
 ```bash
-walletwright cache --setup ./wallet-setup.ts   # once
+node scripts/build-cache.ts   # once
 pnpm exec playwright test
 ```
 

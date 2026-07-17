@@ -74,17 +74,75 @@ It needs a cache built for the same `setup`, via `buildCache` or the CLI.
 type Wallet = {
   connectToDapp: () => Promise<void>;
   confirmSignature: () => Promise<void>;
+  confirmTransaction: () => Promise<void>;
   approve: (options?: { optional?: boolean }) => Promise<void>;
+  rejectConnection: () => Promise<void>;
+  rejectSignature: () => Promise<void>;
+  rejectTransaction: () => Promise<void>;
+  reject: (options?: { optional?: boolean }) => Promise<void>;
+  accounts: {
+    add: () => Promise<void>;
+    switch: (index: number) => Promise<void>;
+    rename: (options: { index: number; name: string }) => Promise<void>;
+    importPrivateKey: (privateKey: string) => Promise<void>;
+  };
+  network: {
+    add: (config: NetworkConfig) => Promise<void>;
+    switch: (chainId: number) => Promise<void>;
+  };
+  settings: { lock: () => Promise<void>; unlock: () => Promise<void> };
+  readonly home: Page;
   readonly extensionId: string;
+};
+
+type NetworkConfig = {
+  name: string;
+  chainId: number;
+  rpcUrl: string;
+  symbol: string;
 };
 ```
 
-| Member               | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `connectToDapp()`    | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.           |
-| `confirmSignature()` | Approve a pending signature popup. Throws if no popup appears.                              |
-| `approve(options)`   | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none. |
-| `extensionId`        | The loaded extension id.                                                                    |
+| Member                           | Description                                                                                                      |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `connectToDapp()`                | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
+| `confirmSignature()`             | Approve a pending signature popup. Throws if no popup appears.                                                   |
+| `confirmTransaction()`           | Approve a pending transaction popup. Throws if no popup appears.                                                 |
+| `rejectTransaction()`            | Reject a pending transaction popup.                                                                              |
+| `approve(options)`               | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none.                      |
+| `rejectConnection()`             | Reject a pending connection popup.                                                                               |
+| `rejectSignature()`              | Reject a pending signature popup.                                                                                |
+| `reject(options)`                | Reject any pending popup. The counterpart of `approve`.                                                          |
+| `accounts.add()`                 | Derive the next HD account from the seed.                                                                        |
+| `accounts.switch(i)`             | Make the account at index `i` (order in the wallet's list) the active one.                                       |
+| `accounts.rename({index, name})` | Rename the account at that index.                                                                                |
+| `accounts.importPrivateKey(key)` | Import an account from a raw private key.                                                                        |
+| `network.add(config)`            | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
+| `network.switch(id)`             | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
+| `settings.lock()`                | Lock the wallet from its own UI.                                                                                 |
+| `settings.unlock()`              | Unlock it again with the setup's password.                                                                       |
+| `home`                           | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
+| `extensionId`                    | The loaded extension id.                                                                                         |
+
+### Capabilities are per-wallet
+
+Beyond connect and sign, a wallet only declares what has actually been driven against the real
+extension, so the API never claims support it doesn't have. Calling something a wallet hasn't
+declared throws rather than silently doing nothing:
+
+```
+[walletwright] Slush does not support reject()
+```
+
+Today `reject` is verified on MetaMask and Phantom, and `settings`, `network.add`, and `accounts`
+on MetaMask. Slush drives connect and sign end to end but declares none of the optional
+capabilities yet, so calling any of them on Slush throws.
+
+`network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
+and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls
+`wallet_addEthereumChain` (idempotent: adds when missing, switches when present) and
+`wallet.approve()` drives the popup. Avoid a bare EIP-3326 `wallet_switchEthereumChain` for custom
+chains; in MetaMask 13.x it hangs with no popup and no error. See the network recipe in Examples.
 
 ## `launchWallet(setup)`
 
@@ -97,6 +155,61 @@ const page = await context.newPage();
 // drive the page and the wallet here
 await context.close();
 ```
+
+## `walletwright/chain`
+
+A local EVM node for network and transaction tests, as a separate entry point so the core
+connect/sign flow doesn't depend on it. It needs the `prool` package (optional peer) and Foundry's
+`anvil` binary on `PATH`.
+
+```ts
+import { createLocalChain } from "walletwright/chain";
+
+const chain = await createLocalChain(); // { chainId: 31337, rpcUrl: "http://127.0.0.1:8545" }
+// … run tests against it …
+await chain.stop();
+```
+
+| Option     | Default                       | Description                            |
+| ---------- | ----------------------------- | -------------------------------------- |
+| `chainId`  | `31337`                       | Chain id of the local node.            |
+| `port`     | `8545`                        | Port for the JSON-RPC endpoint.        |
+| `mnemonic` | the public Hardhat/Anvil seed | Seed for the pre-funded accounts.      |
+| `binary`   | `anvil`                       | Binary to launch (resolved on `PATH`). |
+
+The default mnemonic pre-funds `0xf39F…92266` with 10000 ETH, the same account the MetaMask
+`WalletSetup` in these docs imports, so specs can assert against it with no extra funding step.
+
+## `walletwright/mock`
+
+A headless injected-wallet fake for dapp tests that don't need a real extension, so they run in
+plain (even headless) Chromium in a second or two. It announces itself over EIP-6963, answers the
+EIP-1193 requests a connect/sign flow makes, and signs with a real key so signatures verify. Needs
+`viem` (optional peer). Install it before `goto`, on the context or a single page.
+
+```ts
+import { test, expect } from "@playwright/test";
+import { installMockWallet } from "walletwright/mock";
+
+test("connect and sign, no extension", async ({ page }) => {
+  const address = await installMockWallet(page.context());
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("account")).toHaveText(new RegExp(address, "i"));
+});
+```
+
+| Option       | Default                 | Description                                |
+| ------------ | ----------------------- | ------------------------------------------ |
+| `privateKey` | anvil/hardhat account 0 | Key the mock signs with; sets the account. |
+| `chainId`    | `31337`                 | Chain id reported to the dapp.             |
+| `name`       | `Walletwright Mock`     | Name announced over EIP-6963.              |
+
+It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_sign`, and no-ops the
+chain-switch methods. It is a connect/sign stand-in, not an EVM: it does not execute transactions.
+For anything real (transactions, balances, receipts), drive an actual extension against
+`walletwright/chain`.
 
 ## `wallets`
 

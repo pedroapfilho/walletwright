@@ -52,7 +52,17 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   returns a `Wallet`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
   `approve` by finding the approval popup and clicking the wallet's confirm button.
-- `wallets/{metamask,phantom,slush}.ts` hold the per-wallet selectors and flows.
+- `wallets/{metamask,phantom,slush}.ts` hold the per-wallet definitions. A wallet with more than a
+  file's worth of flow keeps its helpers in a folder of the same name, so the definition file stays
+  the import site: `metamask.ts` assembles, `metamask/onboarding.ts` and `metamask/approve.ts` and
+  `metamask/actions/*.ts` implement.
+
+Beyond connect and sign, capabilities are **optional and per-wallet**. `WalletDefinition.actions`
+groups them (`settings`, and later `network`/`accounts`/`tokens`), and `reject` is optional too. The
+engine mirrors what a wallet declares onto `Wallet` and throws
+`[walletwright] <wallet> does not support <action>()` for the rest. This keeps the registry honest:
+`addNetwork` is meaningless for Slush (Sui), and a wallet only declares an action once it has been
+driven end-to-end.
 
 To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register it in
 `src/wallets/index.ts`. Each definition declares its `ecosystems` (`evm`/`svm`/`sui`/`dot`/`btc`), and
@@ -135,6 +145,49 @@ Each item below cost real debugging time. Don't "simplify" them away.
 11. **Resolve symlinks for the path-derived id.** Chrome hashes the extension's real path, so
     `extensionIdFromPath` runs `realpathSync` first. Without it, a cache under a symlinked dir (macOS
     `/tmp` → `/private/tmp`) yields the wrong id and every navigation hits `ERR_BLOCKED_BY_CLIENT`.
+12. **You can't `page.evaluate()` inside MetaMask.** It runs LavaMoat in scuttling mode, so
+    `evaluate` dies with `property "setInterval" of globalThis is inaccessible under scuttling mode`.
+    Read its UI with locators. This applies to the wallet's own pages, not to the dapp.
+13. **MetaMask's approval popup opens before it renders.** The window appears at bare
+    `notification.html` (no route hash, zero buttons) and only later routes to the request. Anything
+    sampling the popup too early sees an empty page, which is why `approve`/`reject` wait on the
+    button rather than on the popup existing.
+14. **Wallets reject with an EIP-1193 error object, not an `Error`.** A rejected request rejects the
+    provider promise with `{ code: 4001, message }`, so a dapp doing `String(error)` renders
+    `[object Object]`. The demo reads `error.message` explicitly (`apps/demo/src/main.ts`).
+15. **MetaMask 13.x has no wallet-side network switch.** The active chain is scoped per dapp. The
+    header's network manager (`sort-by-networks`) is an asset filter plus registry: selecting a
+    network there does not change any dapp's chain, and neither does toggling the site's permitted
+    networks in `#/permissions` (both verified empirically; the dapp's `eth_chainId` stays put).
+    Custom networks are added under the manager's "Custom" tab; the RPC must be live, since
+    MetaMask validates it before saving. The old `#/connections` route hard-errors;
+    `#/permissions` is the connections page now.
+16. **Switch chains with `wallet_addEthereumChain`, not bare EIP-3326.** A
+    `wallet_switchEthereumChain` request for a wallet-added custom chain hangs: no popup, no error,
+    the promise just never settles. `wallet_addEthereumChain` is idempotent (adds when missing,
+    switches when present) and confirms both in one popup.
+17. **A Snap "Third-party software notice" can cover the confirm.** The first custom-chain request
+    routed through a protocol Snap opens a terms modal over the popup's footer; every confirm click
+    is intercepted until it is accepted, and its Accept button is disabled until the notice is
+    scrolled to the bottom. Its buttons have no testids. MetaMask's `approve` handles it
+    (`wallets/metamask/approve.ts`).
+18. **Gas presets don't render on a legacy-fee local chain.** The transaction popup's gas editor
+    (`edit-gas-fee-icon` → `gas-fee-estimates-modal`) offers only `gas-option-gasPrice` ("Network
+    suggested") and `gas-option-advanced` against anvil. Synpress-style low/market/aggressive
+    presets (`gas-option-<key>`) need EIP-1559 fee history to appear, so `confirmTransaction`
+    ships without a gas argument until those can be driven for real.
+19. **The account menu is a popover with no close button.** Open it with `account-menu-icon`; to
+    leave, navigate home (`goto(#/)`). `add-multichain-account-button` derives the next HD account
+    with no dialog; per-account actions hang off `multichain-account-cell-end-accessory` →
+    `multichain-account-menu-item-{rename,accountDetails,…}`. Import-from-key is `add-wallet` →
+    `choose-wallet-type-import-account`, and a successful import returns to the wallet-type chooser,
+    not home, so wait for the confirm button to disappear rather than for the home screen.
+20. **After driving the wallet's own UI, popups spawn late and the extension tab steals them.**
+    While an extension page is the active tab, MetaMask renders new approvals inline there instead
+    of opening `notification.html`, so the action binder re-fronts the dapp when an action ends
+    (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
+    required popups wait 30s, and `findNotificationPopup` returns a popup only once a button is
+    visible, since the window opens as a bare shell and routes later.
 
 ## Conventions
 
