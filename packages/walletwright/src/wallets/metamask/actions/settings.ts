@@ -3,7 +3,6 @@ import { unlock as unlockScreen } from "../onboarding.ts";
 
 export const settings: SettingsActions = {
   lock: async ({ home }) => {
-    await home.bringToFront();
     await home.getByTestId("account-options-menu-button").click();
     // The menu renders the item several times (responsive variants), only one of which is visible.
     await home.getByTestId("global-menu-lock").filter({ visible: true }).first().click();
@@ -11,7 +10,6 @@ export const settings: SettingsActions = {
   },
 
   unlock: async ({ home, password }) => {
-    await home.bringToFront();
     await unlockScreen(home, password);
   },
 };

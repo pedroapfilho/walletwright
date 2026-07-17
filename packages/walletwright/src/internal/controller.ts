@@ -97,6 +97,9 @@ export const createWallet = ({
       if (!fn) {
         throw unsupported(name);
       }
+      // Actions drive the wallet's own page; front it first so clicks land on a visible tab, then
+      // hand focus back to the dapp below so new approvals open as popups instead of inline.
+      await home.bringToFront().catch(() => {});
       await fn(ctx, ...args);
       const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
       await dapp?.bringToFront().catch(() => {});
