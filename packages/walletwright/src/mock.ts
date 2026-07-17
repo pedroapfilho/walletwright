@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import type { PrivateKeyAccount } from "viem/accounts";
 import { privateKeyToAccount } from "viem/accounts";
 
 /**
@@ -22,19 +23,10 @@ type Rpc = { method: string; params?: ReadonlyArray<unknown> };
 
 const toHex = (value: number): string => `0x${value.toString(16)}`;
 
-/**
- * Install the mock on a context (every page) or a single page. Call before `goto`, so the provider
- * exists when the dapp looks for it. Returns the account address it announces.
- */
-const installMockWallet = async (
-  target: BrowserContext | Page,
-  options: MockWalletOptions = {},
-): Promise<string> => {
-  const { chainId = 31_337, name = "Walletwright Mock", privateKey = DEFAULT_KEY } = options;
-  const account = privateKeyToAccount(privateKey);
-  const chainIdHex = toHex(chainId);
-
-  const handle = ({ method, params = [] }: Rpc): Promise<unknown> => {
+/** The EIP-1193 handler a mock provider answers with. Exported for direct, browser-free testing. */
+const createRpcHandler =
+  (account: PrivateKeyAccount, chainIdHex: string) =>
+  ({ method, params = [] }: Rpc): Promise<unknown> => {
     switch (method) {
       case "eth_requestAccounts":
       case "eth_accounts": {
@@ -59,6 +51,19 @@ const installMockWallet = async (
       }
     }
   };
+
+/**
+ * Install the mock on a context (every page) or a single page. Call before `goto`, so the provider
+ * exists when the dapp looks for it. Returns the account address it announces.
+ */
+const installMockWallet = async (
+  target: BrowserContext | Page,
+  options: MockWalletOptions = {},
+): Promise<string> => {
+  const { chainId = 31_337, name = "Walletwright Mock", privateKey = DEFAULT_KEY } = options;
+  const account = privateKeyToAccount(privateKey);
+  const chainIdHex = toHex(chainId);
+  const handle = createRpcHandler(account, chainIdHex);
 
   const bindingName = "__walletwrightMockRpc";
   try {
@@ -107,4 +112,4 @@ const installMockWallet = async (
   return account.address;
 };
 
-export { installMockWallet };
+export { createRpcHandler, installMockWallet };

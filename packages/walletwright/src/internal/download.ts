@@ -22,7 +22,13 @@ export const downloadAndExtractExtension = async (options: {
   url: string;
 }): Promise<string> => {
   const { cacheDir, kind, name, sha256, url } = options;
+  const cacheRoot = path.resolve(cacheDir);
   const outDir = path.resolve(cacheDir, name);
+  // A wallet-supplied `name` (e.g. built from a version string) must resolve inside the cache dir;
+  // this outDir gets `rm -rf`'d below, so a "../"-bearing name must never escape it.
+  if (outDir !== cacheRoot && !outDir.startsWith(cacheRoot + path.sep)) {
+    throw new Error(`[walletwright] invalid extension name: ${name}`);
+  }
   if (existsSync(path.join(outDir, "manifest.json"))) {
     return outDir;
   }

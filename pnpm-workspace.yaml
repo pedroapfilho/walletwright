@@ -26,4 +26,5 @@ ignoredBuiltDependencies:
   - "@parcel/watcher"
 
 minimumReleaseAgeExclude:
+  # prool was newer than the release-age gate allowed when adopted (2026-07); drop once it ages out.
   - prool@0.2.10

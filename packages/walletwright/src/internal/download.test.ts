@@ -61,6 +61,18 @@ describe("downloadAndExtractExtension", () => {
     expect(existsSync(path.join(outDir, "manifest.json"))).toBe(true);
   });
 
+  it("rejects a name that escapes the cache dir", async () => {
+    const zip = new AdmZip();
+    zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
+    const { close, url } = await serve(zip.toBuffer());
+    servers.push({ close });
+
+    const cacheDir = await makeCacheDir();
+    await expect(
+      downloadAndExtractExtension({ cacheDir, kind: "zip", name: "../escape", url }),
+    ).rejects.toThrow(/invalid extension name/v);
+  });
+
   it("rejects a zip entry that escapes the extraction dir", async () => {
     const zip = new AdmZip();
     zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
