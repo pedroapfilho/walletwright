@@ -281,6 +281,34 @@ The runnable version, including asserting the receipt on the local chain and the
   approval the wallet already trusts). It resolves quietly instead of throwing when none is pending.
 </Callout>
 
+## Without an extension: the mock wallet
+
+Not every dapp test needs a real extension. When you're testing your dapp's connect-and-sign wiring,
+not the wallet, `walletwright/mock` injects a headless EIP-1193 provider (announced over EIP-6963)
+that signs with a real key. These specs use plain `@playwright/test`, run headless, and finish in a
+second or two.
+
+```ts
+import { test, expect } from "@playwright/test";
+import { installMockWallet } from "walletwright/mock";
+import { verifyMessage } from "viem";
+
+test("connect and sign, no extension", async ({ page }) => {
+  const address = await installMockWallet(page.context());
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("account")).toHaveText(new RegExp(address, "i"));
+
+  await page.getByTestId("sign").click();
+  const signature = await page.getByTestId("signature").textContent();
+  expect(await verifyMessage({ address, message: "Hello", signature })).toBe(true);
+});
+```
+
+The mock is a connect/sign stand-in, not an EVM: it doesn't execute transactions. When you need real
+transactions, balances, or receipts, drive an actual extension against the local chain (see above).
+
 ## Build the cache in Playwright global setup
 
 Instead of a separate `walletwright cache` step, onboard every wallet from Playwright's `globalSetup`
