@@ -2,10 +2,11 @@ import { PrivyProvider, useLogin, usePrivy, useWallets } from "@privy-io/react-a
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 
-// The demo's own Privy app (a public client-side id, wallet login enabled, http://localhost:3000
-// allowed). Override with VITE_PRIVY_APP_ID for a different app or origin.
-const PRIVY_APP_ID = "cmrp2xd1e02ds0cjio3zzd4xm";
-const appId = (import.meta.env.VITE_PRIVY_APP_ID as string | undefined) ?? PRIVY_APP_ID;
+// Privy's public test app id works only from http://localhost:3000 (heavily rate-limited, data wiped
+// periodically), enough for clicking the flow by hand. For the automated spec, provide your own app
+// id via VITE_PRIVY_APP_ID (env var or a local apps/demo/.env, see .env.example).
+const PRIVY_TEST_APP_ID = "clpispdty00ycl80fpueukbhl";
+const appId = (import.meta.env.VITE_PRIVY_APP_ID as string | undefined) ?? PRIVY_TEST_APP_ID;
 
 const Dapp = () => {
   const { authenticated, ready, user } = usePrivy();
