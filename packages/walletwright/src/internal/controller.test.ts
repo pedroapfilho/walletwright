@@ -6,7 +6,10 @@ import type { WalletDefinition } from "../types.ts";
 import { createWallet } from "./controller.ts";
 
 const stubContext = { pages: () => [] } as unknown as BrowserContext;
-const stubHome = {} as unknown as Page;
+const stubHome = {
+  bringToFront: () => Promise.resolve(),
+  isClosed: () => false,
+} as unknown as Page;
 
 const makeDefinition = (actions?: WalletDefinition["actions"]): WalletDefinition =>
   ({
@@ -46,6 +49,20 @@ describe("createWallet", () => {
       { context: stubContext, extensionId: "fake-extension-id", home: stubHome, password: "pw" },
       config,
     );
+  });
+
+  it("fails fast when the wallet home page is closed, without invoking the action", async () => {
+    const settingsLock = vi.fn();
+    const wallet = createWallet({
+      context: stubContext,
+      definition: makeDefinition({ settings: { lock: settingsLock } }),
+      extensionId: "fake-extension-id",
+      home: { isClosed: () => true } as unknown as Page,
+      password: "pw",
+    });
+
+    await expect(wallet.settings.lock()).rejects.toThrow("home page is closed");
+    expect(settingsLock).not.toHaveBeenCalled();
   });
 
   it("exposes the extensionId and home it was constructed with", () => {
