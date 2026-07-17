@@ -10,18 +10,19 @@ reviewer says they maintain this index).
 Executed and reviewed 2026-07-16 in worktree `.claude/worktrees/audit-fixes` (branch `audit-fixes`,
 based on `0f0db25`). Verdicts below are the reviewer's, after re-running each plan's done criteria.
 
-| Plan | Title | Priority | Effort | Depends on | Status |
-|------|-------|----------|--------|------------|--------|
-| 001 | Remove throwaway profile dir on context close | P1 | S | none | DONE |
-| 002 | Make `accounts.switch` fail loudly | P1 | S | none | DONE |
-| 003 | Make `installMockWallet` idempotent per context | P2 | S | none | DONE |
-| 004 | Drop unused `NetworkConfig.blockExplorerUrl` | P2 | S | none | DONE |
-| 005 | Zip-slip guard on extension extraction | P2 | S | none | DONE |
-| 006 | Optional sha256 integrity check on downloads | P2 | M | 005 (shared file) | DONE |
-| 007 | CI unit tests for pure logic | P2 | M | none | DONE |
-| 008 | Capability-wiring drift guard | P3 | S | 007 | DONE |
+| Plan | Title                                           | Priority | Effort | Depends on        | Status |
+| ---- | ----------------------------------------------- | -------- | ------ | ----------------- | ------ |
+| 001  | Remove throwaway profile dir on context close   | P1       | S      | none              | DONE   |
+| 002  | Make `accounts.switch` fail loudly              | P1       | S      | none              | DONE   |
+| 003  | Make `installMockWallet` idempotent per context | P2       | S      | none              | DONE   |
+| 004  | Drop unused `NetworkConfig.blockExplorerUrl`    | P2       | S      | none              | DONE   |
+| 005  | Zip-slip guard on extension extraction          | P2       | S      | none              | DONE   |
+| 006  | Optional sha256 integrity check on downloads    | P2       | M      | 005 (shared file) | DONE   |
+| 007  | CI unit tests for pure logic                    | P2       | M      | none              | DONE   |
+| 008  | Capability-wiring drift guard                   | P3       | S      | 007               | DONE   |
 
 Reviewer notes:
+
 - 003 mock spec re-run by reviewer with a free port: passes in 1.5s (the executor's failure was an
   unrelated process on port 3000, not this code).
 - 007: `extensionIdFromPath` returns a 32-character id (16 bytes, one char per nibble), not 16 as the

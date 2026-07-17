@@ -50,20 +50,22 @@ only for a non-obvious WHY, no long dash (U+2014).
 
 ## Commands you will need
 
-| Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
-| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
-| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
-| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new)|
-| Build     | `pnpm --filter walletwright build`     | "Build complete"    |
+| Purpose   | Command (from repo root)               | Expected on success  |
+| --------- | -------------------------------------- | -------------------- |
+| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors    |
+| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors  |
+| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new) |
+| Build     | `pnpm --filter walletwright build`     | "Build complete"     |
 
 ## Scope
 
 **In scope**:
+
 - `packages/walletwright/src/internal/capability-wiring.test.ts` (create)
 - `packages/walletwright/src/internal/controller.ts` (comment-only change: add the contract note)
 
 **Out of scope**:
+
 - Any structural refactor of the capability system. Do NOT introduce generics, mapped types, or a
   registry to collapse the three places. This plan is a test plus a comment only.
 - The runtime behavior of `createWallet`. The only source edit permitted is adding a comment.

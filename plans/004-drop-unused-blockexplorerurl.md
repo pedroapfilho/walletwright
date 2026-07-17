@@ -58,22 +58,24 @@ Repo conventions: `type` over `interface`, alphabetically-sorted object type mem
 
 ## Commands you will need
 
-| Purpose      | Command (from repo root)                | Expected on success |
-|--------------|-----------------------------------------|---------------------|
-| Typecheck    | `pnpm --filter walletwright typecheck`  | exit 0, no errors   |
-| Lint         | `pnpm --filter walletwright lint`       | 0 warnings 0 errors |
-| Build        | `pnpm --filter walletwright build`      | "Build complete"    |
-| Docs lint    | `pnpm --filter docs lint`               | 0 errors            |
-| Grep check   | `grep -rn "blockExplorerUrl" packages/ apps/` | only intended remaining refs (ideally none) |
+| Purpose    | Command (from repo root)                      | Expected on success                         |
+| ---------- | --------------------------------------------- | ------------------------------------------- |
+| Typecheck  | `pnpm --filter walletwright typecheck`        | exit 0, no errors                           |
+| Lint       | `pnpm --filter walletwright lint`             | 0 warnings 0 errors                         |
+| Build      | `pnpm --filter walletwright build`            | "Build complete"                            |
+| Docs lint  | `pnpm --filter docs lint`                     | 0 errors                                    |
+| Grep check | `grep -rn "blockExplorerUrl" packages/ apps/` | only intended remaining refs (ideally none) |
 
 ## Scope
 
 **In scope**:
+
 - `packages/walletwright/src/types.ts` (remove the `blockExplorerUrl` line from `NetworkConfig`)
 - `apps/docs/content/docs/api-reference.mdx` (remove the field from the `NetworkConfig` code block
   and any mention in the `network.add` description)
 
 **Out of scope**:
+
 - `network.ts` add logic (it already ignores the field; no change needed).
 - `apps/docs/content/docs/examples.mdx` if it does not mention `blockExplorerUrl` (grep first; only
   touch it if a reference exists there).

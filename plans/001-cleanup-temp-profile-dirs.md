@@ -35,26 +35,26 @@ context closes.
 Excerpt (`launch.ts:62-83`):
 
 ```ts
-  // Run from a throwaway copy so the cache stays pristine and parallel runs don't share a profile.
-  const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
-  await cp(profileDir, runDir, { recursive: true });
+// Run from a throwaway copy so the cache stays pristine and parallel runs don't share a profile.
+const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
+await cp(profileDir, runDir, { recursive: true });
 
-  const context = await chromium.launchPersistentContext(runDir, {
-    args: launchArgs(extensionPath),
-    headless: false,
-  });
+const context = await chromium.launchPersistentContext(runDir, {
+  args: launchArgs(extensionPath),
+  headless: false,
+});
 
-  const extensionId = extensionIdFromPath(extensionPath);
+const extensionId = extensionIdFromPath(extensionPath);
 
-  // Kept open (not closed after unlock): the settings/network/account actions drive this page.
-  const home = await definition.reachUnlockScreen(context, extensionId);
-  await definition.unlock(home, setup.password);
-  await closeStrayPages(context, home);
+// Kept open (not closed after unlock): the settings/network/account actions drive this page.
+const home = await definition.reachUnlockScreen(context, extensionId);
+await definition.unlock(home, setup.password);
+await closeStrayPages(context, home);
 
-  return {
-    context,
-    wallet: createWallet({ context, definition, extensionId, home, password: setup.password }),
-  };
+return {
+  context,
+  wallet: createWallet({ context, definition, extensionId, home, password: setup.password }),
+};
 ```
 
 Existing imports at the top (`launch.ts:1-12`):
@@ -82,7 +82,7 @@ code, comments, or commits; use a period, comma, semicolon, or parentheses. `rm`
 ## Commands you will need
 
 | Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
+| --------- | -------------------------------------- | ------------------- |
 | Install   | `pnpm install`                         | exit 0              |
 | Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
 | Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
@@ -92,9 +92,11 @@ code, comments, or commits; use a period, comma, semicolon, or parentheses. `rm`
 ## Scope
 
 **In scope** (only file to modify):
+
 - `packages/walletwright/src/internal/launch.ts`
 
 **Out of scope** (do NOT touch):
+
 - `internal/cache.ts` and `buildCache`; the persistent cache is intentionally kept.
 - `closeStrayPages`; unrelated tab cleanup.
 - The `{ context, wallet }` return shape; callers depend on it.
@@ -118,16 +120,16 @@ Target shape:
 ```ts
 import { cp, mkdtemp, rm } from "node:fs/promises";
 // ...
-  const context = await chromium.launchPersistentContext(runDir, {
-    args: launchArgs(extensionPath),
-    headless: false,
-  });
+const context = await chromium.launchPersistentContext(runDir, {
+  args: launchArgs(extensionPath),
+  headless: false,
+});
 
-  // The throwaway profile copy is only needed while the context is live; drop it on close so a long
-  // suite (workers x specs x retries) doesn't fill the temp dir with profile copies.
-  context.on("close", () => {
-    void rm(runDir, { force: true, recursive: true }).catch(() => {});
-  });
+// The throwaway profile copy is only needed while the context is live; drop it on close so a long
+// suite (workers x specs x retries) doesn't fill the temp dir with profile copies.
+context.on("close", () => {
+  void rm(runDir, { force: true, recursive: true }).catch(() => {});
+});
 ```
 
 **Verify**: `pnpm --filter walletwright typecheck` → exit 0, no errors.
@@ -141,8 +143,9 @@ import { cp, mkdtemp, rm } from "node:fs/promises";
 
 No new unit test: this needs a launched browser context, which the CI-runnable vitest suite does not
 have (only `src/wallets/registry.test.ts` runs there, browser-free). Verification is typecheck + lint
-+ build plus reviewer confirmation that the close handler removes `runDir`. Do NOT add a
-browser-driving test; that belongs to the headed demo specs, which are out of scope.
+
+- build plus reviewer confirmation that the close handler removes `runDir`. Do NOT add a
+  browser-driving test; that belongs to the headed demo specs, which are out of scope.
 
 ## Done criteria
 

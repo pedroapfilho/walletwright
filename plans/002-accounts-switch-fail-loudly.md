@@ -72,7 +72,7 @@ non-obvious WHY. Never use a long dash (U+2014).
 ## Commands you will need
 
 | Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
+| --------- | -------------------------------------- | ------------------- |
 | Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
 | Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
 | Build     | `pnpm --filter walletwright build`     | "Build complete"    |
@@ -80,9 +80,11 @@ non-obvious WHY. Never use a long dash (U+2014).
 ## Scope
 
 **In scope**:
+
 - `packages/walletwright/src/wallets/metamask/actions/accounts.ts`
 
 **Out of scope** (do NOT touch):
+
 - `add`, `importPrivateKey`, `rename` in the same file. Only `switchTo` changes.
 - `internal/controller.ts` and the `AccountActions` type; the signature stays
   `(ctx, index) => Promise<void>`.

@@ -48,7 +48,9 @@ deterministic for a given absolute path and differs for different paths.
   `context.pages()`:
 
 ```ts
-  const action = (fn, name) => async (...args) => {
+const action =
+  (fn, name) =>
+  async (...args) => {
     if (!fn) throw unsupported(name);
     await fn(ctx, ...args);
     const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
@@ -70,20 +72,22 @@ No `as any`; when stubbing Playwright types, cast through `as unknown as Browser
 
 ## Commands you will need
 
-| Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
-| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
-| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
-| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new)|
-| Build     | `pnpm --filter walletwright build`     | "Build complete"    |
+| Purpose   | Command (from repo root)               | Expected on success  |
+| --------- | -------------------------------------- | -------------------- |
+| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors    |
+| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors  |
+| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new) |
+| Build     | `pnpm --filter walletwright build`     | "Build complete"     |
 
 ## Scope
 
 **In scope** (create these test files only):
+
 - `packages/walletwright/src/internal/utils.test.ts`
 - `packages/walletwright/src/internal/controller.test.ts`
 
 **Out of scope**:
+
 - Any source file under `src/`. This plan adds tests only; do NOT modify `utils.ts`,
   `controller.ts`, or types to make them "more testable"; they are already testable as shown.
 - `download.test.ts` (owned by plans 005/006).
@@ -98,11 +102,13 @@ No `as any`; when stubbing Playwright types, cast through `as unknown as Browser
 ### Step 1: `utils.test.ts`
 
 Test `profileKey`:
+
 - returns a 20-character lowercase hex string for a sample `WalletSetup`.
 - is deterministic (same input gives same output).
 - changes when any of `wallet`, `version`, `seedPhrase`, `password` changes.
 
 Test `extensionIdFromPath`:
+
 - for an absolute path that does not exist on disk, returns a string matching `/^[a-p]{32}$/`.
 - is deterministic for the same path and differs for a different path.
 
@@ -121,6 +127,7 @@ Import `createWallet` from `./controller.ts`. Construct a minimal fake `WalletDe
 `{ pages: () => [] } as unknown as BrowserContext` and a stub home `{} as unknown as Page`.
 
 Cases:
+
 - Calling a capability the definition does NOT declare rejects with a message containing
   `does not support settings.lock` (definition whose `actions` omits `settings`).
 - Calling a declared capability invokes its function: set `actions.network.add = vi.fn()`, call

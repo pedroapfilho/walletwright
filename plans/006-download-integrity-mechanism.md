@@ -22,7 +22,7 @@
 `downloadAndExtractExtension` fetches an extension archive over the network and extracts it with no
 integrity verification. A compromised release, a hijacked mirror, or a swapped Chrome Web Store CRX
 would be loaded and driven with a (test) wallet on a dev or CI machine. This plan adds the
-*mechanism*: an optional `sha256` that, when provided, is checked against the downloaded bytes before
+_mechanism_: an optional `sha256` that, when provided, is checked against the downloaded bytes before
 extraction, throwing on mismatch. It deliberately does NOT hard-code any hash values: a trustworthy
 hash must come from the vendor's published checksum, not from re-hashing whatever we downloaded
 (which would give false assurance). Pinning real hashes is a follow-up maintainer task, noted below.
@@ -73,20 +73,22 @@ dash (U+2014), `[walletwright] ...` error prefix.
 
 ## Commands you will need
 
-| Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
-| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
-| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
-| Build     | `pnpm --filter walletwright build`     | "Build complete"    |
-| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new)|
+| Purpose   | Command (from repo root)               | Expected on success  |
+| --------- | -------------------------------------- | -------------------- |
+| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors    |
+| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors  |
+| Build     | `pnpm --filter walletwright build`     | "Build complete"     |
+| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new) |
 
 ## Scope
 
 **In scope**:
+
 - `packages/walletwright/src/internal/download.ts`
 - `packages/walletwright/src/internal/download.test.ts` (create, or extend if 005 created it)
 
 **Out of scope**:
+
 - The wallet definitions (`metamask.ts`, `phantom.ts`, `slush.ts`); do NOT add hash values to them.
 - `WalletDefinition.prepareExtension` signature in `types.ts`; unchanged.
 
@@ -138,6 +140,7 @@ are already alphabetical: `cacheDir, kind, name, url`; insert `sha256` before `u
 
 Add tests to `download.test.ts` (create it if 005 did not; if 005 created it, reuse its local
 `node:http` fixture-server helper, do NOT use `file://`). Browser-free. Cases:
+
 - correct `sha256` (compute it from your fixture bytes with `createHash("sha256").update(bytes).digest("hex")`
   in the test) → extraction succeeds.
 - wrong `sha256` (e.g. `"0".repeat(64)`) → throws an error whose message contains

@@ -30,22 +30,22 @@ Validating entry paths before extraction closes the hole cheaply.
 - `packages/walletwright/src/internal/download.ts`. The extraction (`download.ts:38-53`):
 
 ```ts
-  let zipBytes = bytes;
-  if (kind === "crx") {
-    const start = bytes.indexOf(ZIP_SIGNATURE);
-    if (start === -1) {
-      throw new Error(`[walletwright] ${url} is not a valid CRX (no ZIP header found)`);
-    }
-    zipBytes = bytes.subarray(start);
+let zipBytes = bytes;
+if (kind === "crx") {
+  const start = bytes.indexOf(ZIP_SIGNATURE);
+  if (start === -1) {
+    throw new Error(`[walletwright] ${url} is not a valid CRX (no ZIP header found)`);
   }
+  zipBytes = bytes.subarray(start);
+}
 
-  await rm(outDir, { force: true, recursive: true });
-  new AdmZip(zipBytes).extractAllTo(outDir, /* overwrite */ true);
+await rm(outDir, { force: true, recursive: true });
+new AdmZip(zipBytes).extractAllTo(outDir, /* overwrite */ true);
 
-  if (!existsSync(path.join(outDir, "manifest.json"))) {
-    throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
-  }
-  return outDir;
+if (!existsSync(path.join(outDir, "manifest.json"))) {
+  throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
+}
+return outDir;
 ```
 
 Imports (`download.ts:1-5`):
@@ -68,20 +68,22 @@ non-obvious WHY, no long dash (U+2014). Error messages use the `[walletwright] .
 
 ## Commands you will need
 
-| Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
-| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
-| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
-| Build     | `pnpm --filter walletwright build`     | "Build complete"    |
-| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new)|
+| Purpose   | Command (from repo root)               | Expected on success  |
+| --------- | -------------------------------------- | -------------------- |
+| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors    |
+| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors  |
+| Build     | `pnpm --filter walletwright build`     | "Build complete"     |
+| Unit test | `pnpm --filter walletwright test`      | all pass (incl. new) |
 
 ## Scope
 
 **In scope**:
+
 - `packages/walletwright/src/internal/download.ts`
 - `packages/walletwright/src/internal/download.test.ts` (create)
 
 **Out of scope**:
+
 - The CRX header slicing logic (`ZIP_SIGNATURE`, `indexOf`); leave it.
 - The download/fetch logic; leave it.
 - The wallet definitions that call this.
@@ -101,17 +103,17 @@ Compute the resolved target for each entry and confirm it is `outDir` itself or 
 Target shape (replace the `new AdmZip(...).extractAllTo(...)` line region):
 
 ```ts
-  await rm(outDir, { force: true, recursive: true });
-  const zip = new AdmZip(zipBytes);
-  const root = path.resolve(outDir);
-  for (const entry of zip.getEntries()) {
-    const target = path.resolve(root, entry.entryName);
-    // Reject zip-slip: an entry like "../../x" must not resolve outside the extraction root.
-    if (target !== root && !target.startsWith(root + path.sep)) {
-      throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
-    }
+await rm(outDir, { force: true, recursive: true });
+const zip = new AdmZip(zipBytes);
+const root = path.resolve(outDir);
+for (const entry of zip.getEntries()) {
+  const target = path.resolve(root, entry.entryName);
+  // Reject zip-slip: an entry like "../../x" must not resolve outside the extraction root.
+  if (target !== root && !target.startsWith(root + path.sep)) {
+    throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
   }
-  zip.extractAllTo(outDir, /* overwrite */ true);
+}
+zip.extractAllTo(outDir, /* overwrite */ true);
 ```
 
 **Verify**: `pnpm --filter walletwright typecheck` → exit 0.
@@ -149,6 +151,7 @@ the temp dirs and close the server in an `afterEach`/`afterAll`. Model the vites
 `packages/walletwright/src/wallets/registry.test.ts`.
 
 Test cases:
+
 - benign archive (contains `manifest.json`) extracts, and the returned dir contains `manifest.json`.
 - archive with an entry named `../escape.txt` throws an error whose message contains `escapes`.
 

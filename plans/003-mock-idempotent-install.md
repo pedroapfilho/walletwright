@@ -31,8 +31,8 @@ second call with an error that does not name the real cause. The fix makes a rep
 Excerpt (`mock.ts:63-64`):
 
 ```ts
-  const bindingName = "__walletwrightMockRpc";
-  await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
+const bindingName = "__walletwrightMockRpc";
+await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
 ```
 
 `target` is typed `BrowserContext | Page` (`mock.ts:29-32`). Both expose `exposeFunction`. Playwright
@@ -44,11 +44,11 @@ dash (U+2014). The file already uses `try/catch` nowhere; keep the addition mini
 
 ## Commands you will need
 
-| Purpose   | Command (from repo root)               | Expected on success |
-|-----------|----------------------------------------|---------------------|
-| Typecheck | `pnpm --filter walletwright typecheck` | exit 0, no errors   |
-| Lint      | `pnpm --filter walletwright lint`      | 0 warnings 0 errors |
-| Build     | `pnpm --filter walletwright build`     | "Build complete"    |
+| Purpose   | Command (from repo root)                                     | Expected on success |
+| --------- | ------------------------------------------------------------ | ------------------- |
+| Typecheck | `pnpm --filter walletwright typecheck`                       | exit 0, no errors   |
+| Lint      | `pnpm --filter walletwright lint`                            | 0 warnings 0 errors |
+| Build     | `pnpm --filter walletwright build`                           | "Build complete"    |
 | Mock spec | `pnpm --filter demo exec playwright test tests/mock.spec.ts` | 1 passed (see note) |
 
 Note on the mock spec: it needs the demo dev server, which the Playwright config starts automatically
@@ -61,9 +61,11 @@ build for this plan; do not treat an environment failure as a plan failure.
 ## Scope
 
 **In scope**:
+
 - `packages/walletwright/src/mock.ts`
 
 **Out of scope**:
+
 - `apps/demo/tests/mock.spec.ts` (you may run it, do not edit it).
 - The `handle` RPC logic, the EIP-6963 announce, the exported types.
 
@@ -83,16 +85,16 @@ bridge is already installed", rethrow anything else.
 Target shape:
 
 ```ts
-  const bindingName = "__walletwrightMockRpc";
-  try {
-    await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
-  } catch (error) {
-    // Playwright rejects a second exposeFunction with the same name; the bridge is already there,
-    // so a repeat install (e.g. in a per-test hook) is fine. Any other error is real.
-    if (!(error instanceof Error && error.message.includes("already registered"))) {
-      throw error;
-    }
+const bindingName = "__walletwrightMockRpc";
+try {
+  await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
+} catch (error) {
+  // Playwright rejects a second exposeFunction with the same name; the bridge is already there,
+  // so a repeat install (e.g. in a per-test hook) is fine. Any other error is real.
+  if (!(error instanceof Error && error.message.includes("already registered"))) {
+    throw error;
   }
+}
 ```
 
 The `addInitScript` call below it is naturally idempotent enough for a repeat install (it re-adds the
