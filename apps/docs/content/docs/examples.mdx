@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: "Copy-paste recipes for walletwright: connect and sign, connector libraries, multi-chain, transactions with on-chain assertions, accounts and networks, the mock wallet, custom fixtures, and page objects."
+description: "Copy-paste recipes for walletwright: connect and sign, connector libraries, Privy, multi-chain, transactions with on-chain assertions, accounts and networks, the mock wallet, custom fixtures, and page objects."
 ---
 
 Every recipe below uses the same `wallet` fixture API. The wallet-side calls (`connectToDapp()`,
@@ -162,6 +162,79 @@ test("connect and sign on Sui", async ({ page, wallet }) => {
   await expect(page.getByTestId("sui-signature")).not.toBeEmpty();
 });
 ```
+
+## Privy with external wallets
+
+A dapp using [Privy](https://privy.io) with external wallets enabled doesn't change what walletwright
+drives: Privy talks to the same injected provider, and the extension opens its usual popups. Your
+test clicks through Privy's login modal (it renders in the page's DOM, so plain locators work), and
+the wallet calls stay the same. The one Privy-specific detail is that it authenticates external
+wallets with a SIWE message, so a connect popup and a `personal_sign` popup arrive back to back;
+the login isn't complete until both are approved.
+
+```tsx
+// The dapp side: external wallets only, no embedded wallet.
+<PrivyProvider
+  appId={appId}
+  config={{
+    appearance: { walletList: ["detected_ethereum_wallets"] },
+    embeddedWallets: { ethereum: { createOnLogin: "off" } },
+    loginMethods: ["wallet"],
+  }}
+>
+  <Dapp />
+</PrivyProvider>
+```
+
+```ts
+// tests/privy.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("log in with Privy via MetaMask", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Log in" }).click();
+  await page.getByRole("button", { name: /MetaMask/i }).click(); // Privy's wallet list
+
+  await wallet.connectToDapp(); // the connect popup
+  await wallet.confirmSignature(); // Privy's SIWE personal_sign popup
+
+  await expect(page.getByTestId("account")).toHaveText(/^0x[0-9a-fA-F]{40}$/);
+});
+```
+
+<Callout type="warn">
+  This covers Privy's external-wallet path only. Embedded wallets (email, social, passkey login)
+  keep their keys inside Privy's own iframe: there is no extension popup, so there is nothing for
+  walletwright to drive.
+</Callout>
+
+You need a Privy **app id** (the public client-side identifier from
+[dashboard.privy.io](https://dashboard.privy.io), no app secret). Privy also publishes a shared
+**test app id** (`clpispdty00ycl80fpueukbhl`) that works only from `http://localhost:3000`; the
+demo page defaults to it so `pnpm dev` lets you click the flow by hand. That shared id is heavily
+rate-limited, though, so its connect and SIWE round-trips can each take tens of seconds, too slow to
+drive a reliable automated test. The spec therefore runs only when you point `VITE_PRIVY_APP_ID` at
+your own app:
+
+```bash
+pnpm test:cache
+VITE_PRIVY_APP_ID=your-app-id pnpm test tests/privy.spec.ts
+```
+
+<Callout type="info">
+  Because Privy's connect and SIWE popups can arrive with variable delay, the demo spec drives
+  whatever approval popup is pending until the account appears, rather than assuming a fixed
+  connect-then-sign order. See `apps/demo/tests/privy.spec.ts`.
+</Callout>
+
+The demo app has a runnable version of this recipe (`apps/demo/privy.html` and
+`tests/privy.spec.ts`); set `VITE_PRIVY_APP_ID` to a Privy app id with wallet login enabled to run
+it.
 
 ## Rejecting a request
 
