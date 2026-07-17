@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
@@ -17,9 +18,10 @@ export const downloadAndExtractExtension = async (options: {
   cacheDir: string;
   kind: "zip" | "crx";
   name: string;
+  sha256?: string;
   url: string;
 }): Promise<string> => {
-  const { cacheDir, kind, name, url } = options;
+  const { cacheDir, kind, name, sha256, url } = options;
   const outDir = path.resolve(cacheDir, name);
   if (existsSync(path.join(outDir, "manifest.json"))) {
     return outDir;
@@ -34,6 +36,15 @@ export const downloadAndExtractExtension = async (options: {
     );
   }
   const bytes = Buffer.from(await response.arrayBuffer());
+
+  if (sha256) {
+    const actual = createHash("sha256").update(bytes).digest("hex");
+    if (actual !== sha256.toLowerCase()) {
+      throw new Error(
+        `[walletwright] ${name} failed integrity check: expected ${sha256}, got ${actual}`,
+      );
+    }
+  }
 
   let zipBytes = bytes;
   if (kind === "crx") {

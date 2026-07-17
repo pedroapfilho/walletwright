@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -76,5 +77,59 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({ cacheDir, kind: "zip", name: "evil-extension", url }),
     ).rejects.toThrow(/escapes/v);
+  });
+
+  it("extracts when the given sha256 matches the downloaded bytes", async () => {
+    const zip = new AdmZip();
+    zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
+    const bytes = zip.toBuffer();
+    const { close, url } = await serve(bytes);
+    servers.push({ close });
+
+    const cacheDir = await makeCacheDir();
+    const outDir = await downloadAndExtractExtension({
+      cacheDir,
+      kind: "zip",
+      name: "hashed-extension",
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      url,
+    });
+
+    expect(existsSync(path.join(outDir, "manifest.json"))).toBe(true);
+  });
+
+  it("throws when the given sha256 does not match the downloaded bytes", async () => {
+    const zip = new AdmZip();
+    zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
+    const { close, url } = await serve(zip.toBuffer());
+    servers.push({ close });
+
+    const cacheDir = await makeCacheDir();
+    await expect(
+      downloadAndExtractExtension({
+        cacheDir,
+        kind: "zip",
+        name: "wrong-hash-extension",
+        sha256: "0".repeat(64),
+        url,
+      }),
+    ).rejects.toThrow(/failed integrity check/v);
+  });
+
+  it("extracts when no sha256 is given (unchanged behavior)", async () => {
+    const zip = new AdmZip();
+    zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
+    const { close, url } = await serve(zip.toBuffer());
+    servers.push({ close });
+
+    const cacheDir = await makeCacheDir();
+    const outDir = await downloadAndExtractExtension({
+      cacheDir,
+      kind: "zip",
+      name: "no-hash-extension",
+      url,
+    });
+
+    expect(existsSync(path.join(outDir, "manifest.json"))).toBe(true);
   });
 });
