@@ -78,24 +78,38 @@ type Wallet = {
   rejectConnection: () => Promise<void>;
   rejectSignature: () => Promise<void>;
   reject: (options?: { optional?: boolean }) => Promise<void>;
+  network: {
+    add: (config: NetworkConfig) => Promise<void>;
+    switch: (chainId: number) => Promise<void>;
+  };
   settings: { lock: () => Promise<void>; unlock: () => Promise<void> };
   readonly home: Page;
   readonly extensionId: string;
 };
+
+type NetworkConfig = {
+  name: string;
+  chainId: number;
+  rpcUrl: string;
+  symbol: string;
+  blockExplorerUrl?: string;
+};
 ```
 
-| Member               | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `connectToDapp()`    | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.           |
-| `confirmSignature()` | Approve a pending signature popup. Throws if no popup appears.                              |
-| `approve(options)`   | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none. |
-| `rejectConnection()` | Reject a pending connection popup.                                                          |
-| `rejectSignature()`  | Reject a pending signature popup.                                                           |
-| `reject(options)`    | Reject any pending popup. The counterpart of `approve`.                                     |
-| `settings.lock()`    | Lock the wallet from its own UI.                                                            |
-| `settings.unlock()`  | Unlock it again with the setup's password.                                                  |
-| `home`               | The wallet's own extension page. Named `home` because `page` means the dapp under test.     |
-| `extensionId`        | The loaded extension id.                                                                    |
+| Member                | Description                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `connectToDapp()`     | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
+| `confirmSignature()`  | Approve a pending signature popup. Throws if no popup appears.                                                   |
+| `approve(options)`    | Approve any pending popup, connect or sign or transaction. `optional: true` tolerates none.                      |
+| `rejectConnection()`  | Reject a pending connection popup.                                                                               |
+| `rejectSignature()`   | Reject a pending signature popup.                                                                                |
+| `reject(options)`     | Reject any pending popup. The counterpart of `approve`.                                                          |
+| `network.add(config)` | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
+| `network.switch(id)`  | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
+| `settings.lock()`     | Lock the wallet from its own UI.                                                                                 |
+| `settings.unlock()`   | Unlock it again with the setup's password.                                                                       |
+| `home`                | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
+| `extensionId`         | The loaded extension id.                                                                                         |
 
 ### Capabilities are per-wallet
 
@@ -107,8 +121,14 @@ declared throws rather than silently doing nothing:
 [walletwright] Slush does not support reject()
 ```
 
-Today `reject` is verified on MetaMask and Phantom, and `settings` on MetaMask. Slush's onboarding
-can't currently be driven, so it declares neither.
+Today `reject` is verified on MetaMask and Phantom, and `settings` and `network.add` on MetaMask.
+Slush's onboarding can't currently be driven, so it declares none of them.
+
+`network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
+and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls
+`wallet_addEthereumChain` (idempotent: adds when missing, switches when present) and
+`wallet.approve()` drives the popup. Avoid a bare EIP-3326 `wallet_switchEthereumChain` for custom
+chains; in MetaMask 13.x it hangs with no popup and no error. See the network recipe in Examples.
 
 ## `launchWallet(setup)`
 
@@ -121,6 +141,30 @@ const page = await context.newPage();
 // drive the page and the wallet here
 await context.close();
 ```
+
+## `walletwright/chain`
+
+A local EVM node for network and transaction tests, as a separate entry point so the core
+connect/sign flow doesn't depend on it. It needs the `prool` package (optional peer) and Foundry's
+`anvil` binary on `PATH`.
+
+```ts
+import { createLocalChain } from "walletwright/chain";
+
+const chain = await createLocalChain(); // { chainId: 31337, rpcUrl: "http://127.0.0.1:8545" }
+// … run tests against it …
+await chain.stop();
+```
+
+| Option     | Default                       | Description                            |
+| ---------- | ----------------------------- | -------------------------------------- |
+| `chainId`  | `31337`                       | Chain id of the local node.            |
+| `port`     | `8545`                        | Port for the JSON-RPC endpoint.        |
+| `mnemonic` | the public Hardhat/Anvil seed | Seed for the pre-funded accounts.      |
+| `binary`   | `anvil`                       | Binary to launch (resolved on `PATH`). |
+
+The default mnemonic pre-funds `0xf39F…92266` with 10000 ETH, the same account the MetaMask
+`WalletSetup` in these docs imports, so specs can assert against it with no extra funding step.
 
 ## `wallets`
 

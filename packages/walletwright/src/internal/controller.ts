@@ -31,7 +31,15 @@ export const createWallet = ({
     settle: (popup: Page) => Promise<void>,
     { optional = false }: ResolveOptions,
   ): Promise<void> => {
-    const popup = await findNotificationPopup(context, extensionId, match);
+    // Required popups get 30s: the MV3 service worker spawns them slowly after the wallet's own UI
+    // has been driven. Optional ones keep the short wait, since "no popup" is a normal outcome
+    // there (e.g. Phantom auto-approving a trusted site) and the extra wait would just be latency.
+    const popup = await findNotificationPopup(
+      context,
+      extensionId,
+      match,
+      optional ? 10_000 : 30_000,
+    );
     if (!popup) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
@@ -64,15 +72,24 @@ export const createWallet = ({
   /**
    * Bind an optional capability, or fail loudly naming the wallet and action. A wallet declares only
    * what has been driven against the real extension, so an undeclared action is a real gap rather
-   * than something to swallow.
+   * than something to swallow. Extra args (e.g. a network config) forward after the context.
+   *
+   * After the action, focus returns to the dapp: actions drive the wallet's own page via
+   * `bringToFront`, and while an extension page stays the active tab, MetaMask renders new
+   * approvals inline there instead of spawning the `notification.html` popup the engine drives.
    */
   const action =
-    (fn: ((ctx: WalletActionContext) => Promise<void>) | undefined, name: string) =>
-    async (): Promise<void> => {
+    <A extends ReadonlyArray<unknown>>(
+      fn: ((ctx: WalletActionContext, ...args: A) => Promise<void>) | undefined,
+      name: string,
+    ) =>
+    async (...args: A): Promise<void> => {
       if (!fn) {
         throw unsupported(name);
       }
-      await fn(ctx);
+      await fn(ctx, ...args);
+      const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
+      await dapp?.bringToFront().catch(() => {});
     };
 
   return {
@@ -82,6 +99,10 @@ export const createWallet = ({
     connectToDapp: () => approve({ optional: true }),
     extensionId,
     home,
+    network: {
+      add: action(definition.actions?.network?.add, "network.add"),
+      switch: action(definition.actions?.network?.switch, "network.switch"),
+    },
     reject,
     rejectConnection: () => reject({ optional: false }),
     rejectSignature: () => reject({ optional: false }),

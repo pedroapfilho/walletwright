@@ -71,7 +71,17 @@ export const findNotificationPopup = async (
     const popup = context.pages().find((page) => isApprovalPopup(page, extensionId, match));
     if (popup) {
       await popup.waitForLoadState("domcontentloaded").catch(() => {});
-      return popup;
+      // The window opens before the approval renders (bare URL, zero buttons) and routes later,
+      // sometimes tens of seconds later under a busy MV3 worker. "Found" must mean "usable", so
+      // keep polling the same shell until a button shows up rather than handing back a blank page.
+      const usable = await popup
+        .locator("button")
+        .first()
+        .isVisible()
+        .catch(() => false);
+      if (usable) {
+        return popup;
+      }
     }
     await sleep(200);
   }
