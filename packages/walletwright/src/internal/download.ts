@@ -45,7 +45,16 @@ export const downloadAndExtractExtension = async (options: {
   }
 
   await rm(outDir, { force: true, recursive: true });
-  new AdmZip(zipBytes).extractAllTo(outDir, /* overwrite */ true);
+  const zip = new AdmZip(zipBytes);
+  const root = path.resolve(outDir);
+  for (const entry of zip.getEntries()) {
+    const target = path.resolve(root, entry.entryName);
+    // Reject zip-slip: an entry like "../../x" must not resolve outside the extraction root.
+    if (target !== root && !target.startsWith(root + path.sep)) {
+      throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
+    }
+  }
+  zip.extractAllTo(outDir, /* overwrite */ true);
 
   if (!existsSync(path.join(outDir, "manifest.json"))) {
     throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
