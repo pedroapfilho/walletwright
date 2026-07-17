@@ -7,8 +7,11 @@ const { expect } = test;
 
 const ACCOUNT = /^0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266$/i;
 
-// The demo page ships a real Privy app id (see src/privy.tsx), so this runs by default. Point
-// VITE_PRIVY_APP_ID at your own app to test against a different Privy configuration.
+// Runs only with your own Privy app id (dashboard.privy.io, wallet login enabled, localhost:3000
+// allowed), via the VITE_PRIVY_APP_ID env var or a local apps/demo/.env (see .env.example; the
+// Playwright config loads it). The page's default is Privy's shared public test app id, fine for
+// clicking by hand but too rate-limited to drive a reliable automated run.
+test.skip(!process.env.VITE_PRIVY_APP_ID, "set VITE_PRIVY_APP_ID (or apps/demo/.env) to run");
 
 // Privy authenticates an external wallet with SIWE, so login raises two popups back to back — a
 // connect, then a personal_sign. Drive whatever popup is pending until the account appears rather

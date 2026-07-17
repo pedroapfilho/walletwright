@@ -215,16 +215,15 @@ test("log in with Privy via MetaMask", async ({ page, wallet }) => {
 
 You need a Privy **app id** (the public client-side identifier from
 [dashboard.privy.io](https://dashboard.privy.io), no app secret) with wallet login enabled and your
-dapp's origin allowed. The demo ships its own app id (see `apps/demo/src/privy.tsx`), so its spec
-runs by default; point `VITE_PRIVY_APP_ID` at a different app to test another configuration:
+dapp's origin allowed. The demo page falls back to Privy's shared public test app id, which is fine
+for clicking the flow by hand but too rate-limited to drive a reliable automated run, so the spec
+runs only when you provide your own id, either as an env var or in a local gitignored
+`apps/demo/.env` (see `.env.example`; the Playwright config loads it):
 
 ```bash
 pnpm test:cache
 VITE_PRIVY_APP_ID=your-app-id pnpm test tests/privy.spec.ts
 ```
-
-Avoid Privy's shared public test app id for automation: it is heavily rate-limited, and its connect
-and SIWE round-trips can each take tens of seconds.
 
 <Callout type="info">
   Because Privy's connect and SIWE popups can arrive with variable delay, the demo spec drives
