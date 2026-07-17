@@ -74,13 +74,13 @@ The target is the top 3 wallets per ecosystem. A wallet enters `WalletKind` and 
 once its **connect and sign are verified end-to-end**. Looking done is not enough; verifying it is
 the whole point of walletwright. Everything else is roadmap.
 
-| Ecosystem | Verified | Roadmap (next)                   |
-| --------- | -------- | -------------------------------- |
-| EVM       | MetaMask | Rabby, Coinbase Wallet           |
-| SVM       | Phantom  | Solflare, Backpack               |
-| SUI       | Slush    | Suiet, Nightly                   |
-| DOT       | none yet | Talisman, SubWallet, Polkadot.js |
-| BTC       | none yet | Xverse, UniSat, Leather          |
+| Ecosystem | Verified          | Roadmap (next)                   |
+| --------- | ----------------- | -------------------------------- |
+| EVM       | MetaMask          | Rabby, Coinbase Wallet           |
+| SVM       | Phantom, MetaMask | Solflare, Backpack               |
+| SUI       | Slush             | Suiet, Nightly                   |
+| DOT       | none yet          | Talisman, SubWallet, Polkadot.js |
+| BTC       | none yet          | Xverse, UniSat, Leather          |
 
 Adding a wallet is empirical: drive the real extension, never guess selectors. Download the CRX,
 launch it headed, and snapshot each onboarding screen (its buttons, testids, and inputs) to discover

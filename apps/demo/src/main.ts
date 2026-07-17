@@ -147,6 +147,55 @@ const handlePhantomSvmSign = async () => {
   $("#phantomSvmSignature").textContent = toHex(signature);
 };
 
+// --- MetaMask Solana (Wallet Standard, solana:* features) ---
+type SolanaStandardAccount = { address: string; publicKey: Uint8Array };
+type SolanaStandardWallet = {
+  accounts: ReadonlyArray<SolanaStandardAccount>;
+  chains: ReadonlyArray<string>;
+  features: Record<string, unknown>;
+  name: string;
+};
+
+const getMetamaskSolana = () =>
+  waitFor(
+    () =>
+      getWallets()
+        .get()
+        .find(
+          (wallet) =>
+            wallet.name === "MetaMask" &&
+            (wallet as SolanaStandardWallet).chains.some((chain) => chain.startsWith("solana:")),
+        ) as SolanaStandardWallet | undefined,
+  );
+
+let mmSvmAccount: SolanaStandardAccount | undefined;
+
+const handleMmSvmConnect = async () => {
+  const wallet = await getMetamaskSolana();
+  const feature = wallet.features["standard:connect"] as {
+    connect: () => Promise<{ accounts: ReadonlyArray<SolanaStandardAccount> }>;
+  };
+  const { accounts } = await feature.connect();
+  mmSvmAccount = accounts[0];
+  $("#mmSvmAccount").textContent = mmSvmAccount?.address ?? "";
+  $<HTMLButtonElement>("#mmSvmSign").disabled = !mmSvmAccount;
+};
+
+const handleMmSvmSign = async () => {
+  const wallet = await getMetamaskSolana();
+  const feature = wallet.features["solana:signMessage"] as {
+    signMessage: (input: {
+      account: SolanaStandardAccount;
+      message: Uint8Array;
+    }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
+  };
+  const [output] = await feature.signMessage({
+    account: mmSvmAccount as SolanaStandardAccount,
+    message: new TextEncoder().encode("Hello walletwright Solana"),
+  });
+  $("#mmSvmSignature").textContent = toHex(output?.signature ?? new Uint8Array());
+};
+
 // --- Slush / Sui (Wallet Standard, sui:* features) ---
 type SuiAccount = { address: string };
 type StandardWallet = {
@@ -224,5 +273,7 @@ $("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
 $("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
 $("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
 $("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
+$("#mmSvmConnect").addEventListener("click", handleMmSvmConnect);
+$("#mmSvmSign").addEventListener("click", handleMmSvmSign);
 $("#suiConnect").addEventListener("click", handleSuiConnect);
 $("#suiSign").addEventListener("click", handleSuiSign);

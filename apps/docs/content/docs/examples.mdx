@@ -137,6 +137,36 @@ test("phantom EVM + Solana", async ({ page, wallet }) => {
   shows up.
 </Callout>
 
+## MetaMask on Solana
+
+MetaMask 13.x announces a Solana wallet over the Wallet Standard, so the same MetaMask setup drives
+Solana dapps too. Your dapp connects through `standard:connect` and signs through
+`solana:signMessage`; the wallet calls stay `connectToDapp()` and `confirmSignature()`.
+
+```ts
+// tests/metamask-solana.spec.ts
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "../wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("connect and sign on Solana with MetaMask", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("mm-svm-connect").click();
+  await wallet.connectToDapp();
+  await expect(page.getByTestId("mm-svm-account")).toHaveText(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+
+  await page.getByTestId("mm-svm-sign").click();
+  await wallet.confirmSignature();
+  await expect(page.getByTestId("mm-svm-signature")).toHaveText(/^0x[0-9a-fA-F]{128}$/);
+});
+```
+
+The runnable version is `apps/demo/tests/metamask-solana.spec.ts`; the dapp side (selecting the
+Wallet Standard wallet named "MetaMask" with `solana:` chains) is in `apps/demo/src/main.ts`.
+
 ## Sui (Slush)
 
 Slush connects through the Wallet Standard and re-prompts for the password when signing. The fixture

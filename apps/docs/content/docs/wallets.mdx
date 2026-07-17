@@ -9,7 +9,7 @@ its `ecosystems` (`evm`, `svm`, `sui`, `dot`, `btc`), and `walletKindsByEcosyste
 wallets that drive a chain. The roadmap is the top 3 wallets per ecosystem, and a wallet ships only
 once its connect and sign are verified end-to-end.
 
-## MetaMask (EVM)
+## MetaMask (EVM + Solana)
 
 ```ts
 import type { WalletSetup } from "walletwright";
@@ -22,6 +22,9 @@ export const metamask: WalletSetup = {
 ```
 
 - Drives `window.ethereum`: connect, `personal_sign` and `eth_signTypedData`, transaction approvals.
+- Drives Solana through the Wallet Standard (`standard:connect`, `solana:signMessage`), which
+  MetaMask 13.x announces natively. Solana requests route through MetaMask's Solana snap, whose
+  approval popups walletwright handles like any other.
 - Downloaded from the MetaMask GitHub releases. A known-good version is pinned; override it with
   `version` (for example `version: "13.35.1"`).
 - The public `test … junk` seed is fine here. Its first account is the well-known `0xf39F…2266`
