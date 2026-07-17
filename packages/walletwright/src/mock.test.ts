@@ -53,8 +53,21 @@ describe("createRpcHandler", () => {
     expect(hexSignature).toBe(utf8Signature);
   });
 
-  it("resolves wallet_addEthereumChain to null", async () => {
+  it("signs a message that merely starts with 0x via the UTF-8 branch", async () => {
+    const message = "0x is a prefix";
+    const signature = (await handle({
+      method: "personal_sign",
+      params: [message, account.address],
+    })) as `0x${string}`;
+
+    await expect(verifyMessage({ address: account.address, message, signature })).resolves.toBe(
+      true,
+    );
+  });
+
+  it("resolves wallet_addEthereumChain and wallet_switchEthereumChain to null", async () => {
     await expect(handle({ method: "wallet_addEthereumChain" })).resolves.toBeNull();
+    await expect(handle({ method: "wallet_switchEthereumChain" })).resolves.toBeNull();
   });
 
   it("rejects an unsupported method", async () => {
