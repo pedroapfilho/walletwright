@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
@@ -17,9 +18,10 @@ export const downloadAndExtractExtension = async (options: {
   cacheDir: string;
   kind: "zip" | "crx";
   name: string;
+  sha256?: string;
   url: string;
 }): Promise<string> => {
-  const { cacheDir, kind, name, url } = options;
+  const { cacheDir, kind, name, sha256, url } = options;
   const outDir = path.resolve(cacheDir, name);
   if (existsSync(path.join(outDir, "manifest.json"))) {
     return outDir;
@@ -35,6 +37,15 @@ export const downloadAndExtractExtension = async (options: {
   }
   const bytes = Buffer.from(await response.arrayBuffer());
 
+  if (sha256) {
+    const actual = createHash("sha256").update(bytes).digest("hex");
+    if (actual !== sha256.toLowerCase()) {
+      throw new Error(
+        `[walletwright] ${name} failed integrity check: expected ${sha256}, got ${actual}`,
+      );
+    }
+  }
+
   let zipBytes = bytes;
   if (kind === "crx") {
     const start = bytes.indexOf(ZIP_SIGNATURE);
@@ -45,7 +56,16 @@ export const downloadAndExtractExtension = async (options: {
   }
 
   await rm(outDir, { force: true, recursive: true });
-  new AdmZip(zipBytes).extractAllTo(outDir, /* overwrite */ true);
+  const zip = new AdmZip(zipBytes);
+  const root = path.resolve(outDir);
+  for (const entry of zip.getEntries()) {
+    const target = path.resolve(root, entry.entryName);
+    // Reject zip-slip: an entry like "../../x" must not resolve outside the extraction root.
+    if (target !== root && !target.startsWith(root + path.sep)) {
+      throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
+    }
+  }
+  zip.extractAllTo(outDir, /* overwrite */ true);
 
   if (!existsSync(path.join(outDir, "manifest.json"))) {
     throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);

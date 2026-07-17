@@ -35,7 +35,7 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm exec playwright install --with-deps chromium
-      - run: walletwright cache --setup ./wallet-setup.ts
+      - run: node scripts/build-cache.ts
       - run: xvfb-run --auto-servernum pnpm exec playwright test
 ```
 

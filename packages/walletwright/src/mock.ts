@@ -61,7 +61,15 @@ const installMockWallet = async (
   };
 
   const bindingName = "__walletwrightMockRpc";
-  await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
+  try {
+    await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
+  } catch (error) {
+    // Playwright rejects a second exposeFunction with the same name; the bridge is already there,
+    // so a repeat install (e.g. in a per-test hook) is fine. Any other error is real.
+    if (!(error instanceof Error && error.message.includes("already registered"))) {
+      throw error;
+    }
+  }
 
   await target.addInitScript(
     ([binding, info]) => {

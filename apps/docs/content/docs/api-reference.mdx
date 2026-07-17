@@ -100,7 +100,6 @@ type NetworkConfig = {
   chainId: number;
   rpcUrl: string;
   symbol: string;
-  blockExplorerUrl?: string;
 };
 ```
 
@@ -136,7 +135,8 @@ declared throws rather than silently doing nothing:
 ```
 
 Today `reject` is verified on MetaMask and Phantom, and `settings`, `network.add`, and `accounts`
-on MetaMask. Slush's onboarding can't currently be driven, so it declares none of them.
+on MetaMask. Slush drives connect and sign end to end but declares none of the optional
+capabilities yet, so calling any of them on Slush throws.
 
 `network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
 and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls

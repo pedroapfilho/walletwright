@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { cp, mkdtemp } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -67,6 +67,12 @@ export const launchWalletContext = async (setup: WalletSetup): Promise<LaunchedW
   const context = await chromium.launchPersistentContext(runDir, {
     args: launchArgs(extensionPath),
     headless: false,
+  });
+
+  // The throwaway profile copy is only needed while the context is live; drop it on close so a long
+  // suite (workers x specs x retries) doesn't fill the temp dir with profile copies.
+  context.on("close", async () => {
+    await rm(runDir, { force: true, recursive: true }).catch(() => {});
   });
 
   const extensionId = extensionIdFromPath(extensionPath);

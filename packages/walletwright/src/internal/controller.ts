@@ -102,6 +102,9 @@ export const createWallet = ({
       await dapp?.bringToFront().catch(() => {});
     };
 
+  // Capability contract: each method is declared in three places that must stay in sync, its
+  // optional fn in WalletActions (types.ts), its runtime signature in the *Api types on Wallet, and
+  // its binding below. capability-wiring.test.ts guards the binding-to-fn half.
   return {
     accounts: {
       add: action(definition.actions?.accounts?.add, "accounts.add"),
