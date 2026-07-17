@@ -6,7 +6,6 @@ const closeButton = (home: Page) =>
   home.getByTestId("modal-header-close-button").filter({ visible: true }).first();
 
 const openNetworkManager = async (home: Page): Promise<void> => {
-  await home.bringToFront();
   await home.getByTestId("sort-by-networks").click();
   // The manager is a modal; its close button is present whether the Popular or Custom tab is shown.
   await closeButton(home).waitFor({ state: "visible" });

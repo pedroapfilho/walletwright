@@ -3,7 +3,6 @@ import type { Page } from "@playwright/test";
 import type { AccountActions, WalletActionContext } from "../../../types.ts";
 
 const openAccountMenu = async (home: Page): Promise<void> => {
-  await home.bringToFront();
   await home.getByTestId("account-menu-icon").click();
   await home.getByTestId("add-multichain-account-button").waitFor({ state: "visible" });
 };

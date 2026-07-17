@@ -35,7 +35,7 @@ describe("capability wiring", () => {
       context: { pages: () => [] } as unknown as BrowserContext,
       definition,
       extensionId: "fake",
-      home: {} as unknown as Page,
+      home: { bringToFront: () => Promise.resolve(), isClosed: () => false } as unknown as Page,
       password: "pw",
     });
 
