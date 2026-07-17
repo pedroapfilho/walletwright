@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:cache": "node scripts/build-cache.ts",
     "test:cache:one": "node scripts/cache-one.ts",
-    "test": "playwright test"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@privy-io/react-auth": "^3.34.0",

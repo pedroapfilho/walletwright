@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   description:
-    "Documentation for walletwright: Playwright wallet automation for MetaMask (EVM), Phantom (EVM + Solana), and Slush (Sui). Connect and sign in real browser extensions.",
+    "Documentation for walletwright: Playwright wallet automation for MetaMask (EVM + Solana), Phantom (EVM + Solana), and Slush (Sui). Connect and sign in real browser extensions.",
   metadataBase: new URL("https://walletwright.dev"),
   title: {
     default: "walletwright: Playwright wallet automation",

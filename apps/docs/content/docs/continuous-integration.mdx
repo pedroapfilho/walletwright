@@ -53,6 +53,14 @@ seed as a test secret.
     key: walletwright-${{ runner.os }}-${{ hashFiles('wallet-setup.ts') }}
 ```
 
+## Network and transaction specs
+
+The specs that submit a transaction or switch networks also need a local chain reachable at
+`127.0.0.1:8545` with chain id `31337` (Foundry's `anvil`, seeded with the public test mnemonic, or
+`createLocalChain()` from `walletwright/chain`). Most CI setups skip these specs since they add an
+extra process to run; run them locally or add an `anvil` step before the test command if you want
+them on CI.
+
 ## Flakiness
 
 MV3 service workers can be timing-sensitive on cold launches. Set Playwright `retries` (2 is plenty)

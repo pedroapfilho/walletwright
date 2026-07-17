@@ -5,8 +5,8 @@ this file.
 
 ## What this repo is
 
-`walletwright` is a **Playwright wallet-automation library** for **MetaMask (EVM)**, **Phantom
-(EVM + Solana)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
+`walletwright` is a **Playwright wallet-automation library** for **MetaMask (EVM + Solana)**,
+**Phantom (EVM + Solana)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
 unlocks and drives the extension's connect/sign approval popups against a dapp under test.
 
 walletwright takes the approach that works — onboard once, cache the profile, drive the popups — and
@@ -34,12 +34,14 @@ apps/
 
 ## Dev workflow
 
-Root scripts run turbo: `build`, `test`, `test:coverage`, `lint`, `typecheck`, `clean`, `dev`.
+Root scripts run turbo: `build`, `test`, `test:coverage`, `lint`, `typecheck`, `clean`, `dev`. Root
+`test` runs only the walletwright unit suite; root `test:e2e` runs the demo's headed specs.
 Root-only: `format`/`format:check` (oxfmt), `changeset`/`version-packages`/`release`.
 
 Run the demo end-to-end from `apps/demo`: `pnpm exec playwright install chromium`, then
-`pnpm test:cache` to onboard the wallets, then `pnpm test` to connect and sign. Run it headed (see
-below).
+`pnpm test:cache` to onboard the wallets, then `pnpm test:e2e` to connect and sign. Run it headed
+(see below). The network and transaction specs also need a local chain on `127.0.0.1:8545` (chain
+id `31337`), e.g. Foundry's `anvil` seeded with the public test mnemonic.
 
 ## Architecture
 
