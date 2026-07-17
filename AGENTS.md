@@ -176,7 +176,13 @@ Each item below cost real debugging time. Don't "simplify" them away.
     suggested") and `gas-option-advanced` against anvil. Synpress-style low/market/aggressive
     presets (`gas-option-<key>`) need EIP-1559 fee history to appear, so `confirmTransaction`
     ships without a gas argument until those can be driven for real.
-19. **After driving the wallet's own UI, popups spawn late and the extension tab steals them.**
+19. **The account menu is a popover with no close button.** Open it with `account-menu-icon`; to
+    leave, navigate home (`goto(#/)`). `add-multichain-account-button` derives the next HD account
+    with no dialog; per-account actions hang off `multichain-account-cell-end-accessory` →
+    `multichain-account-menu-item-{rename,accountDetails,…}`. Import-from-key is `add-wallet` →
+    `choose-wallet-type-import-account`, and a successful import returns to the wallet-type chooser,
+    not home, so wait for the confirm button to disappear rather than for the home screen.
+20. **After driving the wallet's own UI, popups spawn late and the extension tab steals them.**
     While an extension page is the active tab, MetaMask renders new approvals inline there instead
     of opening `notification.html`, so the action binder re-fronts the dapp when an action ends
     (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so

@@ -33,6 +33,16 @@ export type WalletActionContext = {
   password: string;
 };
 
+/** Create, import, rename, and switch accounts from the wallet's own UI. */
+export type AccountActions = {
+  /** Derive the next HD account from the seed. */
+  add?: (ctx: WalletActionContext) => Promise<void>;
+  importPrivateKey?: (ctx: WalletActionContext, privateKey: string) => Promise<void>;
+  rename?: (ctx: WalletActionContext, options: { index: number; name: string }) => Promise<void>;
+  /** Make the account at `index` (order shown in the wallet's account list) the active one. */
+  switch?: (ctx: WalletActionContext, index: number) => Promise<void>;
+};
+
 /** A custom EVM network, as the wallet's add-network form expects it. */
 export type NetworkConfig = {
   blockExplorerUrl?: string;
@@ -61,6 +71,7 @@ export type SettingsActions = {
  * for much of MetaMask's. Anything undeclared throws a clear error at call time.
  */
 export type WalletActions = {
+  accounts?: AccountActions;
   network?: NetworkActions;
   settings?: SettingsActions;
 };
@@ -121,8 +132,17 @@ export type NetworkApi = {
   switch: (chainId: number) => Promise<void>;
 };
 
+/** Manage accounts from the wallet's own UI. Throws if the wallet doesn't declare support. */
+export type AccountsApi = {
+  add: () => Promise<void>;
+  importPrivateKey: (privateKey: string) => Promise<void>;
+  rename: (options: { index: number; name: string }) => Promise<void>;
+  switch: (index: number) => Promise<void>;
+};
+
 /** Drives an unlocked wallet against a dapp under test. */
 export type Wallet = {
+  accounts: AccountsApi;
   /** Approve whatever approval popup is currently pending (connect, sign, tx…). */
   approve: (options?: { optional?: boolean }) => Promise<void>;
   /** Approve a pending signature request popup. */

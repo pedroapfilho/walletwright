@@ -103,6 +103,15 @@ export const createWallet = ({
     };
 
   return {
+    accounts: {
+      add: action(definition.actions?.accounts?.add, "accounts.add"),
+      importPrivateKey: action(
+        definition.actions?.accounts?.importPrivateKey,
+        "accounts.importPrivateKey",
+      ),
+      rename: action(definition.actions?.accounts?.rename, "accounts.rename"),
+      switch: action(definition.actions?.accounts?.switch, "accounts.switch"),
+    },
     approve,
     confirmSignature: () => approve({ optional: false }),
     confirmTransaction: () => approve({ optional: false }),
