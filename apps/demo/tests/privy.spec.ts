@@ -7,11 +7,8 @@ const { expect } = test;
 
 const ACCOUNT = /^0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266$/i;
 
-// Runs only with your own Privy app id (dashboard.privy.io, wallet login enabled). The page also
-// defaults to Privy's *public* test app id so `pnpm dev` works for manual clicking, but that shared
-// id is heavily rate-limited — connect and the SIWE round-trip can each take tens of seconds — which
-// makes an automated run too flaky to keep in CI. Point VITE_PRIVY_APP_ID at a real app to run this.
-test.skip(!process.env.VITE_PRIVY_APP_ID, "set VITE_PRIVY_APP_ID to a real Privy app id to run");
+// The demo page ships a real Privy app id (see src/privy.tsx), so this runs by default. Point
+// VITE_PRIVY_APP_ID at your own app to test against a different Privy configuration.
 
 // Privy authenticates an external wallet with SIWE, so login raises two popups back to back — a
 // connect, then a personal_sign. Drive whatever popup is pending until the account appears rather

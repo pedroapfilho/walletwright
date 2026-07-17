@@ -214,17 +214,17 @@ test("log in with Privy via MetaMask", async ({ page, wallet }) => {
 </Callout>
 
 You need a Privy **app id** (the public client-side identifier from
-[dashboard.privy.io](https://dashboard.privy.io), no app secret). Privy also publishes a shared
-**test app id** (`clpispdty00ycl80fpueukbhl`) that works only from `http://localhost:3000`; the
-demo page defaults to it so `pnpm dev` lets you click the flow by hand. That shared id is heavily
-rate-limited, though, so its connect and SIWE round-trips can each take tens of seconds, too slow to
-drive a reliable automated test. The spec therefore runs only when you point `VITE_PRIVY_APP_ID` at
-your own app:
+[dashboard.privy.io](https://dashboard.privy.io), no app secret) with wallet login enabled and your
+dapp's origin allowed. The demo ships its own app id (see `apps/demo/src/privy.tsx`), so its spec
+runs by default; point `VITE_PRIVY_APP_ID` at a different app to test another configuration:
 
 ```bash
 pnpm test:cache
 VITE_PRIVY_APP_ID=your-app-id pnpm test tests/privy.spec.ts
 ```
+
+Avoid Privy's shared public test app id for automation: it is heavily rate-limited, and its connect
+and SIWE round-trips can each take tens of seconds.
 
 <Callout type="info">
   Because Privy's connect and SIWE popups can arrive with variable delay, the demo spec drives
@@ -233,8 +233,7 @@ VITE_PRIVY_APP_ID=your-app-id pnpm test tests/privy.spec.ts
 </Callout>
 
 The demo app has a runnable version of this recipe (`apps/demo/privy.html` and
-`tests/privy.spec.ts`); set `VITE_PRIVY_APP_ID` to a Privy app id with wallet login enabled to run
-it.
+`tests/privy.spec.ts`).
 
 ## Rejecting a request
 
