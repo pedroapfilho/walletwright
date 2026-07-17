@@ -30,6 +30,18 @@ Reviewer notes:
 - 005 zip-slip test: `adm-zip.addFile` sanitizes a leading `../`, so the test rewrites `entryName`
   directly to simulate a real malicious archive. Sound approach.
 
+### Cycle 2 (2026-07-17, against `0060500`)
+
+| Plan | Title                                                               | Priority | Effort | Depends on | Status |
+| ---- | ------------------------------------------------------------------- | -------- | ------ | ---------- | ------ |
+| 009  | Fresh-clone test story + stale MetaMask (EVM) claims                | P1       | S      | none       | TODO   |
+| 010  | Engine layering: relocate MetaMask patch, centralize focus          | P1       | S      | none       | TODO   |
+| 011  | Demo cleanup: wallet-standard helper, error surfaces, fixtures      | P2       | M      | none       | TODO   |
+| 012  | Hardening: mock RPC tests, action pin, version guard, deps, archive | P2       | M      | none       | TODO   |
+
+Each cycle-2 plan is one PR; branches `improve-dx-docs`, `improve-engine-layering`,
+`improve-demo-cleanup`, `improve-hardening`, all off `0060500`.
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rationale)
 
 ## Dependency notes
@@ -40,6 +52,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
   first.
 - 007 and 008 (tests) intentionally land after the behavior fixes (001, 002) so the tests describe
   the final, corrected behavior.
+
+## Cycle 2 review outcomes
+
+All four plans executed, PR-reviewed (9 review agents), and revised once. Rejected during review:
+the optional-connect distrust-of-failed-refront rework (wrong layer, risks verified Phantom
+auto-approve), the mnemonic-wording nit, and micro test gaps the reviewers themselves rated noise.
+Follow-up left open: a Slush rejection spec needs `reject` in slush.ts first.
 
 ## Findings considered and rejected
 
