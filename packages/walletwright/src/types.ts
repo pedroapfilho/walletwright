@@ -127,6 +127,8 @@ export type Wallet = {
   approve: (options?: { optional?: boolean }) => Promise<void>;
   /** Approve a pending signature request popup. */
   confirmSignature: () => Promise<void>;
+  /** Approve a pending transaction request popup. */
+  confirmTransaction: () => Promise<void>;
   /** Approve a pending connection request popup. Resolves quietly if the wallet auto-approved. */
   connectToDapp: () => Promise<void>;
   /** The loaded extension id. */
@@ -143,5 +145,7 @@ export type Wallet = {
   rejectConnection: () => Promise<void>;
   /** Reject a pending signature request popup. */
   rejectSignature: () => Promise<void>;
+  /** Reject a pending transaction request popup. */
+  rejectTransaction: () => Promise<void>;
   settings: SettingsApi;
 };
