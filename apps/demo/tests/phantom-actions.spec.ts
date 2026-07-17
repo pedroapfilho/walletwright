@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { phantomTest } from "./fixtures.ts";
 
-import { phantomSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(phantomSetup);
+const test = phantomTest;
 const { expect } = test;
 
 test("Phantom: reject an EVM connection request", async ({ page, wallet }) => {

@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { metamaskTest } from "./fixtures.ts";
 
-import { metamaskSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(metamaskSetup);
+const test = metamaskTest;
 const { expect } = test;
 
 // MetaMask announces a Solana wallet over the Wallet Standard (chains solana:*, standard:connect,

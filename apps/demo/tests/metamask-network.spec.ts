@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { connectMetamask, metamaskTest } from "./fixtures.ts";
 
-import { metamaskSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(metamaskSetup);
+const test = metamaskTest;
 const { expect } = test;
 
 // These specs need the local chain running on 127.0.0.1:8545 with chain id 31337 (see
@@ -10,9 +8,7 @@ const { expect } = test;
 const LOCAL_CHAIN_HEX = "0x7a69";
 
 test("dapp-initiated add-and-switch via wallet_addEthereumChain", async ({ page, wallet }) => {
-  await page.goto("/");
-  await page.locator("#connectButton").click();
-  await wallet.connectToDapp();
+  await connectMetamask(page, wallet);
 
   await page.locator("#switchChainButton").click();
   // MetaMask confirms the add and the switch in a single popup.
@@ -21,9 +17,7 @@ test("dapp-initiated add-and-switch via wallet_addEthereumChain", async ({ page,
 });
 
 test("wallet-UI network.add, then the dapp switches onto it", async ({ page, wallet }) => {
-  await page.goto("/");
-  await page.locator("#connectButton").click();
-  await wallet.connectToDapp();
+  await connectMetamask(page, wallet);
 
   await wallet.network.add({
     chainId: 31_337,
