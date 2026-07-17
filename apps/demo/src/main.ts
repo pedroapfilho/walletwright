@@ -148,7 +148,7 @@ const handlePhantomSvmSign = async () => {
 };
 
 // --- MetaMask Solana (Wallet Standard, solana:* features) ---
-type SolanaStandardAccount = { address: string; publicKey: Uint8Array };
+type SolanaStandardAccount = { address: string };
 type SolanaStandardWallet = {
   accounts: ReadonlyArray<SolanaStandardAccount>;
   chains: ReadonlyArray<string>;
