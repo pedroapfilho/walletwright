@@ -1,0 +1,170 @@
+---
+title: Comparison with Synpress
+description: "How walletwright compares to Synpress: a feature table, side-by-side code, and a method migration map."
+---
+
+[Synpress](https://synpress.io) pioneered wallet automation for Playwright and inspired this
+project. walletwright takes the approach that works (onboard once, cache the profile, drive the
+popups) and rebuilds it clean: plain `@playwright/test`, current wallet and Chromium versions, no
+fork and no patched dependencies. This page compares the two honestly, including where Synpress has
+more surface.
+
+<Callout type="info">
+  Accurate as of Synpress v4.1 (`dev` branch) and the current walletwright, July 2026. Both projects
+  move; check their docs for anything load-bearing.
+</Callout>
+
+## Feature table
+
+|                       | walletwright                                                                                               | Synpress                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Test runner           | plain `@playwright/test` (peer dependency, you own the version)                                            | Playwright and Cypress, with its own fixtures package per wallet                            |
+| Playwright version    | current (`>=1.48` peer range)                                                                              | pinned older (4.x targets 1.48)                                                             |
+| Wallet builds         | current MetaMask 13.x, Phantom, Slush                                                                      | the versions its selectors target                                                           |
+| Ecosystems            | EVM, Solana, Sui                                                                                           | EVM, Solana                                                                                 |
+| Wallets               | MetaMask, Phantom, Slush                                                                                   | MetaMask, Phantom, EVM wallet mock                                                          |
+| Connect / sign        | yes, verified per wallet                                                                                   | yes                                                                                         |
+| Reject flows          | `reject`, `rejectConnection`, `rejectSignature`, `rejectTransaction`                                       | `reject*` for signatures, transactions, networks, token permissions                         |
+| Transactions          | `confirmTransaction` / `rejectTransaction`                                                                 | `confirmTransaction({ gasSetting })` with gas presets, `confirmTransactionAndWaitForMining` |
+| Networks              | `network.add` from the wallet UI; switching is dapp-initiated (current MetaMask has no wallet-side switch) | `addNetwork`, `switchNetwork` against the MetaMask UI it pins                               |
+| Accounts              | `accounts.add`, `switch`, `rename`, `importPrivateKey`                                                     | add, switch, rename, import from key, `getAccountAddress`, `resetAccount`                   |
+| Tokens                | roadmap                                                                                                    | `approveTokenPermission({ spendLimit })`, `addNewToken`                                     |
+| Lock / unlock         | `settings.lock` / `settings.unlock`                                                                        | `lock` / `unlock`                                                                           |
+| Undeclared capability | throws `[walletwright] <wallet> does not support <action>()`                                               | method exists per wallet class                                                              |
+| Local chain           | `walletwright/chain` (anvil via prool, optional peer)                                                      | Anvil fixtures plus `deployToken` / `deployAndMintERC1155` helpers                          |
+| Provider mock         | `walletwright/mock`: EIP-6963 announce, signs with a real key so signatures verify                         | `ethereum-wallet-mock` package                                                              |
+| Cache identity        | hash of `(wallet, version, seed, password)`                                                                | hash of the setup function's source, so custom setup steps cache too                        |
+| Adding a wallet       | one `WalletDefinition` object in one registry                                                              | a new package with its own page objects and fixtures                                        |
+| Extension id          | derived from the manifest key or load path (no browser query to race)                                      | queried from the browser                                                                    |
+
+Two philosophical differences drive most rows. walletwright tracks **current** wallet and browser
+builds and ships a capability only after driving it against the real extension, so its surface is
+smaller but every method is verified; the per-wallet capability model makes an unsupported call
+throw instead of existing untested. Synpress offers a **wider** MetaMask surface (tokens, gas
+presets, encryption) and a second runner, built against the wallet versions it pins.
+
+## The same test, side by side
+
+Connect and sign against MetaMask.
+
+```ts
+// walletwright
+import { createWalletFixtures } from "walletwright";
+import { metamask } from "./wallet-setup";
+
+const test = createWalletFixtures(metamask);
+const { expect } = test;
+
+test("connect and sign", async ({ page, wallet }) => {
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await wallet.connectToDapp();
+
+  await page.getByTestId("sign").click();
+  await wallet.confirmSignature();
+  await expect(page.getByTestId("signature")).toContainText("0x");
+});
+```
+
+```ts
+// Synpress v4
+import { testWithSynpress } from "@synthetixio/synpress";
+import { MetaMask, metaMaskFixtures } from "@synthetixio/synpress/playwright";
+import basicSetup from "./wallet-setup/basic.setup";
+
+const test = testWithSynpress(metaMaskFixtures(basicSetup));
+const { expect } = test;
+
+test("connect and sign", async ({ context, page, metamaskPage, extensionId }) => {
+  const metamask = new MetaMask(context, metamaskPage, basicSetup.walletPassword, extensionId);
+  await page.goto("/");
+
+  await page.getByTestId("connect").click();
+  await metamask.connectToDapp();
+
+  await page.getByTestId("sign").click();
+  await metamask.confirmSignature();
+  await expect(page.getByTestId("signature")).toContainText("0x");
+});
+```
+
+The structural difference: walletwright hands you a ready `wallet` fixture bound to one declared
+`WalletSetup`; Synpress hands you the raw pieces (`context`, `metamaskPage`, `extensionId`) and you
+construct the wallet page object per test.
+
+## Setup and cache, side by side
+
+```ts
+// walletwright: wallet-setup.ts, a plain data object
+import type { WalletSetup } from "walletwright";
+
+export const metamask: WalletSetup = {
+  wallet: "metamask",
+  seedPhrase: "test test test test test test test test test test test junk",
+  password: "Tester@1234",
+};
+```
+
+```ts
+// Synpress: wallet-setup/basic.setup.ts, a function that drives onboarding
+import { defineWalletSetup } from "@synthetixio/synpress";
+import { MetaMask } from "@synthetixio/synpress/playwright";
+
+const SEED_PHRASE = "test test test test test test test test test test test junk";
+const PASSWORD = "Tester@1234";
+
+export default defineWalletSetup(PASSWORD, async (context, walletPage) => {
+  const metamask = new MetaMask(context, walletPage, PASSWORD);
+  await metamask.importWallet(SEED_PHRASE);
+});
+```
+
+```bash
+# walletwright: cache from the CLI or buildCache() in code
+walletwright cache --wallet metamask --seed "..." --password "..."
+
+# Synpress: cache from its CLI, hashing the setup function's source
+synpress
+```
+
+The trade-off is real on both sides. Synpress's setup **function** can drive arbitrary onboarding
+steps (import extra accounts, add a network) and caches them, invalidating when the function's
+source changes. walletwright's setup is a plain **data object** (wallet, seed, password, version):
+less flexible, but nothing to keep in sync with a hash of your own code, and post-launch state comes
+from explicit `wallet.accounts.*` / `wallet.network.*` calls inside the test instead.
+
+## Method migration map
+
+For a suite moving from Synpress's MetaMask class to the walletwright `wallet` fixture:
+
+| Synpress                                      | walletwright                                                                                                                                                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metamask.connectToDapp()`                    | `wallet.connectToDapp()`                                                                                                                                                                             |
+| `metamask.confirmSignature()`                 | `wallet.confirmSignature()`                                                                                                                                                                          |
+| `metamask.rejectSignature()`                  | `wallet.rejectSignature()`                                                                                                                                                                           |
+| `metamask.confirmTransaction()`               | `wallet.confirmTransaction()`                                                                                                                                                                        |
+| `metamask.confirmTransaction({ gasSetting })` | not yet (gas presets need EIP-1559 fee history to render; see [Architecture](/architecture))                                                                                                         |
+| `metamask.rejectTransaction()`                | `wallet.rejectTransaction()`                                                                                                                                                                         |
+| `metamask.addNewAccount(name)`                | `wallet.accounts.add()` then `wallet.accounts.rename({ index, name })`                                                                                                                               |
+| `metamask.switchAccount(name)`                | `wallet.accounts.switch(index)` (by list position, not name)                                                                                                                                         |
+| `metamask.importWalletFromPrivateKey(key)`    | `wallet.accounts.importPrivateKey(key)`                                                                                                                                                              |
+| `metamask.addNetwork(network)`                | `wallet.network.add(config)`                                                                                                                                                                         |
+| `metamask.switchNetwork(name)`                | dapp-initiated: have the dapp call `wallet_addEthereumChain`, then `wallet.approve()` (current MetaMask has no wallet-side switcher; see the [network recipe](/examples#networks-and-a-local-chain)) |
+| `metamask.lock()` / `unlock()`                | `wallet.settings.lock()` / `wallet.settings.unlock()`                                                                                                                                                |
+| `metamask.approveTokenPermission(...)`        | not yet; on the roadmap                                                                                                                                                                              |
+| `connectToDapp(accounts)` (account selection) | not yet; connect approves as-is                                                                                                                                                                      |
+| Anvil fixtures / `deployToken`                | `createLocalChain()` from `walletwright/chain`; no deploy helper yet                                                                                                                                 |
+| `ethereum-wallet-mock`                        | `installMockWallet()` from `walletwright/mock`                                                                                                                                                       |
+| Cypress commands (`cy.*`)                     | none by design; walletwright is Playwright-only                                                                                                                                                      |
+
+## When to pick which
+
+Pick **Synpress** if you need Cypress, token-permission or gas-preset flows today, or its
+setup-function caching, and you are comfortable pinning the wallet and Playwright versions its
+selectors target.
+
+Pick **walletwright** if you want current wallet and browser builds on plain `@playwright/test`,
+Sui coverage, a mock whose signatures actually verify, or the guarantee that every method you can
+call has been driven against the real extension. The unimplemented rows above are roadmap, and each
+lands the same way everything here landed: verified end to end first.
