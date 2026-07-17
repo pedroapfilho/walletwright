@@ -228,10 +228,10 @@ for anything it did not:
 [walletwright] Slush does not support reject()
 ```
 
-That is the design center: the API never claims support a wallet has not proven. `addNetwork` is
+That is the design center: the API never claims support a wallet has not proven. `network.add` is
 meaningless for Slush (Sui), and Phantom's settings UI has no analogue for much of MetaMask's, so
-those wallets simply omit the group. An undeclared call is a real gap surfaced loudly, never a
-silent no-op.
+those wallets omit the group. An undeclared call is a real gap surfaced loudly, never a silent
+no-op.
 
 ### How a capability is wired
 
@@ -315,17 +315,11 @@ typing, but calling it on a wallet that did not declare `network.add` throws imm
 
 ## Deriving the extension id
 
-Chrome assigns an extension its id, and querying it is unreliable under automation:
-`chrome://extensions` is blocked headless and the MV3 service worker starts lazily, so a query
-races. walletwright computes the id instead (`extensionIdFromPath` in `utils.ts`):
-
-- if the manifest has a public `key` (Phantom ships its fixed Web Store id), hash that
-- otherwise hash the absolute load path (MetaMask has no key)
-- take the sha256, first 16 bytes, and map each nibble `0-f` to `a-p`
-
-The load path is resolved through symlinks first, because Chrome hashes the real path. A cache under
-a symlinked directory (macOS `/tmp` points at `/private/tmp`) would otherwise derive the wrong id and
-every navigation would fail with `ERR_BLOCKED_BY_CLIENT`.
+The engine never asks the browser for the extension id (`chrome://extensions` is blocked headless
+and the MV3 worker races); it computes the id from the manifest's public `key` or the absolute load
+path with `extensionIdFromPath` in `utils.ts`. The derivation and the symlink caveat are covered in
+[How it works](/how-it-works); what matters architecturally is that every engine module receives the
+id as a plain string, so nothing downstream depends on browser state.
 
 ## The cache
 
