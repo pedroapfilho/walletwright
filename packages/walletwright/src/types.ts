@@ -45,7 +45,6 @@ export type AccountActions = {
 
 /** A custom EVM network, as the wallet's add-network form expects it. */
 export type NetworkConfig = {
-  blockExplorerUrl?: string;
   chainId: number;
   name: string;
   rpcUrl: string;
