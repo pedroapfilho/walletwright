@@ -59,11 +59,16 @@ const rename = async (
 const switchTo = async ({ home }: WalletActionContext, index: number): Promise<void> => {
   await openAccountMenu(home);
   await home.getByTestId("account-cell-avatar").nth(index).click();
-  // Selecting an account closes the menu and makes it active.
-  await home
+  // Selecting an account closes the menu and makes it active; if the menu is still open, the
+  // switch did not happen (bad index, missed click), which must be an error, not a silent no-op.
+  const menuClosed = await home
     .getByTestId("add-multichain-account-button")
     .waitFor({ state: "hidden", timeout: 10_000 })
-    .catch(() => closeAccountMenu(home));
+    .then(() => true)
+    .catch(() => false);
+  if (!menuClosed) {
+    throw new Error(`[walletwright] accounts.switch(${index}) did not switch (menu stayed open)`);
+  }
 };
 
 export const accounts: AccountActions = {
