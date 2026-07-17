@@ -9,17 +9,20 @@ const HELP = `walletwright: build the onboarded wallet cache for Playwright test
 
 Usage:
   walletwright cache --setup <file>            Build cache from a module's default-exported WalletSetup
-  walletwright cache --wallet <metamask|phantom> --seed "<phrase>" --password "<pw>" [--version <v>]
+  walletwright cache --wallet <metamask|phantom|slush> --seed "<phrase>" --password "<pw>" [--version <v>]
 
 Options:
-  --setup <file>     JS/MJS module whose default export is a WalletSetup
-  --wallet <kind>    metamask | phantom
+  --setup <file>     A module whose default export is a WalletSetup (.ts works on modern Node)
+  --wallet <kind>    metamask | phantom | slush
   --seed <phrase>    seed phrase to import
   --password <pw>    wallet password
   --version <v>      pin an extension version
   --cache-dir <dir>  cache directory (default: .walletwright)
   --headless         build the cache headless (onboarding only; tests still need headed)
   -h, --help         show this help
+
+--seed and --password are visible in shell history and process lists when passed as flags; use
+test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
 const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {

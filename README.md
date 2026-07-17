@@ -1,7 +1,7 @@
 # walletwright
 
 A monorepo for [`walletwright`](./packages/walletwright), Playwright wallet automation for MetaMask
-(EVM), Phantom (EVM + Solana), and Slush (Sui).
+(EVM + Solana), Phantom (EVM + Solana), and Slush (Sui).
 
 ## Packages
 
@@ -18,7 +18,8 @@ A monorepo for [`walletwright`](./packages/walletwright), Playwright wallet auto
 ```sh
 pnpm install
 pnpm build         # build the library
-pnpm test          # unit tests and the demo E2E (run headed; use xvfb-run on CI)
+pnpm test          # fast unit tests only
+pnpm test:e2e      # the demo's headed extension specs (run headed; use xvfb-run on CI)
 pnpm lint
 pnpm typecheck
 ```
@@ -29,8 +30,13 @@ pnpm typecheck
 cd apps/demo
 pnpm exec playwright install chromium
 pnpm test:cache    # onboard the wallets into cached profiles
-pnpm test          # connect and sign on each wallet
+pnpm test:e2e      # connect and sign on each wallet
 ```
+
+The network and transaction specs additionally need a local chain on `127.0.0.1:8545` (chain id
+`31337`) seeded with the public Foundry test mnemonic: start Foundry's `anvil` directly, or via
+`createLocalChain()` from `walletwright/chain` (which spawns the same binary and needs the optional
+`prool` peer).
 
 ## Docs and context
 

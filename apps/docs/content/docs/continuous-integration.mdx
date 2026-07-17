@@ -53,6 +53,15 @@ seed as a test secret.
     key: walletwright-${{ runner.os }}-${{ hashFiles('wallet-setup.ts') }}
 ```
 
+## Network and transaction specs
+
+The specs that submit a transaction or switch networks also need a local chain on `127.0.0.1:8545`
+with chain id `31337`: start Foundry's `anvil` directly, or via `createLocalChain()` from
+`walletwright/chain` (which spawns the same binary and needs the optional `prool` peer). Without a
+chain these specs fail with slow timeouts rather than skipping, so either add an anvil step before
+the test run or exclude them, for example
+`xvfb-run --auto-servernum pnpm exec playwright test --grep-invert "network|transaction"`.
+
 ## Flakiness
 
 MV3 service workers can be timing-sensitive on cold launches. Set Playwright `retries` (2 is plenty)
