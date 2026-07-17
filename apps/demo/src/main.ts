@@ -1,4 +1,5 @@
-import { getWallets } from "@wallet-standard/app";
+import { connectStandard, findStandardWallet } from "./wallet-standard.ts";
+import type { StandardAccount } from "./wallet-standard.ts";
 
 type Eip1193Provider = {
   request: (args: { method: string; params?: Array<unknown> }) => Promise<unknown>;
@@ -122,13 +123,18 @@ const handlePhantomEvmConnect = async () => {
 };
 
 const handlePhantomEvmSign = async () => {
-  const signature = (await (
-    await getPhantomEvm()
-  ).request({
-    method: "personal_sign",
-    params: ["Hello Phantom EVM", phantomEvmAccount],
-  })) as string;
-  $("#phantomEvmSignature").textContent = signature;
+  $("#phantomEvmError").textContent = "";
+  try {
+    const signature = (await (
+      await getPhantomEvm()
+    ).request({
+      method: "personal_sign",
+      params: ["Hello Phantom EVM", phantomEvmAccount],
+    })) as string;
+    $("#phantomEvmSignature").textContent = signature;
+  } catch (error) {
+    showError(error, "#phantomEvmError");
+  }
 };
 
 // --- Phantom Solana / SVM (window.phantom.solana) ---
@@ -136,111 +142,122 @@ const getPhantomSolana = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.solana);
 
 const handlePhantomSvmConnect = async () => {
-  const { publicKey } = await (await getPhantomSolana()).connect();
-  $("#phantomSvmAccount").textContent = publicKey.toString();
-  $<HTMLButtonElement>("#phantomSvmSign").disabled = false;
+  $("#phantomSvmError").textContent = "";
+  try {
+    const { publicKey } = await (await getPhantomSolana()).connect();
+    $("#phantomSvmAccount").textContent = publicKey.toString();
+    $<HTMLButtonElement>("#phantomSvmSign").disabled = false;
+  } catch (error) {
+    showError(error, "#phantomSvmError");
+  }
 };
 
 const handlePhantomSvmSign = async () => {
-  const message = new TextEncoder().encode("Hello Phantom Solana");
-  const { signature } = await (await getPhantomSolana()).signMessage(message, "utf8");
-  $("#phantomSvmSignature").textContent = toHex(signature);
+  $("#phantomSvmError").textContent = "";
+  try {
+    const message = new TextEncoder().encode("Hello Phantom Solana");
+    const { signature } = await (await getPhantomSolana()).signMessage(message, "utf8");
+    $("#phantomSvmSignature").textContent = toHex(signature);
+  } catch (error) {
+    showError(error, "#phantomSvmError");
+  }
 };
 
 // --- MetaMask Solana (Wallet Standard, solana:* features) ---
-type SolanaStandardAccount = { address: string };
-type SolanaStandardWallet = {
-  accounts: ReadonlyArray<SolanaStandardAccount>;
-  chains: ReadonlyArray<string>;
-  features: Record<string, unknown>;
-  name: string;
-};
-
 const getMetamaskSolana = () =>
-  waitFor(
-    () =>
-      getWallets()
-        .get()
-        .find(
-          (wallet) =>
-            wallet.name === "MetaMask" &&
-            (wallet as SolanaStandardWallet).chains.some((chain) => chain.startsWith("solana:")),
-        ) as SolanaStandardWallet | undefined,
+  waitFor(() =>
+    findStandardWallet(
+      (wallet) =>
+        wallet.name === "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
+    ),
   );
 
-let mmSvmAccount: SolanaStandardAccount | undefined;
+let mmSvmAccount: StandardAccount | undefined;
 
 const handleMmSvmConnect = async () => {
-  const wallet = await getMetamaskSolana();
-  const feature = wallet.features["standard:connect"] as {
-    connect: () => Promise<{ accounts: ReadonlyArray<SolanaStandardAccount> }>;
-  };
-  const { accounts } = await feature.connect();
-  mmSvmAccount = accounts[0];
-  $("#mmSvmAccount").textContent = mmSvmAccount?.address ?? "";
-  $<HTMLButtonElement>("#mmSvmSign").disabled = !mmSvmAccount;
+  $("#mmSvmError").textContent = "";
+  try {
+    const wallet = await getMetamaskSolana();
+    mmSvmAccount = await connectStandard(wallet);
+    $("#mmSvmAccount").textContent = mmSvmAccount.address;
+    $<HTMLButtonElement>("#mmSvmSign").disabled = false;
+  } catch (error) {
+    showError(error, "#mmSvmError");
+  }
 };
 
 const handleMmSvmSign = async () => {
-  const wallet = await getMetamaskSolana();
-  const feature = wallet.features["solana:signMessage"] as {
-    signMessage: (input: {
-      account: SolanaStandardAccount;
-      message: Uint8Array;
-    }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
-  };
-  const [output] = await feature.signMessage({
-    account: mmSvmAccount as SolanaStandardAccount,
-    message: new TextEncoder().encode("Hello walletwright Solana"),
-  });
-  $("#mmSvmSignature").textContent = toHex(output?.signature ?? new Uint8Array());
+  $("#mmSvmError").textContent = "";
+  try {
+    const account = mmSvmAccount;
+    if (!account) {
+      throw new Error("connect MetaMask (Solana) before signing");
+    }
+    const wallet = await getMetamaskSolana();
+    const feature = wallet.features["solana:signMessage"] as {
+      signMessage: (input: {
+        account: StandardAccount;
+        message: Uint8Array;
+      }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
+    };
+    const [output] = await feature.signMessage({
+      account,
+      message: new TextEncoder().encode("Hello walletwright Solana"),
+    });
+    if (!output?.signature) {
+      throw new Error("solana:signMessage returned no signature");
+    }
+    $("#mmSvmSignature").textContent = toHex(output.signature);
+  } catch (error) {
+    showError(error, "#mmSvmError");
+  }
 };
 
 // --- Slush / Sui (Wallet Standard, sui:* features) ---
-type SuiAccount = { address: string };
-type StandardWallet = {
-  accounts: ReadonlyArray<SuiAccount>;
-  chains: ReadonlyArray<string>;
-  features: Record<string, unknown>;
-  name: string;
-};
-
 const getSuiWallet = () =>
-  waitFor(
-    () =>
-      getWallets()
-        .get()
-        .find((wallet) =>
-          (wallet as StandardWallet).chains.some((chain) => chain.startsWith("sui:")),
-        ) as StandardWallet | undefined,
+  waitFor(() =>
+    findStandardWallet((wallet) => wallet.chains.some((chain) => chain.startsWith("sui:"))),
   );
 
-let suiAccount: SuiAccount | undefined;
+let suiAccount: StandardAccount | undefined;
 
 const handleSuiConnect = async () => {
-  const wallet = await getSuiWallet();
-  const feature = wallet.features["standard:connect"] as {
-    connect: () => Promise<{ accounts: ReadonlyArray<SuiAccount> }>;
-  };
-  const { accounts } = await feature.connect();
-  suiAccount = accounts[0];
-  $("#suiAccount").textContent = suiAccount?.address ?? "";
-  $<HTMLButtonElement>("#suiSign").disabled = !suiAccount;
+  $("#suiError").textContent = "";
+  try {
+    const wallet = await getSuiWallet();
+    suiAccount = await connectStandard(wallet);
+    $("#suiAccount").textContent = suiAccount.address;
+    $<HTMLButtonElement>("#suiSign").disabled = false;
+  } catch (error) {
+    showError(error, "#suiError");
+  }
 };
 
 const handleSuiSign = async () => {
-  const wallet = await getSuiWallet();
-  const feature = wallet.features["sui:signPersonalMessage"] as {
-    signPersonalMessage: (input: {
-      account: SuiAccount;
-      message: Uint8Array;
-    }) => Promise<{ signature: string }>;
-  };
-  const { signature } = await feature.signPersonalMessage({
-    account: suiAccount as SuiAccount,
-    message: new TextEncoder().encode("Hello walletwright Sui"),
-  });
-  $("#suiSignature").textContent = signature;
+  $("#suiError").textContent = "";
+  try {
+    const account = suiAccount;
+    if (!account) {
+      throw new Error("connect Slush (Sui) before signing");
+    }
+    const wallet = await getSuiWallet();
+    const feature = wallet.features["sui:signPersonalMessage"] as {
+      signPersonalMessage: (input: {
+        account: StandardAccount;
+        message: Uint8Array;
+      }) => Promise<{ signature: string }>;
+    };
+    const { signature } = await feature.signPersonalMessage({
+      account,
+      message: new TextEncoder().encode("Hello walletwright Sui"),
+    });
+    if (typeof signature !== "string" || !signature) {
+      throw new Error("sui:signPersonalMessage returned no signature");
+    }
+    $("#suiSignature").textContent = signature;
+  } catch (error) {
+    showError(error, "#suiError");
+  }
 };
 
 $("#connectButton").addEventListener("click", handleConnect);

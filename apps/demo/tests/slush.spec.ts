@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { slushTest } from "./fixtures.ts";
 
-import { slushSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(slushSetup);
+const test = slushTest;
 const { expect } = test;
 
 test("Slush: connect + sign on Sui", async ({ page, wallet }) => {

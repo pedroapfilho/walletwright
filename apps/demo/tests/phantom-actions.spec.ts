@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { phantomTest } from "./fixtures.ts";
 
-import { phantomSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(phantomSetup);
+const test = phantomTest;
 const { expect } = test;
 
 test("Phantom: reject an EVM connection request", async ({ page, wallet }) => {
@@ -13,4 +11,12 @@ test("Phantom: reject an EVM connection request", async ({ page, wallet }) => {
 
   await expect(page.locator("#phantomEvmError")).toContainText(/reject/i);
   await expect(page.locator("#phantomEvmAccount")).toBeEmpty();
+});
+
+test("Phantom: reject a Solana connection request", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.locator("#phantomSvmConnect").click();
+  await wallet.rejectConnection();
+  await expect(page.locator("#phantomSvmError")).toContainText(/reject/i);
+  await expect(page.locator("#phantomSvmAccount")).toBeEmpty();
 });

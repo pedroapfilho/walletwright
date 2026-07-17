@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { connectMetamask, metamaskTest } from "./fixtures.ts";
 
-import { metamaskSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(metamaskSetup);
+const test = metamaskTest;
 const { expect } = test;
 
 // Needs the local chain on 127.0.0.1:8545 (see `walletwright/chain`): the sender must hold funds
@@ -25,9 +23,7 @@ const receiptStatus = async (hash: string): Promise<string | undefined> => {
 };
 
 test.beforeEach(async ({ page, wallet }) => {
-  await page.goto("/");
-  await page.locator("#connectButton").click();
-  await wallet.connectToDapp();
+  await connectMetamask(page, wallet);
   await page.locator("#switchChainButton").click();
   await wallet.approve();
   await expect(page.locator("#chainId")).toHaveText("0x7a69");

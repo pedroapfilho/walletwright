@@ -1,8 +1,6 @@
-import { createWalletFixtures } from "walletwright";
+import { metamaskTest } from "./fixtures.ts";
 
-import { metamaskSetup } from "../wallet-setup.ts";
-
-const test = createWalletFixtures(metamaskSetup);
+const test = metamaskTest;
 const { expect } = test;
 
 // MetaMask announces a Solana wallet over the Wallet Standard (chains solana:*, standard:connect,
@@ -20,4 +18,12 @@ test("MetaMask: connect and sign on Solana", async ({ page, wallet }) => {
   await wallet.confirmSignature();
   // An ed25519 signature is 64 bytes, hex-encoded by the demo.
   await expect(page.locator("#mmSvmSignature")).toHaveText(/^0x[0-9a-fA-F]{128}$/);
+});
+
+test("MetaMask: reject a Solana connection request", async ({ page, wallet }) => {
+  await page.goto("/");
+  await page.locator("#mmSvmConnect").click();
+  await wallet.rejectConnection();
+  await expect(page.locator("#mmSvmError")).toContainText(/reject|denied/i);
+  await expect(page.locator("#mmSvmAccount")).toBeEmpty();
 });
