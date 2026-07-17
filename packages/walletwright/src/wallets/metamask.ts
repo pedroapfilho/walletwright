@@ -13,7 +13,7 @@ const DEFAULT_VERSION = "13.35.1";
 export const metamask: WalletDefinition = {
   actions: { accounts, network, settings },
   approve,
-  ecosystems: ["evm"],
+  ecosystems: ["evm", "svm"],
   extensionName: "MetaMask",
 
   prepareExtension: (cacheDir, version = DEFAULT_VERSION) =>

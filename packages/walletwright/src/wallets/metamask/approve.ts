@@ -24,14 +24,17 @@ const acceptThirdPartyNotice = async (popup: Page): Promise<void> => {
 
 /**
  * Confirm buttons differ by request type: connect popups use `confirm-btn`, signature and
- * transaction popups use `confirm-footer-button`, and older builds used
- * `page-container-footer-next`. Try them together so one call covers every popup.
+ * transaction popups use `confirm-footer-button`, older builds used `page-container-footer-next`,
+ * and requests routed through a protocol Snap (e.g. Solana) use
+ * `confirm-<type>-confirm-snap-footer-button`, matched by suffix so every snap confirmation type is
+ * covered. Try them together so one call covers every popup.
  */
 export const approve = async (popup: Page): Promise<void> => {
   const button = popup
     .getByTestId("confirm-btn")
     .or(popup.getByTestId("confirm-footer-button"))
     .or(popup.locator('[data-testid="page-container-footer-next"]'))
+    .or(popup.locator('[data-testid$="-confirm-snap-footer-button"]'))
     .first();
   await acceptThirdPartyNotice(popup);
   try {
@@ -45,12 +48,13 @@ export const approve = async (popup: Page): Promise<void> => {
   }
 };
 
-/** The cancel counterparts of `approve`, in the same order: connect, sign/tx, then the old build. */
+/** The cancel counterparts of `approve`, in the same order: connect, sign/tx, old build, snap. */
 export const reject = async (popup: Page): Promise<void> => {
   const button = popup
     .getByTestId("cancel-btn")
     .or(popup.getByTestId("confirm-footer-cancel-button"))
     .or(popup.locator('[data-testid="page-container-footer-cancel"]'))
+    .or(popup.locator('[data-testid$="-cancel-snap-footer-button"]'))
     .first();
   await button.click({ timeout: 15_000 });
 };
