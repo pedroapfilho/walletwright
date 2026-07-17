@@ -123,13 +123,18 @@ const handlePhantomEvmConnect = async () => {
 };
 
 const handlePhantomEvmSign = async () => {
-  const signature = (await (
-    await getPhantomEvm()
-  ).request({
-    method: "personal_sign",
-    params: ["Hello Phantom EVM", phantomEvmAccount],
-  })) as string;
-  $("#phantomEvmSignature").textContent = signature;
+  $("#phantomEvmError").textContent = "";
+  try {
+    const signature = (await (
+      await getPhantomEvm()
+    ).request({
+      method: "personal_sign",
+      params: ["Hello Phantom EVM", phantomEvmAccount],
+    })) as string;
+    $("#phantomEvmSignature").textContent = signature;
+  } catch (error) {
+    showError(error, "#phantomEvmError");
+  }
 };
 
 // --- Phantom Solana / SVM (window.phantom.solana) ---
@@ -174,8 +179,8 @@ const handleMmSvmConnect = async () => {
   try {
     const wallet = await getMetamaskSolana();
     mmSvmAccount = await connectStandard(wallet);
-    $("#mmSvmAccount").textContent = mmSvmAccount?.address ?? "";
-    $<HTMLButtonElement>("#mmSvmSign").disabled = !mmSvmAccount;
+    $("#mmSvmAccount").textContent = mmSvmAccount.address;
+    $<HTMLButtonElement>("#mmSvmSign").disabled = false;
   } catch (error) {
     showError(error, "#mmSvmError");
   }
@@ -184,6 +189,10 @@ const handleMmSvmConnect = async () => {
 const handleMmSvmSign = async () => {
   $("#mmSvmError").textContent = "";
   try {
+    const account = mmSvmAccount;
+    if (!account) {
+      throw new Error("connect MetaMask (Solana) before signing");
+    }
     const wallet = await getMetamaskSolana();
     const feature = wallet.features["solana:signMessage"] as {
       signMessage: (input: {
@@ -192,10 +201,13 @@ const handleMmSvmSign = async () => {
       }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
     };
     const [output] = await feature.signMessage({
-      account: mmSvmAccount as StandardAccount,
+      account,
       message: new TextEncoder().encode("Hello walletwright Solana"),
     });
-    $("#mmSvmSignature").textContent = toHex(output?.signature ?? new Uint8Array());
+    if (!output?.signature) {
+      throw new Error("solana:signMessage returned no signature");
+    }
+    $("#mmSvmSignature").textContent = toHex(output.signature);
   } catch (error) {
     showError(error, "#mmSvmError");
   }
@@ -214,8 +226,8 @@ const handleSuiConnect = async () => {
   try {
     const wallet = await getSuiWallet();
     suiAccount = await connectStandard(wallet);
-    $("#suiAccount").textContent = suiAccount?.address ?? "";
-    $<HTMLButtonElement>("#suiSign").disabled = !suiAccount;
+    $("#suiAccount").textContent = suiAccount.address;
+    $<HTMLButtonElement>("#suiSign").disabled = false;
   } catch (error) {
     showError(error, "#suiError");
   }
@@ -224,6 +236,10 @@ const handleSuiConnect = async () => {
 const handleSuiSign = async () => {
   $("#suiError").textContent = "";
   try {
+    const account = suiAccount;
+    if (!account) {
+      throw new Error("connect Slush (Sui) before signing");
+    }
     const wallet = await getSuiWallet();
     const feature = wallet.features["sui:signPersonalMessage"] as {
       signPersonalMessage: (input: {
@@ -232,9 +248,12 @@ const handleSuiSign = async () => {
       }) => Promise<{ signature: string }>;
     };
     const { signature } = await feature.signPersonalMessage({
-      account: suiAccount as StandardAccount,
+      account,
       message: new TextEncoder().encode("Hello walletwright Sui"),
     });
+    if (typeof signature !== "string" || !signature) {
+      throw new Error("sui:signPersonalMessage returned no signature");
+    }
     $("#suiSignature").textContent = signature;
   } catch (error) {
     showError(error, "#suiError");

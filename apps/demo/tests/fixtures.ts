@@ -8,7 +8,7 @@ export const metamaskTest = createWalletFixtures(metamaskSetup);
 export const phantomTest = createWalletFixtures(phantomSetup);
 export const slushTest = createWalletFixtures(slushSetup);
 
-/** The EVM baseline: open the dapp, connect MetaMask, wait for the account. */
+/** The shared EVM connect baseline reused across specs. */
 export const connectMetamask = async (page: Page, wallet: Wallet): Promise<void> => {
   await page.goto("/");
   await page.locator("#connectButton").click();

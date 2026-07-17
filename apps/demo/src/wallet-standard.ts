@@ -13,12 +13,19 @@ const findStandardWallet = (predicate: (wallet: StandardWallet) => boolean) =>
     .get()
     .find((wallet) => predicate(wallet as StandardWallet)) as StandardWallet | undefined;
 
-const connectStandard = async (wallet: StandardWallet): Promise<StandardAccount | undefined> => {
-  const feature = wallet.features["standard:connect"] as {
-    connect: () => Promise<{ accounts: ReadonlyArray<StandardAccount> }>;
-  };
+const connectStandard = async (wallet: StandardWallet): Promise<StandardAccount> => {
+  const feature = wallet.features["standard:connect"] as
+    | { connect: () => Promise<{ accounts: ReadonlyArray<StandardAccount> }> }
+    | undefined;
+  if (!feature) {
+    throw new Error(`${wallet.name} lacks standard:connect`);
+  }
   const { accounts } = await feature.connect();
-  return accounts[0];
+  const account = accounts[0];
+  if (!account) {
+    throw new Error(`${wallet.name} standard:connect returned no accounts`);
+  }
+  return account;
 };
 
 export { connectStandard, findStandardWallet };
