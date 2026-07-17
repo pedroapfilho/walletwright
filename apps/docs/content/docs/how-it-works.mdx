@@ -33,9 +33,14 @@ type WalletDefinition = {
   reachUnlockScreen: (context, extensionId) => Promise<Page>;
   unlock: (page, password) => Promise<void>;
   approve: (popup, password) => Promise<void>;
+  reject?: (popup) => Promise<void>; // the cancel counterpart of approve
   notificationMatch?: string; // popup URL token; defaults to "notification.html"
+  actions?: WalletActions; // optional capabilities: accounts, network, settings
 };
 ```
+
+The optional `actions` group is how a wallet declares capabilities beyond connect and sign. See
+[Architecture](/architecture) for the capability model and how a wallet or a capability is added.
 
 ## Details that make it work
 

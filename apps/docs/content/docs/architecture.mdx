@@ -1,0 +1,375 @@
+---
+title: Architecture
+description: How walletwright is built. The layered engine, the cache/launch/drive data flow, the WalletDefinition extension point, the per-wallet capability model, and the chain and mock subpackages.
+---
+
+walletwright is a small wallet-agnostic engine wrapped around one plug-in per wallet. The engine
+knows how to build a cache, launch a browser from it, and drive approval popups. It knows nothing
+about MetaMask, Phantom, or Slush specifically: every wallet-specific selector and flow lives behind
+a single `WalletDefinition` interface. Everything you import from `walletwright` is a thin surface
+over that engine.
+
+This page is the map. If you only want to write tests, [Getting started](/getting-started) and
+[Examples](/examples) are enough. Read this when you want to add a wallet, add a capability, or
+understand why a popup is handled the way it is.
+
+## The layers
+
+```
+your test
+   │  createWalletFixtures(setup)  /  launchWallet(setup)  /  buildCache(setup)
+   ▼
+public API            src/index.ts, src/fixtures.ts, src/cli.ts
+   │
+   ▼
+engine                src/internal/{cache,launch,controller,utils,download,onboarding-patch}.ts
+   │  drives, per wallet, via one interface
+   ▼
+wallet definitions    src/wallets/{metamask,phantom,slush}.ts  (+ src/wallets/metamask/*)
+   │
+   ▼
+real extension        MetaMask / Phantom / Slush, loaded unpacked into Chromium
+
+optional subpackages  walletwright/chain (local EVM node), walletwright/mock (headless provider)
+```
+
+The engine is generic. Each wallet definition fills in the wallet-specific parts (how to import a
+seed, how to reach the unlock screen, which button confirms a popup). Adding a wallet means writing
+one definition and registering it; the engine does not change.
+
+## Package layout
+
+```
+packages/walletwright/src/
+  index.ts            public exports
+  cli.ts              `walletwright cache` command
+  fixtures.ts         createWalletFixtures(), the Playwright test fixtures
+  types.ts            WalletSetup, WalletDefinition, Wallet, the capability types
+  chain.ts            walletwright/chain entry point (local EVM node)
+  mock.ts             walletwright/mock entry point (headless provider)
+  internal/
+    cache.ts          buildCache(): onboard once, persist a profile
+    launch.ts         launchWalletContext(): copy the profile, launch, unlock
+    controller.ts     createWallet(): the runtime that drives popups and actions
+    utils.ts          extension-id derivation, popup polling, profile keys
+    download.ts       fetch + extract an extension archive
+    onboarding-patch.ts  MetaMask completedOnboarding LevelDB fix
+  wallets/
+    index.ts          the registry + walletKindsByEcosystem()
+    metamask.ts       MetaMask definition (+ metamask/ for its actions)
+    phantom.ts        Phantom definition
+    slush.ts          Slush definition
+```
+
+## The data flow: cache, launch, drive
+
+Three phases, each owned by one engine module. A test touches only the first (once) and the third.
+
+```
+buildCache(setup)                       once, ahead of the tests (headless ok)
+  prepareExtension  ─ download + extract the extension into .walletwright/
+  launchPersistentContext(profileDir)   headed by default; --headless=new when asked
+  goto onboarding, retry until registered
+  importWallet(seed, password)          the wallet's own onboarding flow
+  close, then finalizeCache             e.g. MetaMask's LevelDB completedOnboarding
+        │
+        ▼   .walletwright/<profileKey>  a ready-to-unlock profile on disk
+        │
+launchWalletContext(setup)              per test worker, always headed
+  copy profileDir ─▶ os.tmpdir()/walletwright-XXXX   throwaway, cache stays pristine
+  launchPersistentContext(runDir)
+  extensionIdFromPath                   derive the id, do not query the browser
+  reachUnlockScreen + unlock
+  closeStrayPages                       drop about:blank and the auto-opened tab
+        │
+        ▼   { context, wallet }
+        │
+createWallet(...)                       the Wallet you drive in the test
+  connectToDapp / confirmSignature / confirmTransaction / reject* / approve
+  accounts.* / network.* / settings.*
+```
+
+`buildCache` is idempotent per `(wallet, version, seedPhrase, password)`: that tuple hashes to the
+profile directory name (`profileKey` in `internal/utils.ts`), so re-running with the same setup
+reuses the profile. Each `launchWalletContext` copies that profile to a throwaway directory, so
+parallel workers never share a profile and the cache is never mutated. The copy is removed when the
+context closes.
+
+<Callout type="info">
+  `buildCache` may run headless (onboarding raises no approval popups). `launchWalletContext` and
+  every test must run headed, because approval popups do not open in headless Chromium. See
+  [Continuous integration](/continuous-integration) for the `xvfb` setup.
+</Callout>
+
+## The WalletDefinition extension point
+
+One object per wallet describes everything the engine cannot know generically. The engine calls
+these members at the right moments; the wallet author never touches the engine.
+
+```ts
+type WalletDefinition = {
+  ecosystems: Ecosystem[]; // ["evm"], ["evm", "svm"], ["sui"], ...
+  extensionName: string; // used in error messages, e.g. "MetaMask"
+  prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
+  onboardingPage: string; // extension-relative entry, e.g. "home.html"
+  importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
+  finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
+  reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
+  unlock: (page: Page, password: string) => Promise<void>;
+  approve: (popup: Page, password: string) => Promise<void>;
+  reject?: (popup: Page) => Promise<void>;
+  notificationMatch?: string; // popup URL token; defaults to "notification.html"
+  actions?: WalletActions; // optional capabilities beyond connect/sign
+};
+```
+
+| Member               | When the engine calls it                                               |
+| -------------------- | ---------------------------------------------------------------------- |
+| `prepareExtension`   | in `buildCache`, to fetch and extract the extension into the cache dir |
+| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                   |
+| `importWallet`       | in `buildCache`, to run the import-from-seed flow                      |
+| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)       |
+| `reachUnlockScreen`  | in `launchWalletContext`, to open and return the wallet's home page    |
+| `unlock`             | in `launchWalletContext`, to type the password                         |
+| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup       |
+| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL |
+| `actions`            | in the controller, to expose optional capabilities on the `Wallet`     |
+
+### Adding a wallet
+
+Write a definition, register it in `wallets/index.ts`, and declare the ecosystems it drives. Nothing
+in the engine changes. This is the skeleton; the selectors are discovered by driving the real
+extension, never guessed.
+
+```ts
+// src/wallets/rabby.ts
+import type { WalletDefinition } from "../types.ts";
+import { downloadAndExtractExtension } from "../internal/download.ts";
+
+export const rabby: WalletDefinition = {
+  ecosystems: ["evm"],
+  extensionName: "Rabby",
+
+  prepareExtension: (cacheDir, version) =>
+    downloadAndExtractExtension({
+      cacheDir,
+      kind: "crx",
+      name: `rabby-${version ?? "latest"}`,
+      url: RABBY_CRX_URL,
+    }),
+
+  onboardingPage: "index.html",
+
+  importWallet: async (page, seedPhrase, password) => {
+    // drive Rabby's import-from-seed screens here
+  },
+
+  reachUnlockScreen: async (context, extensionId) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/index.html`);
+    // wait for the password field, retrying past ERR_BLOCKED_BY_CLIENT
+    return page;
+  },
+
+  unlock: async (page, password) => {
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole("button", { name: "Unlock" }).click();
+  },
+
+  approve: async (popup) => {
+    await popup.getByRole("button", { name: "Confirm" }).click();
+  },
+};
+```
+
+```ts
+// src/wallets/index.ts
+import { rabby } from "./rabby.ts";
+
+export const wallets = { metamask, phantom, slush, rabby };
+```
+
+<Callout type="warn">
+  A wallet lands in the registry only once its connect and sign are verified end to end against the
+  real extension. Looking done is not enough. The whole point of walletwright is that a passing test
+  reflects a real extension approving a real request.
+</Callout>
+
+## The capability model
+
+Connect and sign are universal, so they live directly on the `Wallet` and every wallet must
+implement `approve`. Everything beyond that (rejecting, managing accounts, adding networks, locking)
+is optional and declared per wallet through `WalletDefinition.actions`.
+
+```ts
+type WalletActions = {
+  accounts?: AccountActions; // add, switch, rename, importPrivateKey
+  network?: NetworkActions; //  add, switch
+  settings?: SettingsActions; // lock, unlock
+};
+```
+
+Each action receives one context object rather than positional arguments, so adding a dependency
+later does not churn every wallet:
+
+```ts
+type WalletActionContext = {
+  context: BrowserContext;
+  extensionId: string;
+  home: Page; // the wallet's own extension page, kept open after unlock
+  password: string;
+};
+```
+
+The controller mirrors whatever a wallet declares onto the runtime `Wallet` and throws a clear error
+for anything it did not:
+
+```
+[walletwright] Slush does not support reject()
+```
+
+That is the design center: the API never claims support a wallet has not proven. `addNetwork` is
+meaningless for Slush (Sui), and Phantom's settings UI has no analogue for much of MetaMask's, so
+those wallets simply omit the group. An undeclared call is a real gap surfaced loudly, never a
+silent no-op.
+
+### How a capability is wired
+
+A capability method touches three places that must stay in sync:
+
+1. the optional function on the definition side, in `WalletActions` (`types.ts`)
+2. the runtime signature on the `Wallet`, in the `*Api` types (`types.ts`)
+3. the binding in `createWallet` (`internal/controller.ts`)
+
+TypeScript catches a mismatch between (2) and (3). `capability-wiring.test.ts` guards the binding to
+the definition function, so a method wired to the wrong action or left unwired fails in CI rather
+than at call time.
+
+### Adding a capability to a wallet
+
+Implement the action against the wallet's own `home` page and attach it to the definition's
+`actions`. Everything drives the extension UI directly.
+
+```ts
+// src/wallets/metamask/actions/settings.ts
+import type { SettingsActions } from "../../../types.ts";
+
+export const settings: SettingsActions = {
+  lock: async ({ home }) => {
+    await home.bringToFront();
+    await home.getByTestId("account-options-menu-button").click();
+    await home.getByTestId("global-menu-lock").filter({ visible: true }).first().click();
+  },
+  unlock: async ({ home, password }) => {
+    await home.locator('input[type="password"]').fill(password);
+    await home.locator('input[type="password"]').press("Enter");
+  },
+};
+```
+
+```ts
+// src/wallets/metamask.ts
+import { settings } from "./metamask/actions/settings.ts";
+
+export const metamask: WalletDefinition = {
+  // ...
+  actions: { accounts, network, settings },
+};
+```
+
+## The runtime controller
+
+`createWallet` (`internal/controller.ts`) builds the `Wallet` you drive. Two responsibilities:
+resolving approval popups, and binding capability actions.
+
+### Popup resolution
+
+Approval popups are the tricky part of driving a real extension, and several details are
+load-bearing:
+
+- **Poll, do not wait for an event.** A popup opens as `about:blank` and then navigates, so
+  `context.waitForEvent('page', { url })` misses it. The engine polls `context.pages()` for a page
+  whose URL matches the wallet's `notificationMatch` (`findNotificationPopup` in `utils.ts`).
+- **"Found" means "usable".** The window opens before it renders (a bare URL with no buttons) and
+  routes to the request later, sometimes tens of seconds later under a busy MV3 service worker. The
+  poller only returns a popup once a button is visible, so the caller never clicks a blank shell.
+- **Required vs optional.** `confirmSignature` waits up to 30 seconds and throws if no popup appears.
+  `connectToDapp` and `approve({ optional: true })` tolerate no popup, because a wallet may
+  auto-approve a site it already trusts.
+- **Re-front the dapp after a wallet-UI action.** While an extension page is the active tab, MetaMask
+  renders new approvals inline there instead of opening the popup the engine drives, so the
+  controller brings the dapp page back to the front when an action finishes.
+- **Retry a popup that closed under us.** The poller can grab the previous popup in its final moments
+  (a window closes right after its own approval resolves), so a failed settle re-finds once.
+
+### Action binding
+
+Each capability method is bound through one helper that either forwards to the declared function
+(with the action context and any extra arguments) or throws a named "does not support" error. This
+is why the `Wallet` surface is honest: `wallet.network.add` exists as a method on every wallet for
+typing, but calling it on a wallet that did not declare `network.add` throws immediately.
+
+## Deriving the extension id
+
+Chrome assigns an extension its id, and querying it is unreliable under automation:
+`chrome://extensions` is blocked headless and the MV3 service worker starts lazily, so a query
+races. walletwright computes the id instead (`extensionIdFromPath` in `utils.ts`):
+
+- if the manifest has a public `key` (Phantom ships its fixed Web Store id), hash that
+- otherwise hash the absolute load path (MetaMask has no key)
+- take the sha256, first 16 bytes, and map each nibble `0-f` to `a-p`
+
+The load path is resolved through symlinks first, because Chrome hashes the real path. A cache under
+a symlinked directory (macOS `/tmp` points at `/private/tmp`) would otherwise derive the wrong id and
+every navigation would fail with `ERR_BLOCKED_BY_CLIENT`.
+
+## The cache
+
+`buildCache` writes an onboarded profile to `.walletwright/<profileKey>`, where `profileKey` is the
+first 20 hex characters of `sha256("<wallet>:<version>:<seed>:<password>")`. Same setup, same
+directory, so onboarding runs once. Change any of those four and you get a distinct profile.
+
+`launchWalletContext` never launches the cached profile directly. It copies it to a fresh
+`mkdtemp` directory and launches from the copy, so the cache stays pristine and parallel workers do
+not share a profile. That throwaway copy is removed when the context closes.
+
+## The subpackages
+
+Two capabilities are shipped as separate entry points so the core connect/sign flow does not depend
+on them. Both declare their heavy dependency as an optional peer, so a plain
+`pnpm add -D walletwright` pulls in neither.
+
+### `walletwright/chain`
+
+A local EVM node for network and transaction tests. `createLocalChain()` starts Foundry's `anvil`
+through `prool` and returns `{ chainId, rpcUrl, stop }`. Transaction tests need a real chain: MetaMask
+reads balance, nonce, and gas off it to render the confirmation, and validates a custom network's RPC
+before saving it. The default mnemonic pre-funds the same account the MetaMask setup imports, so
+tests assert against a funded account with no extra step.
+
+Needs the `prool` package and the `anvil` binary on `PATH`.
+
+### `walletwright/mock`
+
+A headless injected-wallet fake for dapp tests that do not need a real extension.
+`installMockWallet(context)` injects an EIP-1193 provider, announces it over EIP-6963, and answers
+the connect/sign requests, signing with a real `viem` account so signatures verify. The provider
+lives in the page but signs in Node, bridged by a Playwright `exposeFunction`. It runs in plain,
+even headless, Chromium in a second or two.
+
+It is a connect/sign stand-in, not an EVM: it does not execute transactions. For anything real, drive
+an actual extension against `walletwright/chain`.
+
+Needs the `viem` package.
+
+## Design principles
+
+- **Verified capabilities only.** A wallet declares an action once it has been driven against the
+  real extension. The registry and the API never advertise unproven support.
+- **Plain `@playwright/test`.** No fork, no patched framework, no bundled runner. `@playwright/test`
+  is a peer dependency, so you own the version.
+- **One extension point.** A new wallet is one `WalletDefinition`. A new capability is one action
+  plus its wiring. The engine is closed to change and open to extension.
+- **Deep modules.** The engine hides a lot of hard-won extension-automation detail behind a small
+  surface (`connectToDapp`, `confirmSignature`, `approve`). Most of that detail is documented in
+  [How it works](/how-it-works).
