@@ -42,6 +42,10 @@
     "./mock": {
       "types": "./dist/mock.d.mts",
       "default": "./dist/mock.mjs"
+    },
+    "./mock-standard": {
+      "types": "./dist/mock-standard.d.mts",
+      "default": "./dist/mock-standard.mjs"
     }
   },
   "publishConfig": {

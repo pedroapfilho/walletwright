@@ -520,6 +520,30 @@ const address = await installMockWallet(page.context(), {
 });
 ```
 
+### The same, for a Solana dapp
+
+For a Wallet-Standard Solana dapp, `walletwright/mock-standard` registers a headless wallet that
+answers `standard:connect` and `solana:signMessage`, signing with a real ed25519 key. It needs no
+extra dependency and returns the announced account so a spec can verify the signature.
+
+```ts
+import { test, expect } from "@playwright/test";
+import { installMockStandardWallet } from "walletwright/mock-standard";
+
+test("connect and sign a Solana dapp, no extension", async ({ page }) => {
+  const { address, publicKeyHex } = await installMockStandardWallet(page, { ecosystem: "svm" });
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("account")).toHaveText(new RegExp(address, "i"));
+
+  await page.getByTestId("sign").click();
+  const signature = await page.getByTestId("signature").textContent();
+  // `signature` is base58/hex from your dapp; verify it against `publicKeyHex` with your Solana lib.
+  expect(signature).toBeTruthy();
+});
+```
+
 ## Composing your own fixtures
 
 `createWalletFixtures(setup)` returns a normal `@playwright/test` `test`, so extend it with your own
