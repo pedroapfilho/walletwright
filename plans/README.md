@@ -60,20 +60,31 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
 | 019  | Fail loudly on stuck approval/unlock (investigate) | P2       | M      | MED     | none       | TODO   |
 | 020  | Slush reachUnlockScreen readiness (investigate)    | P2       | M      | MED     | none       | TODO   |
 | 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | TODO   |
-| 022  | Resolve the network.switch API trap (decision)     | P3       | S/M    | LOW/MED | none       | TODO   |
-| 023  | Multi-chain Wallet-Standard mock (design spike)    | P3       | M      | LOW     | none       | TODO   |
+| 022  | Resolve the network.switch API trap (decision)     | P3       | S/M    | LOW/MED | none       | DONE   |
+| 023  | Multi-chain Wallet-Standard mock (design spike)    | P3       | M      | LOW     | none       | DONE   |
 | 024  | Add Rabby EVM wallet (discovery + build spike)     | P3       | M      | LOW     | none       | TODO   |
-| 025  | Fix api-reference root-vs-subpath claim            | P3       | S      | LOW     | none       | TODO   |
-| 026  | Housekeeping bundle (deps, CI drift, cruft)        | P3       | S      | LOW     | none       | TODO   |
+| 025  | Fix api-reference root-vs-subpath claim            | P3       | S      | LOW     | none       | DONE   |
+| 026  | Housekeeping bundle (deps, CI drift, cruft)        | P3       | S      | LOW     | none       | DONE   |
+| 027  | Graduate Wallet-Standard Solana mock (from 023)    | P3       | M      | LOW     | 023        | DONE   |
 
 Each cycle-3 plan is one PR (branch `improve-<slug>`, named inside each plan). Suggested order:
 013-018 are the S-tier batch (do these first; 018 depends on 017). 019-020 are investigate-first and
 touch the flaky wallet path, verify against the real extensions or STOP. 021-024 are direction
 spikes. 025-026 are docs/housekeeping and can land any time.
 
-Executed 2026-07-20 (PRs open, awaiting merge): 013 to PR #21, 014 to #22, 015 to #23, 016 to #24,
-017 to #25, 018 to #26 (018 stacked on #25). The S-tier batch (013-018) is implemented and reviewed;
-each PR was verified against its plan's done criteria before opening. 019-026 remain TODO.
+Executed and merged 2026-07-20: 013 (#21), 014 (#22), 015 (#23), 016 (#24), 017 (#25), 018 (#27),
+022 (#30), 025 (#28), 026 (#29). Plan 023 was run as a design spike (working headless Solana mock,
+dep-free) and then graduated to a shippable feature as plan 027 (#31): `walletwright/mock-standard`
+for Solana. Each PR was executor-built in an isolated worktree and reviewed against its plan's done
+criteria before merge. The 023 proposal is preserved in `plans/023-notes.md`.
+
+Sui deferred: the Wallet-Standard mock ships Solana only; Sui needs a blake2b dependency (open
+question 1 in `plans/023-notes.md`), tracked but not planned yet.
+
+Still TODO (need real-extension, headed or interactive verification; not doable by an autonomous
+executor per their STOP conditions): 019 (loud approval/unlock failures), 020 (Slush unlock
+readiness), 021 (Slush reject, needs interactive selector discovery), 024 (Rabby wallet, needs CRX
+download + interactive onboarding discovery + headed connect/sign).
 
 ## Dependency notes
 
