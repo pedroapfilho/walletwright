@@ -213,6 +213,58 @@ const handleMmSvmSign = async () => {
   }
 };
 
+// --- Mock Solana (Wallet Standard, solana:* features, name-agnostic) ---
+// Unlike the MetaMask-Solana section this matches any non-MetaMask Wallet-Standard Solana wallet, so
+// walletwright/mock-standard drives it without impersonating a named extension.
+const getMockSolana = () =>
+  waitFor(() =>
+    findStandardWallet(
+      (wallet) =>
+        wallet.name !== "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
+    ),
+  );
+
+let mockSvmAccount: StandardAccount | undefined;
+
+const handleMockSvmConnect = async () => {
+  $("#mockSvmError").textContent = "";
+  try {
+    const wallet = await getMockSolana();
+    mockSvmAccount = await connectStandard(wallet);
+    $("#mockSvmAccount").textContent = mockSvmAccount.address;
+    $<HTMLButtonElement>("#mockSvmSign").disabled = false;
+  } catch (error) {
+    showError(error, "#mockSvmError");
+  }
+};
+
+const handleMockSvmSign = async () => {
+  $("#mockSvmError").textContent = "";
+  try {
+    const account = mockSvmAccount;
+    if (!account) {
+      throw new Error("connect Mock (Solana) before signing");
+    }
+    const wallet = await getMockSolana();
+    const feature = wallet.features["solana:signMessage"] as {
+      signMessage: (input: {
+        account: StandardAccount;
+        message: Uint8Array;
+      }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
+    };
+    const [output] = await feature.signMessage({
+      account,
+      message: new TextEncoder().encode("Hello walletwright Mock Solana"),
+    });
+    if (!output?.signature) {
+      throw new Error("solana:signMessage returned no signature");
+    }
+    $("#mockSvmSignature").textContent = toHex(output.signature);
+  } catch (error) {
+    showError(error, "#mockSvmError");
+  }
+};
+
 // --- Slush / Sui (Wallet Standard, sui:* features) ---
 const getSuiWallet = () =>
   waitFor(() =>
@@ -292,5 +344,7 @@ $("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
 $("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
 $("#mmSvmConnect").addEventListener("click", handleMmSvmConnect);
 $("#mmSvmSign").addEventListener("click", handleMmSvmSign);
+$("#mockSvmConnect").addEventListener("click", handleMockSvmConnect);
+$("#mockSvmSign").addEventListener("click", handleMockSvmSign);
 $("#suiConnect").addEventListener("click", handleSuiConnect);
 $("#suiSign").addEventListener("click", handleSuiSign);

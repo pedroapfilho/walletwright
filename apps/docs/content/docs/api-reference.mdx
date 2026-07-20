@@ -3,7 +3,7 @@ title: API reference
 description: "Every walletwright export: buildCache, createWalletFixtures, launchWallet, the Wallet fixture, the CLI, and the types."
 ---
 
-The core API is exported from the package root; `walletwright/chain` and `walletwright/mock` are optional subpath entry points (each needs an optional peer, documented below).
+The core API is exported from the package root; `walletwright/chain`, `walletwright/mock`, and `walletwright/mock-standard` are optional subpath entry points (documented below; `chain` and `mock` each need an optional peer, `mock-standard` needs none).
 
 ```ts
 import {
@@ -210,6 +210,37 @@ It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_s
 chain-switch methods. It is a connect/sign stand-in, not an EVM: it does not execute transactions.
 For anything real (transactions, balances, receipts), drive an actual extension against
 `walletwright/chain`.
+
+## `walletwright/mock-standard`
+
+A headless Wallet-Standard fake for Solana dapp tests that don't need a real extension, so they run
+in plain (even headless) Chromium. It registers over the Wallet-Standard protocol, answers
+`standard:connect` and `solana:signMessage`, and signs with a real ed25519 key so signatures verify.
+Needs no extra dependency (Node `crypto` plus a hand-rolled base58). Install it before `goto`, on the
+context or a single page.
+
+```ts
+import { test, expect } from "@playwright/test";
+import { installMockStandardWallet } from "walletwright/mock-standard";
+
+test("connect and sign a Solana dapp, no extension", async ({ page }) => {
+  const { address } = await installMockStandardWallet(page, { ecosystem: "svm" });
+
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("account")).toHaveText(new RegExp(address, "i"));
+});
+```
+
+| Option      | Default             | Description                                             |
+| ----------- | ------------------- | ------------------------------------------------------- |
+| `ecosystem` | `svm`               | The chain family to mock; only `svm` (Solana) is built. |
+| `name`      | `Walletwright Mock` | Name announced over Wallet Standard.                    |
+| `seedHex`   | fixed test seed     | 32-byte ed25519 seed as hex; sets the stable address.   |
+
+It returns `{ address, publicKeyHex }` so a spec can verify a returned signature against the public
+key. Sui is out of scope: it needs a blake2b256 dependency Node's `crypto` lacks. It is a
+connect/sign stand-in, not a chain; drive a real extension for anything that touches the network.
 
 ## `wallets`
 
