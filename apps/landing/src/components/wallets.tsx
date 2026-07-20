@@ -37,6 +37,7 @@ const TARGETS: Array<Target> = [
   {
     capability: "Connect and sign through the Sui Wallet Standard.",
     chain: { icon: <NetworkSui aria-hidden size={18} variant="branded" />, name: "Sui" },
+    // @web3icons/react has no Slush brand mark, so reuse the Sui network icon as the wallet icon.
     wallet: { icon: <NetworkSui aria-hidden size={32} variant="branded" />, name: "Slush" },
   },
 ];

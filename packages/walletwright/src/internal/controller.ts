@@ -2,7 +2,12 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types.ts";
 
-import { findNotificationPopup, hasNotificationPopup, sleep } from "./utils.ts";
+import {
+  DEFAULT_NOTIFICATION_MATCH,
+  findNotificationPopup,
+  hasNotificationPopup,
+  sleep,
+} from "./utils.ts";
 
 type ResolveOptions = { optional?: boolean };
 
@@ -23,7 +28,7 @@ export const createWallet = ({
   home,
   password,
 }: CreateWalletOptions): Wallet => {
-  const match = definition.notificationMatch ?? "notification.html";
+  const match = definition.notificationMatch ?? DEFAULT_NOTIFICATION_MATCH;
   const ctx: WalletActionContext = { context, extensionId, home, password };
 
   /** Drive the pending approval popup with `settle`, then wait for it to close. */
