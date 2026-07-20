@@ -57,7 +57,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
 | 016  | Show MetaMask Solana support on the landing page   | P2       | S      | LOW     | none       | DONE   |
 | 017  | Unit-test parseFlags + isApprovalPopup             | P2       | S      | LOW     | none       | DONE   |
 | 018  | Harden the cache CLI flag handling                 | P2       | S      | LOW     | 017        | DONE   |
-| 019  | Fail loudly on stuck approval/unlock (investigate) | P2       | M      | MED     | none       | TODO   |
+| 019  | Fail loudly on stuck approval/unlock (investigate) | P2       | M      | MED     | none       | DONE   |
 | 020  | Slush reachUnlockScreen readiness (investigate)    | P2       | M      | MED     | none       | TODO   |
 | 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | TODO   |
 | 022  | Resolve the network.switch API trap (decision)     | P3       | S/M    | LOW/MED | none       | DONE   |
@@ -81,10 +81,19 @@ criteria before merge. The 023 proposal is preserved in `plans/023-notes.md`.
 Sui deferred: the Wallet-Standard mock ships Solana only; Sui needs a blake2b dependency (open
 question 1 in `plans/023-notes.md`), tracked but not planned yet.
 
-Still TODO (need real-extension, headed or interactive verification; not doable by an autonomous
-executor per their STOP conditions): 019 (loud approval/unlock failures), 020 (Slush unlock
-readiness), 021 (Slush reject, needs interactive selector discovery), 024 (Rabby wallet, needs CRX
-download + interactive onboarding discovery + headed connect/sign).
+019 merged 2026-07-20 (#33, plus format fix #34): the controller `resolvePopup` throw and the
+MetaMask `unlock` throw were headed-verified (MetaMask connect+sign passes with a fresh cache). The
+Slush `approve` throw shipped code-reviewed but NOT headed-verified, because Slush's cache build is a
+known pre-existing break (`Word 1` onboarding input times out), so no Slush profile can be onboarded
+to run its spec. Re-run the Slush spec once that build is fixed.
+
+Still TODO, and currently BLOCKED:
+
+- 020 (Slush unlock readiness) and 021 (Slush reject): blocked by the Slush cache-build break, no
+  Slush profile can be built to verify them headed. Fix the Slush onboarding cache build first.
+- 024 (Rabby wallet): needs CRX download + interactive onboarding-selector discovery + headed
+  connect/sign; an autonomous executor cannot do the discovery, and this was additionally blocked by
+  the org monthly spend limit during cycle-3 execution.
 
 ## Dependency notes
 
