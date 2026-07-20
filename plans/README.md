@@ -34,10 +34,13 @@ Reviewer notes:
 
 | Plan | Title                                                               | Priority | Effort | Depends on | Status |
 | ---- | ------------------------------------------------------------------- | -------- | ------ | ---------- | ------ |
-| 009  | Fresh-clone test story + stale MetaMask (EVM) claims                | P1       | S      | none       | TODO   |
-| 010  | Engine layering: relocate MetaMask patch, centralize focus          | P1       | S      | none       | TODO   |
-| 011  | Demo cleanup: wallet-standard helper, error surfaces, fixtures      | P2       | M      | none       | TODO   |
-| 012  | Hardening: mock RPC tests, action pin, version guard, deps, archive | P2       | M      | none       | TODO   |
+| 009  | Fresh-clone test story + stale MetaMask (EVM) claims                | P1       | S      | none       | DONE   |
+| 010  | Engine layering: relocate MetaMask patch, centralize focus          | P1       | S      | none       | DONE   |
+| 011  | Demo cleanup: wallet-standard helper, error surfaces, fixtures      | P2       | M      | none       | DONE   |
+| 012  | Hardening: mock RPC tests, action pin, version guard, deps, archive | P2       | M      | none       | DONE   |
+
+Merged 2026-07-17: 009 → PR #15 (`improve-dx-docs`), 010 → #16 (`improve-engine-layering`),
+011 → #17 (`improve-demo-cleanup`), 012 → #18 (`improve-hardening`).
 
 Each cycle-2 plan is one PR; branches `improve-dx-docs`, `improve-engine-layering`,
 `improve-demo-cleanup`, `improve-hardening`, all off `0060500`.
