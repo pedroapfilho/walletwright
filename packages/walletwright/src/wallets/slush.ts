@@ -16,8 +16,8 @@ const fclick = async (page: Page, text: string, timeoutMs = 8000): Promise<boole
     return false;
   }
   await target.scrollIntoViewIfNeeded().catch(() => {});
-  // Slush's popup buttons need a forced click, actionability checks flap on its animated UI.
-  await target.click({ force: true, timeout: timeoutMs }).catch(() => {});
+  // Slush's popup buttons need a forced click; do NOT swallow a real click failure here.
+  await target.click({ force: true, timeout: timeoutMs });
   return true;
 };
 
@@ -30,7 +30,7 @@ export const slush: WalletDefinition = {
     await sleep(2000);
     const confirmed = (await fclick(popup, "Approve")) || (await fclick(popup, "Sign"));
     if (!confirmed) {
-      return;
+      throw new Error("[walletwright] Slush approval: neither Approve nor Sign was actionable");
     }
     await sleep(1500);
     const input = popup.locator('input[type="password"]');

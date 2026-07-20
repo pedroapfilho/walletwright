@@ -68,6 +68,11 @@ export const createWallet = ({
     while (hasNotificationPopup(context, extensionId, match) && Date.now() < deadline) {
       await sleep(200);
     }
+    if (!optional && hasNotificationPopup(context, extensionId, match)) {
+      throw new Error(
+        "[walletwright] approval popup did not close after 15s (the approval may not have registered)",
+      );
+    }
   };
 
   const unsupported = (name: string): Error =>
