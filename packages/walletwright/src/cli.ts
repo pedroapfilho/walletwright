@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import { buildCache } from "./internal/cache.ts";
 import type { WalletKind, WalletSetup } from "./types.ts";
+import { wallets } from "./wallets/index.ts";
 
 const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
 
@@ -25,7 +26,7 @@ Options:
 test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
-export const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
+const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
   const flags: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
@@ -53,6 +54,40 @@ const loadSetup = async (file: string): Promise<WalletSetup> => {
   return mod.default;
 };
 
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.length > 0;
+
+const resolveSetup = async (flags: Record<string, string | boolean>): Promise<WalletSetup> => {
+  if (typeof flags.setup === "string") {
+    const loaded = await loadSetup(flags.setup);
+    return typeof flags["cache-dir"] === "string"
+      ? { ...loaded, cacheDir: flags["cache-dir"] }
+      : loaded;
+  }
+  if (
+    isNonEmptyString(flags.wallet) &&
+    isNonEmptyString(flags.seed) &&
+    isNonEmptyString(flags.password)
+  ) {
+    const kinds = Object.keys(wallets) as Array<WalletKind>;
+    if (!kinds.includes(flags.wallet as WalletKind)) {
+      throw new Error(
+        `[walletwright] unknown --wallet "${flags.wallet}". Expected one of: ${kinds.join(", ")}.`,
+      );
+    }
+    return {
+      password: flags.password,
+      seedPhrase: flags.seed,
+      wallet: flags.wallet as WalletKind,
+      ...(typeof flags.version === "string" ? { version: flags.version } : {}),
+      ...(typeof flags["cache-dir"] === "string" ? { cacheDir: flags["cache-dir"] } : {}),
+    };
+  }
+  throw new Error(
+    "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
+  );
+};
+
 const main = async (): Promise<void> => {
   const [command, ...rest] = process.argv.slice(2);
   const flags = parseFlags(rest);
@@ -65,31 +100,23 @@ const main = async (): Promise<void> => {
     throw new Error(`[walletwright] unknown command "${command}". Run \`walletwright --help\`.`);
   }
 
-  let setup: WalletSetup;
-  if (typeof flags.setup === "string") {
-    setup = await loadSetup(flags.setup);
-  } else if (flags.wallet && flags.seed && flags.password) {
-    setup = {
-      password: flags.password as string,
-      seedPhrase: flags.seed as string,
-      wallet: flags.wallet as WalletKind,
-      ...(typeof flags.version === "string" ? { version: flags.version } : {}),
-      ...(typeof flags["cache-dir"] === "string" ? { cacheDir: flags["cache-dir"] } : {}),
-    };
-  } else {
-    throw new Error(
-      "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
-    );
-  }
+  const setup = await resolveSetup(flags);
 
   process.stdout.write(`[walletwright] building ${setup.wallet} cache…\n`);
   const profileDir = await buildCache(setup, { headless: Boolean(flags.headless) });
   process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
 };
 
-try {
-  await main();
-} catch (error: unknown) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exit(1);
+const invokedAsCli =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedAsCli) {
+  try {
+    await main();
+  } catch (error: unknown) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
 }
+
+export { parseFlags, resolveSetup };
