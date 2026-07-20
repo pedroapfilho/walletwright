@@ -45,7 +45,7 @@ const FEATURES: Array<Feature> = [
   },
   {
     description:
-      "connectToDapp() and confirmSignature() drive MetaMask, Phantom (EVM and Solana), and Slush (Sui) the same way.",
+      "connectToDapp() and confirmSignature() drive MetaMask and Phantom on EVM and Solana, and Slush on Sui, the same way.",
     icon: (
       <svg {...ICON_PROPS}>
         <path d="m12 2 9 5-9 5-9-5 9-5Z" />
