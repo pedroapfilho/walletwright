@@ -5,10 +5,14 @@ export const unlock = async (page: Page, password: string): Promise<void> => {
   const input = page.locator('input[type="password"]');
   await input.fill(password);
   await input.press("Enter");
-  await page
+  const cleared = await page
     .locator('input[type="password"]')
     .waitFor({ state: "hidden", timeout: 15_000 })
-    .catch(() => {});
+    .then(() => true)
+    .catch(() => false);
+  if (!cleared) {
+    throw new Error("[walletwright] MetaMask unlock failed (password screen still visible after 15s)");
+  }
 };
 
 export const importWallet = async (
