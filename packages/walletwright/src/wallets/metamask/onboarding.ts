@@ -11,7 +11,9 @@ export const unlock = async (page: Page, password: string): Promise<void> => {
     .then(() => true)
     .catch(() => false);
   if (!cleared) {
-    throw new Error("[walletwright] MetaMask unlock failed (password screen still visible after 15s)");
+    throw new Error(
+      "[walletwright] MetaMask unlock failed (password screen still visible after 15s)",
+    );
   }
 };
 
