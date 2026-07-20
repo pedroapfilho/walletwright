@@ -2,6 +2,10 @@ packages:
   - apps/*
   - packages/*
 
+overrides:
+  # Force prool's transitive tar to a patched release (dev-only, local-anvil tests) to clear HIGH advisories.
+  tar: "^7.5.20"
+
 allowBuilds:
   # Prebuilt binaries ship via optionalDependencies; the build script is only
   # a node-gyp fallback and the watcher is only used by `tailwindcss --watch`.
@@ -24,7 +28,3 @@ onlyBuiltDependencies:
 
 ignoredBuiltDependencies:
   - "@parcel/watcher"
-
-minimumReleaseAgeExclude:
-  # prool was newer than the release-age gate allowed when adopted (2026-07); drop once it ages out.
-  - prool@0.2.10

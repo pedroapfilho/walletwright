@@ -13,6 +13,9 @@ export const sleep = (ms: number): Promise<void> =>
 
 export const DEFAULT_CACHE_DIR = ".walletwright";
 
+/** MetaMask/Phantom approval-popup URL token; Slush overrides it with `notificationMatch: "isPopup=1"`. */
+export const DEFAULT_NOTIFICATION_MATCH = "notification.html";
+
 /** Stable per-setup profile directory name, so the same wallet+seed+password reuses one cache. */
 export const profileKey = (setup: WalletSetup): string =>
   createHash("sha256")
@@ -63,7 +66,7 @@ export const isApprovalPopup = (page: Page, extensionId: string, match: string):
 export const findNotificationPopup = async (
   context: BrowserContext,
   extensionId: string,
-  match = "notification.html",
+  match = DEFAULT_NOTIFICATION_MATCH,
   timeoutMs = 10_000,
 ): Promise<Page | undefined> => {
   const deadline = Date.now() + timeoutMs;
@@ -91,5 +94,5 @@ export const findNotificationPopup = async (
 export const hasNotificationPopup = (
   context: BrowserContext,
   extensionId: string,
-  match = "notification.html",
+  match = DEFAULT_NOTIFICATION_MATCH,
 ): boolean => context.pages().some((page) => isApprovalPopup(page, extensionId, match));
