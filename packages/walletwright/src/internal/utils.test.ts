@@ -1,8 +1,12 @@
+import type { Page } from "@playwright/test";
 import { describe, expect, it } from "vitest";
 
 import type { WalletSetup } from "../types.ts";
 
-import { extensionIdFromPath, profileKey } from "./utils.ts";
+import { extensionIdFromPath, isApprovalPopup, profileKey } from "./utils.ts";
+
+const fakePage = (url: string, closed = false): Page =>
+  ({ isClosed: () => closed, url: () => url }) as unknown as Page;
 
 const baseSetup: WalletSetup = {
   password: "correct-horse-battery-staple",
@@ -59,5 +63,34 @@ describe("extensionIdFromPath", () => {
     expect(extensionIdFromPath("/tmp/walletwright-does-not-exist-abc")).not.toBe(
       extensionIdFromPath(fakePath),
     );
+  });
+});
+
+describe("isApprovalPopup", () => {
+  const extensionId = "abc";
+
+  it("is true for a matching extension id and token on an open page", () => {
+    const page = fakePage("chrome-extension://abc/notification.html");
+    expect(isApprovalPopup(page, extensionId, "notification.html")).toBe(true);
+  });
+
+  it("is false when the extension id does not match", () => {
+    const page = fakePage("chrome-extension://xyz/notification.html");
+    expect(isApprovalPopup(page, extensionId, "notification.html")).toBe(false);
+  });
+
+  it("is false when the match token is absent", () => {
+    const page = fakePage("chrome-extension://abc/home.html");
+    expect(isApprovalPopup(page, extensionId, "notification.html")).toBe(false);
+  });
+
+  it("is false when the page is closed", () => {
+    const page = fakePage("chrome-extension://abc/notification.html", true);
+    expect(isApprovalPopup(page, extensionId, "notification.html")).toBe(false);
+  });
+
+  it("matches Slush's isPopup=1 single-page token", () => {
+    const page = fakePage("chrome-extension://abc/index.html#/dapp?isPopup=1");
+    expect(isApprovalPopup(page, extensionId, "isPopup=1")).toBe(true);
   });
 });

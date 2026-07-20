@@ -25,7 +25,7 @@ Options:
 test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
-const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
+export const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
   const flags: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
