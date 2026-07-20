@@ -128,6 +128,12 @@ export type SettingsApi = {
 /** Add and switch networks from the wallet's own UI. Throws if the wallet doesn't declare support. */
 export type NetworkApi = {
   add: (config: NetworkConfig) => Promise<void>;
+  /**
+   * No wallet implements this today, so calling it throws. MetaMask 13.x scopes the active chain
+   * per dapp and has no wallet-side network selector, so switching is dapp-initiated: the dapp calls
+   * `wallet_addEthereumChain` (idempotent, adds when missing and switches when present) and
+   * `wallet.approve()` drives the popup. See the network recipe in Examples.
+   */
   switch: (chainId: number) => Promise<void>;
 };
 
