@@ -59,7 +59,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.0",
     "classic-level": "^1.4.1"
   },
   "devDependencies": {
