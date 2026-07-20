@@ -47,6 +47,30 @@ Each cycle-2 plan is one PR; branches `improve-dx-docs`, `improve-engine-layerin
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rationale)
 
+### Cycle 3 (2026-07-20, against `993e798`)
+
+| Plan | Title                                              | Priority | Effort | Risk    | Depends on | Status |
+| ---- | -------------------------------------------------- | -------- | ------ | ------- | ---------- | ------ |
+| 013  | Upgrade adm-zip off the vulnerable 0.5.x line      | P1       | S      | LOW     | none       | TODO   |
+| 014  | Close context + temp profile on launch failure     | P1       | S      | LOW     | none       | TODO   |
+| 015  | Extract shared Chrome Web Store CRX helper         | P2       | S      | LOW     | none       | TODO   |
+| 016  | Show MetaMask Solana support on the landing page   | P2       | S      | LOW     | none       | TODO   |
+| 017  | Unit-test parseFlags + isApprovalPopup             | P2       | S      | LOW     | none       | TODO   |
+| 018  | Harden the cache CLI flag handling                 | P2       | S      | LOW     | 017        | TODO   |
+| 019  | Fail loudly on stuck approval/unlock (investigate) | P2       | M      | MED     | none       | TODO   |
+| 020  | Slush reachUnlockScreen readiness (investigate)    | P2       | M      | MED     | none       | TODO   |
+| 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | TODO   |
+| 022  | Resolve the network.switch API trap (decision)     | P3       | S/M    | LOW/MED | none       | TODO   |
+| 023  | Multi-chain Wallet-Standard mock (design spike)    | P3       | M      | LOW     | none       | TODO   |
+| 024  | Add Rabby EVM wallet (discovery + build spike)     | P3       | M      | LOW     | none       | TODO   |
+| 025  | Fix api-reference root-vs-subpath claim            | P3       | S      | LOW     | none       | TODO   |
+| 026  | Housekeeping bundle (deps, CI drift, cruft)        | P3       | S      | LOW     | none       | TODO   |
+
+Each cycle-3 plan is one PR (branch `improve-<slug>`, named inside each plan). Suggested order:
+013-018 are the S-tier batch (do these first; 018 depends on 017). 019-020 are investigate-first and
+touch the flaky wallet path, verify against the real extensions or STOP. 021-024 are direction
+spikes. 025-026 are docs/housekeeping and can land any time.
+
 ## Dependency notes
 
 - 006 shares `download.ts` and `download.test.ts` with 005; do 005 first so the edits compose (both
@@ -74,9 +98,24 @@ Follow-up left open: a Slush rejection spec needs `reject` in slush.ts first.
   cleverness against the repo's "minimal language features" convention, and the wiring is not yet
   painful enough to justify it.
 
+Cycle 3 (2026-07-20):
+
+- The identical `confirmSignature`/`confirmTransaction` and `reject*` alias methods surfaced again in
+  the cycle-3 audit; rejected again for the same reason (by-design intent-revealing sugar over
+  "whatever popup is pending"). Not planned.
+- No CI job runs the connect/sign E2E (headed/xvfb). This is a deliberate tradeoff: the E2E is
+  headed/local by design, and a flaky headed gate would erode trust. Left as an optional future spike
+  (a nightly `workflow_dispatch` smoke run), not a defect, so not planned in cycle 3.
+
 ## Scope note
 
-This audit covered the `walletwright` library core, the new action/chain/mock code, and the test and
-docs surface. It did NOT deeply audit: `apps/landing`, `apps/docs` beyond the API/examples pages, the
-CI workflow internals, or the `phantom.ts`/`slush.ts` onboarding flows (Slush's cache build is a
-known pre-existing break, tracked separately, not planned here).
+Cycle-1/2 covered the `walletwright` library core, the action/chain/mock code, and the test and docs
+surface.
+
+Cycle 3 (2026-07-20, against `993e798`) extended coverage to the surfaces the earlier note flagged as
+unaudited: `apps/landing` (found the MetaMask-Solana omission, plan 016), `apps/docs`
+(root-vs-subpath claim, plan 025), the CI workflow internals (setup drift, plan 026 Task B), and the
+`phantom.ts`/`slush.ts` onboarding/unlock flows (Slush readiness gap, plan 020; Slush reject gap,
+plan 021). Not deeply audited in cycle 3: the demo's Privy specs, and `apps/docs`/`apps/landing`
+runtime behavior beyond content accuracy. Slush's cache build remains a known pre-existing fragility
+(relevant to verifying plans 019-021, called out in their STOP conditions).
