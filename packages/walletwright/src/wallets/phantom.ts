@@ -1,10 +1,9 @@
-import { downloadAndExtractExtension } from "../internal/download.ts";
+import { prepareWebStoreExtension } from "../internal/download.ts";
 import { sleep } from "../internal/utils.ts";
 import type { WalletDefinition } from "../types.ts";
 
 // Phantom's old crx-backup host is dead; pull from the Chrome Web Store (stable extension id).
 const PHANTOM_EXTENSION_ID = "bfnaelmomeimhlpmgjnjophhpkkoljpa";
-const CWS_URL = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${PHANTOM_EXTENSION_ID}%26uc`;
 
 export const phantom: WalletDefinition = {
   ecosystems: ["evm", "svm"],
@@ -45,11 +44,10 @@ export const phantom: WalletDefinition = {
   onboardingPage: "onboarding.html",
 
   prepareExtension: (cacheDir) =>
-    downloadAndExtractExtension({
+    prepareWebStoreExtension({
       cacheDir,
-      kind: "crx",
+      extensionId: PHANTOM_EXTENSION_ID,
       name: "phantom-chrome-latest",
-      url: CWS_URL,
     }),
 
   reachUnlockScreen: async (context, extensionId) => {
