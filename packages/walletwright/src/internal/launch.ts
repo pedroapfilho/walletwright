@@ -77,15 +77,21 @@ export const launchWalletContext = async (setup: WalletSetup): Promise<LaunchedW
 
   const extensionId = extensionIdFromPath(extensionPath);
 
-  // Kept open (not closed after unlock): the settings/network/account actions drive this page.
-  const home = await definition.reachUnlockScreen(context, extensionId);
-  await definition.unlock(home, setup.password);
-  await closeStrayPages(context, home);
+  try {
+    // Kept open (not closed after unlock): the settings/network/account actions drive this page.
+    const home = await definition.reachUnlockScreen(context, extensionId);
+    await definition.unlock(home, setup.password);
+    await closeStrayPages(context, home);
 
-  return {
-    context,
-    wallet: createWallet({ context, definition, extensionId, home, password: setup.password }),
-  };
+    return {
+      context,
+      wallet: createWallet({ context, definition, extensionId, home, password: setup.password }),
+    };
+  } catch (error) {
+    // Fires the context.on("close") handler above, which removes the throwaway runDir.
+    await context.close().catch(() => {});
+    throw error;
+  }
 };
 
 /** Standalone launcher (outside Playwright fixtures). Remember to `context.close()` when done. */
