@@ -20,6 +20,11 @@ const TARGETS: Array<Target> = [
     wallet: { icon: <WalletMetamask aria-hidden size={32} variant="branded" />, name: "MetaMask" },
   },
   {
+    capability: "Connect and sign through the Solana Wallet Standard.",
+    chain: { icon: <NetworkSolana aria-hidden size={18} variant="branded" />, name: "Solana" },
+    wallet: { icon: <WalletMetamask aria-hidden size={32} variant="branded" />, name: "MetaMask" },
+  },
+  {
     capability: "Connect and sign on window.phantom.ethereum.",
     chain: { icon: <NetworkEthereum aria-hidden size={18} variant="branded" />, name: "EVM" },
     wallet: { icon: <WalletPhantom aria-hidden size={32} variant="branded" />, name: "Phantom" },
@@ -50,7 +55,7 @@ const Wallets = () => (
       </p>
     </div>
 
-    <ul className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <ul className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
       {TARGETS.map((target) => (
         <li
           className="border-border bg-card rounded-lg border p-6"
