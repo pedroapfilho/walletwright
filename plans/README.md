@@ -51,12 +51,12 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
 
 | Plan | Title                                              | Priority | Effort | Risk    | Depends on | Status |
 | ---- | -------------------------------------------------- | -------- | ------ | ------- | ---------- | ------ |
-| 013  | Upgrade adm-zip off the vulnerable 0.5.x line      | P1       | S      | LOW     | none       | TODO   |
-| 014  | Close context + temp profile on launch failure     | P1       | S      | LOW     | none       | TODO   |
-| 015  | Extract shared Chrome Web Store CRX helper         | P2       | S      | LOW     | none       | TODO   |
-| 016  | Show MetaMask Solana support on the landing page   | P2       | S      | LOW     | none       | TODO   |
-| 017  | Unit-test parseFlags + isApprovalPopup             | P2       | S      | LOW     | none       | TODO   |
-| 018  | Harden the cache CLI flag handling                 | P2       | S      | LOW     | 017        | TODO   |
+| 013  | Upgrade adm-zip off the vulnerable 0.5.x line      | P1       | S      | LOW     | none       | DONE   |
+| 014  | Close context + temp profile on launch failure     | P1       | S      | LOW     | none       | DONE   |
+| 015  | Extract shared Chrome Web Store CRX helper         | P2       | S      | LOW     | none       | DONE   |
+| 016  | Show MetaMask Solana support on the landing page   | P2       | S      | LOW     | none       | DONE   |
+| 017  | Unit-test parseFlags + isApprovalPopup             | P2       | S      | LOW     | none       | DONE   |
+| 018  | Harden the cache CLI flag handling                 | P2       | S      | LOW     | 017        | DONE   |
 | 019  | Fail loudly on stuck approval/unlock (investigate) | P2       | M      | MED     | none       | TODO   |
 | 020  | Slush reachUnlockScreen readiness (investigate)    | P2       | M      | MED     | none       | TODO   |
 | 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | TODO   |
@@ -70,6 +70,10 @@ Each cycle-3 plan is one PR (branch `improve-<slug>`, named inside each plan). S
 013-018 are the S-tier batch (do these first; 018 depends on 017). 019-020 are investigate-first and
 touch the flaky wallet path, verify against the real extensions or STOP. 021-024 are direction
 spikes. 025-026 are docs/housekeeping and can land any time.
+
+Executed 2026-07-20 (PRs open, awaiting merge): 013 to PR #21, 014 to #22, 015 to #23, 016 to #24,
+017 to #25, 018 to #26 (018 stacked on #25). The S-tier batch (013-018) is implemented and reviewed;
+each PR was verified against its plan's done criteria before opening. 019-026 remain TODO.
 
 ## Dependency notes
 
