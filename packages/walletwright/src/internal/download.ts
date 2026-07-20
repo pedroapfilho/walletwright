@@ -79,3 +79,20 @@ export const downloadAndExtractExtension = async (options: {
   }
   return outDir;
 };
+
+/** Build the Chrome Web Store CRX download URL for an extension id. */
+export const chromeWebStoreCrxUrl = (extensionId: string): string =>
+  `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${extensionId}%26uc`;
+
+/** Download and extract a Chrome Web Store extension (latest) into `<cacheDir>/<name>`. */
+export const prepareWebStoreExtension = (options: {
+  cacheDir: string;
+  extensionId: string;
+  name: string;
+}): Promise<string> =>
+  downloadAndExtractExtension({
+    cacheDir: options.cacheDir,
+    kind: "crx",
+    name: options.name,
+    url: chromeWebStoreCrxUrl(options.extensionId),
+  });
