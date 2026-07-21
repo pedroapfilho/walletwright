@@ -111,8 +111,20 @@ export const slush: WalletDefinition = {
       }
       await sleep(1000);
     }
-    await sleep(2500);
-    return page;
+    // Slush's single-page UI mounts a few seconds after the navigation resolves and settles into one
+    // of two states: the password screen (cold launch, locked) or the home route (warm launch,
+    // already unlocked). Poll for whichever appears instead of blind-sleeping and returning a
+    // not-yet-ready page whose failure would only surface later at the first approval.
+    const password = page.locator('input[type="password"]');
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const atHome = (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
+      const locked = await password.isVisible().catch(() => false);
+      if (atHome || locked) {
+        return page;
+      }
+      await sleep(500);
+    }
+    throw new Error("[walletwright] Slush unlock screen never appeared");
   },
 
   unlock: async (page, password) => {
