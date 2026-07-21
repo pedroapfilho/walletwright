@@ -108,6 +108,11 @@ debugging:
   is a silent no-op.
 - Connect confirms with "Approve". Signing confirms with "Sign" and then re-prompts for the password
   ("Unlock"), which is why `WalletDefinition.approve` takes the password.
+- Gate clicks on `waitFor({ state: "visible" })`, never `isVisible({ timeout })`. `isVisible()` reads
+  the current state and returns immediately (its `timeout` does not wait), so against Slush's
+  late-mounting single-page UI it reads false and the click silently no-ops. That broke the cache
+  build: the `More options` / `Import existing from passphrase` clicks were skipped and the flow never
+  reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
   `tests/slush.spec.ts`).
 

@@ -83,14 +83,21 @@ question 1 in `plans/023-notes.md`), tracked but not planned yet.
 
 019 merged 2026-07-20 (#33, plus format fix #34): the controller `resolvePopup` throw and the
 MetaMask `unlock` throw were headed-verified (MetaMask connect+sign passes with a fresh cache). The
-Slush `approve` throw shipped code-reviewed but NOT headed-verified, because Slush's cache build is a
-known pre-existing break (`Word 1` onboarding input times out), so no Slush profile can be onboarded
-to run its spec. Re-run the Slush spec once that build is fixed.
+Slush `approve` throw shipped code-reviewed but NOT headed-verified, because Slush's cache build was a
+known pre-existing break (`Word 1` onboarding input times out), so no Slush profile could be onboarded
+to run its spec.
 
-Still TODO, and currently BLOCKED:
+Slush cache-build break FIXED 2026-07-21: root cause was `fclick`'s `isVisible({ timeout })` gate,
+which reads the current state without waiting, so Slush's late-mounting single-page UI made the
+"More options" / "Import existing from passphrase" clicks silently no-op and the flow never reached
+the seed screen (hence the `Word 1` timeout). `fclick` now waits with `waitFor({ state: "visible" })`.
+Verified headed: `pnpm test:cache:one slush` builds a profile and `apps/demo/tests/slush.spec.ts`
+(connect + sign) passes across two runs. This also re-confirms the 019 Slush `approve` throw path.
 
-- 020 (Slush unlock readiness) and 021 (Slush reject): blocked by the Slush cache-build break, no
-  Slush profile can be built to verify them headed. Fix the Slush onboarding cache build first.
+Still TODO:
+
+- 020 (Slush unlock readiness) and 021 (Slush reject): now UNBLOCKED (a Slush profile builds and its
+  spec passes headed). Ready to execute and headed-verify.
 - 024 (Rabby wallet): needs CRX download + interactive onboarding-selector discovery + headed
   connect/sign; an autonomous executor cannot do the discovery, and this was additionally blocked by
   the org monthly spend limit during cycle-3 execution.

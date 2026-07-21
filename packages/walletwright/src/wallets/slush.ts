@@ -10,9 +10,16 @@ const SLUSH_EXTENSION_ID = "opcgpfmipidbgpenhmajoajpbobppdil";
 // Slush is a single-page app: popup, onboarding, unlock, and approvals all live in index.html.
 const HOME_ROUTE = "#/tokens";
 
-const fclick = async (page: Page, text: string, timeoutMs = 8000): Promise<boolean> => {
+const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boolean> => {
   const target = page.getByText(text, { exact: true }).first();
-  if (!(await target.isVisible({ timeout: timeoutMs }).catch(() => false))) {
+  // isVisible() reports the *current* state without waiting; Slush's single-page UI mounts its React
+  // tree a few seconds after domcontentloaded, so an instant check reads false and the click is
+  // silently skipped. waitFor blocks until the element is actually visible (or the budget elapses).
+  const visible = await target
+    .waitFor({ state: "visible", timeout: timeoutMs })
+    .then(() => true)
+    .catch(() => false);
+  if (!visible) {
     return false;
   }
   await target.scrollIntoViewIfNeeded().catch(() => {});
@@ -28,7 +35,9 @@ export const slush: WalletDefinition = {
     // Slush's popup reports the button visible before its React handlers are wired, a click that
     // lands too early is a silent no-op. Let it settle first.
     await sleep(2000);
-    const confirmed = (await fclick(popup, "Approve")) || (await fclick(popup, "Sign"));
+    // Probe Approve with a short budget so a signing popup (no Approve button) falls through to
+    // Sign quickly instead of waiting out fclick's full budget on an element that never appears.
+    const confirmed = (await fclick(popup, "Approve", 4000)) || (await fclick(popup, "Sign"));
     if (!confirmed) {
       throw new Error("[walletwright] Slush approval: neither Approve nor Sign was actionable");
     }
