@@ -58,8 +58,8 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
 | 017  | Unit-test parseFlags + isApprovalPopup             | P2       | S      | LOW     | none       | DONE   |
 | 018  | Harden the cache CLI flag handling                 | P2       | S      | LOW     | 017        | DONE   |
 | 019  | Fail loudly on stuck approval/unlock (investigate) | P2       | M      | MED     | none       | DONE   |
-| 020  | Slush reachUnlockScreen readiness (investigate)    | P2       | M      | MED     | none       | TODO   |
-| 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | TODO   |
+| 020  | Slush reachUnlockScreen readiness (investigate)    | P2       | M      | MED     | none       | DONE   |
+| 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | DONE   |
 | 022  | Resolve the network.switch API trap (decision)     | P3       | S/M    | LOW/MED | none       | DONE   |
 | 023  | Multi-chain Wallet-Standard mock (design spike)    | P3       | M      | LOW     | none       | DONE   |
 | 024  | Add Rabby EVM wallet (discovery + build spike)     | P3       | M      | LOW     | none       | TODO   |
@@ -94,10 +94,19 @@ the seed screen (hence the `Word 1` timeout). `fclick` now waits with `waitFor({
 Verified headed: `pnpm test:cache:one slush` builds a profile and `apps/demo/tests/slush.spec.ts`
 (connect + sign) passes across two runs. This also re-confirms the 019 Slush `approve` throw path.
 
+020 + 021 DONE 2026-07-21 (unblocked by the cache-build fix above):
+
+- 020: Slush `reachUnlockScreen` now polls (up to ~15s) for the password screen (cold) or the home
+  route (warm) and throws `Slush unlock screen never appeared` otherwise, replacing the blind 2500ms
+  sleep. Verified headed (warm launch, connect + sign passes).
+- 021: Slush now declares `reject`. The cancel control was discovered empirically to be a text
+  "Reject" button on both the connect and sign popups (no testid), clicked with the same force-click +
+  2s settle as `approve`. Added `apps/demo/tests/slush.spec.ts` reject case (asserts `#suiError`
+  populated, `#suiSignature` empty); the extension logs "User rejected the request." Verified headed
+  across two runs. Docs updated (`api-reference.mdx`).
+
 Still TODO:
 
-- 020 (Slush unlock readiness) and 021 (Slush reject): now UNBLOCKED (a Slush profile builds and its
-  spec passes headed). Ready to execute and headed-verify.
 - 024 (Rabby wallet): needs CRX download + interactive onboarding-selector discovery + headed
   connect/sign; an autonomous executor cannot do the discovery, and this was additionally blocked by
   the org monthly spend limit during cycle-3 execution.
@@ -116,7 +125,8 @@ Still TODO:
 All four plans executed, PR-reviewed (9 review agents), and revised once. Rejected during review:
 the optional-connect distrust-of-failed-refront rework (wrong layer, risks verified Phantom
 auto-approve), the mnemonic-wording nit, and micro test gaps the reviewers themselves rated noise.
-Follow-up left open: a Slush rejection spec needs `reject` in slush.ts first.
+Follow-up (now closed by plan 021, 2026-07-21): the Slush rejection spec needed `reject` in
+slush.ts first; both shipped.
 
 ## Findings considered and rejected
 

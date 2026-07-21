@@ -131,12 +131,12 @@ extension, so the API never claims support it doesn't have. Calling something a 
 declared throws rather than silently doing nothing:
 
 ```
-[walletwright] Slush does not support reject()
+[walletwright] Slush does not support settings.lock()
 ```
 
-Today `reject` is verified on MetaMask and Phantom, and `settings`, `network.add`, and `accounts`
-on MetaMask. Slush drives connect and sign end to end but declares none of the optional
-capabilities yet, so calling any of them on Slush throws.
+Today `reject` is verified on MetaMask, Phantom, and Slush, and `settings`, `network.add`, and
+`accounts` on MetaMask. Slush drives connect, sign, and reject end to end but declares none of the
+other optional capabilities yet, so calling those on Slush throws.
 
 `network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
 and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls
