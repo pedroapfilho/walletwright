@@ -117,7 +117,8 @@ export const slush: WalletDefinition = {
     // not-yet-ready page whose failure would only surface later at the first approval.
     const password = page.locator('input[type="password"]');
     for (let attempt = 0; attempt < 30; attempt++) {
-      const atHome = (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
+      const atHome =
+        (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
       const locked = await password.isVisible().catch(() => false);
       if (atHome || locked) {
         return page;
@@ -125,6 +126,16 @@ export const slush: WalletDefinition = {
       await sleep(500);
     }
     throw new Error("[walletwright] Slush unlock screen never appeared");
+  },
+
+  // Both the connect and sign popups cancel via a text "Reject" button. Like approve, the popup
+  // reports the button visible before its React handlers wire up, so settle first or the click
+  // no-ops silently.
+  reject: async (popup) => {
+    await sleep(2000);
+    if (!(await fclick(popup, "Reject"))) {
+      throw new Error("[walletwright] Slush reject: no Reject control was actionable");
+    }
   },
 
   unlock: async (page, password) => {
