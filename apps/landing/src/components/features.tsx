@@ -21,7 +21,7 @@ const ICON_PROPS = {
 const FEATURES: Array<Feature> = [
   {
     description:
-      "The actual MetaMask, Phantom, Rabby, and Slush builds, loaded unpacked into Chromium, with no mocked providers.",
+      "The actual MetaMask, Phantom, Rabby, Solflare, and Slush builds, loaded unpacked into Chromium, with no mocked providers.",
     icon: (
       <svg {...ICON_PROPS}>
         <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
@@ -45,7 +45,7 @@ const FEATURES: Array<Feature> = [
   },
   {
     description:
-      "connectToDapp() and confirmSignature() drive MetaMask, Phantom, and Rabby on EVM and Solana, and Slush on Sui, the same way.",
+      "connectToDapp() and confirmSignature() drive MetaMask, Phantom, Rabby, and Solflare on EVM and Solana, and Slush on Sui, the same way.",
     icon: (
       <svg {...ICON_PROPS}>
         <path d="m12 2 9 5-9 5-9-5 9-5Z" />

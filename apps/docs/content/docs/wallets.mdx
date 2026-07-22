@@ -1,9 +1,9 @@
 ---
 title: Wallets
-description: "MetaMask (EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), and Slush (Sui): supported flows, seed-phrase caveats, and pinning extension versions."
+description: "MetaMask (EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), Solflare (Solana), and Slush (Sui): supported flows, seed-phrase caveats, and pinning extension versions."
 ---
 
-walletwright ships definitions for MetaMask, Phantom, Rabby, and Slush. Pick one per `WalletSetup` with the
+walletwright ships definitions for MetaMask, Phantom, Rabby, Solflare, and Slush. Pick one per `WalletSetup` with the
 `wallet` field; the runtime `wallet` fixture is the same regardless of chain. Each definition declares
 its `ecosystems` (`evm`, `svm`, `sui`, `dot`, `btc`), and `walletKindsByEcosystem(eco)` lists the
 wallets that drive a chain. The roadmap is the top 3 wallets per ecosystem, and a wallet ships only
@@ -106,6 +106,30 @@ export const rabby: WalletSetup = {
   your test stays `connectToDapp()` then `confirmSignature()`.
 </Callout>
 
+## Solflare (Solana)
+
+```ts
+import type { WalletSetup } from "walletwright";
+
+export const solflare: WalletSetup = {
+  wallet: "solflare",
+  // A fresh, unfunded mnemonic.
+  seedPhrase: "parade wire fork giggle foil sugar early record crew mesh excuse purse",
+  password: "Tester@1234",
+};
+```
+
+- Drives Solana through the Wallet Standard (`standard:connect`, `solana:signMessage`), so your dapp
+  connects with `@wallet-standard/app` exactly as it would for any other Solana wallet.
+- Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+- Approvals open in Solflare's own `confirm_popup.html` window; `connectToDapp()` and
+  `confirmSignature()` drive it unchanged.
+
+<Callout type="info">
+  An unfunded seed derives no "active" (SOL-holding) accounts, so Solflare's import asks how to pick
+  them. walletwright takes the quick-setup default, which is the account the tests drive.
+</Callout>
+
 ## Slush (Sui)
 
 ```ts
@@ -131,8 +155,8 @@ export const slush: WalletSetup = {
 
 ## Pinning versions
 
-`version` pins the extension build for reproducible runs (MetaMask only; Phantom, Rabby, and Slush
-track the Web Store). Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached
+`version` pins the extension build for reproducible runs (MetaMask only; Phantom, Rabby, Solflare,
+and Slush track the Web Store). Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached
 profile, so bumping a version re-onboards automatically on the next `buildCache`.
 
 ## Adding a wallet

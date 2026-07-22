@@ -41,6 +41,12 @@ const TARGETS: Array<Target> = [
     wallet: { icon: <WalletRabby aria-hidden size={32} variant="branded" />, name: "Rabby" },
   },
   {
+    capability: "Connect and sign through the Solana Wallet Standard.",
+    chain: { icon: <NetworkSolana aria-hidden size={18} variant="branded" />, name: "Solana" },
+    // @web3icons/react has no Solflare brand mark, so reuse the Solana network icon.
+    wallet: { icon: <NetworkSolana aria-hidden size={32} variant="branded" />, name: "Solflare" },
+  },
+  {
     capability: "Connect and sign through the Sui Wallet Standard.",
     chain: { icon: <NetworkSui aria-hidden size={18} variant="branded" />, name: "Sui" },
     // @web3icons/react has no Slush brand mark, so reuse the Sui network icon as the wallet icon.

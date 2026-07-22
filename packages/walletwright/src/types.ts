@@ -7,7 +7,7 @@ export type Ecosystem = "evm" | "svm" | "sui" | "dot" | "btc";
  * Supported wallet extensions. Only wallets with a verified end-to-end (connect + sign) flow are
  * listed. The roadmap (top 3 per ecosystem) is tracked in `AGENTS.md`; each lands here once driven.
  */
-export type WalletKind = "metamask" | "phantom" | "rabby" | "slush";
+export type WalletKind = "metamask" | "phantom" | "rabby" | "slush" | "solflare";
 
 /** A wallet to import and the credentials to unlock it. */
 export type WalletSetup = {

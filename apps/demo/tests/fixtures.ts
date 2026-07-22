@@ -2,12 +2,19 @@ import type { Page } from "@playwright/test";
 import { createWalletFixtures } from "walletwright";
 import type { Wallet } from "walletwright";
 
-import { metamaskSetup, phantomSetup, rabbySetup, slushSetup } from "../wallet-setup.ts";
+import {
+  metamaskSetup,
+  phantomSetup,
+  rabbySetup,
+  slushSetup,
+  solflareSetup,
+} from "../wallet-setup.ts";
 
 export const metamaskTest = createWalletFixtures(metamaskSetup);
 export const phantomTest = createWalletFixtures(phantomSetup);
 export const rabbyTest = createWalletFixtures(rabbySetup);
 export const slushTest = createWalletFixtures(slushSetup);
+export const solflareTest = createWalletFixtures(solflareSetup);
 
 /** The shared EVM connect baseline reused across specs. */
 export const connectMetamask = async (page: Page, wallet: Wallet): Promise<void> => {
