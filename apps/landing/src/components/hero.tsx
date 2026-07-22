@@ -32,9 +32,9 @@ const Hero = () => (
       </h1>
 
       <p className="text-muted-foreground mx-auto mt-6 max-w-[60ch] text-lg text-pretty sm:text-xl">
-        walletwright onboards MetaMask, Phantom, Rabby, and Slush from a seed, caches the profile,
-        then unlocks and clicks through the connect and signature popups against your dapp. It
-        covers EVM, Solana, and Sui with the real extensions, not mocks.
+        walletwright onboards MetaMask, Phantom, Rabby, Solflare, and Slush from a seed, caches the
+        profile, then unlocks and clicks through the connect and signature popups against your dapp.
+        It covers EVM, Solana, and Sui with the real extensions, not mocks.
       </p>
 
       <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row">

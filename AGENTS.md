@@ -6,7 +6,7 @@ this file.
 ## What this repo is
 
 `walletwright` is a **Playwright wallet-automation library** for **MetaMask (EVM + Solana)**,
-**Phantom (EVM + Solana)**, **Rabby (EVM)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
+**Phantom (EVM + Solana)**, **Rabby (EVM)**, **Solflare (Solana)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
 unlocks and drives the extension's connect/sign approval popups against a dapp under test.
 
 walletwright takes the approach that works — onboard once, cache the profile, drive the popups — and
@@ -22,7 +22,7 @@ packages/
     src/types.ts         WalletSetup, WalletDefinition, Wallet
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
-    src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts) + registry
+    src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts, solflare.ts) + registry
     src/internal/        engine: cache (build), launch, controller, download, onboarding-patch, utils
   config-typescript/   @repo/typescript-config (tsconfig presets)
   config-vitest/        @repo/config-vitest (node vitest preset)
@@ -77,13 +77,13 @@ The target is the top 3 wallets per ecosystem. A wallet enters `WalletKind` and 
 once its **connect and sign are verified end-to-end**. Looking done is not enough; verifying it is
 the whole point of walletwright. Everything else is roadmap.
 
-| Ecosystem | Verified          | Roadmap (next)                   |
-| --------- | ----------------- | -------------------------------- |
-| EVM       | MetaMask, Rabby   | Coinbase Wallet, Trust Wallet    |
-| SVM       | Phantom, MetaMask | Solflare, Backpack               |
-| SUI       | Slush             | Suiet, Nightly                   |
-| DOT       | none yet          | Talisman, SubWallet, Polkadot.js |
-| BTC       | none yet          | Xverse, UniSat, Leather          |
+| Ecosystem | Verified                    | Roadmap (next)                   |
+| --------- | --------------------------- | -------------------------------- |
+| EVM       | MetaMask, Rabby             | Coinbase Wallet, Trust Wallet    |
+| SVM       | Phantom, MetaMask, Solflare | Backpack, Glow                   |
+| SUI       | Slush                       | Suiet, Nightly                   |
+| DOT       | none yet                    | Talisman, SubWallet, Polkadot.js |
+| BTC       | none yet                    | Xverse, UniSat, Leather          |
 
 Adding a wallet is empirical: drive the real extension, never guess selectors. Download the CRX,
 launch it headed, and snapshot each onboarding screen (its buttons, testids, and inputs) to discover
@@ -115,6 +115,22 @@ debugging:
   reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
   `tests/slush.spec.ts`).
+
+### Solflare (SVM), verified
+
+Solflare (`src/wallets/solflare.ts`) is a Web-Store build with no manifest `key` (path-derived id).
+Onboarding lives in `wallet.html` under `#/onboard`; approvals get their own `confirm_popup.html`
+window, which is what `notificationMatch` keys on. Worth knowing:
+
+- The flow is "Import existing wallet" → "Recovery phrase" → twelve `input-recovery-phrase-N` boxes →
+  `btn-continue` → `input-new-password` / `input-repeat-password` → `btn-continue` → **"No Active
+  Wallets Found"** → `btn-quick-setup` → `btn-explore`. Solflare calls an account "active" only if it
+  holds SOL, so an unfunded test seed always takes the quick-setup branch; skipping it leaves
+  onboarding incomplete.
+- Confirm buttons differ by request: connect uses `btn-connect`, signing uses `btn-approve`
+  (cancels are `btn-cancel` / `btn-reject`), so `approve` unions the pair.
+- Verified end-to-end via `apps/demo`, driving the name-agnostic Wallet-Standard Solana section
+  (`#mockSvmConnect` / `#mockSvmSign`); the spec is `tests/solflare.spec.ts`.
 
 ### Rabby (EVM), verified
 

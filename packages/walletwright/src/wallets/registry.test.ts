@@ -9,7 +9,9 @@ describe("wallet registry", () => {
     expect(walletKindsByEcosystem("evm")).toEqual(
       expect.arrayContaining(["metamask", "phantom", "rabby"]),
     );
-    expect(walletKindsByEcosystem("svm")).toEqual(expect.arrayContaining(["metamask", "phantom"]));
+    expect(walletKindsByEcosystem("svm")).toEqual(
+      expect.arrayContaining(["metamask", "phantom", "solflare"]),
+    );
     expect(walletKindsByEcosystem("sui")).toContain("slush");
   });
 
