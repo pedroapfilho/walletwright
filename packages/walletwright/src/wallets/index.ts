@@ -2,11 +2,13 @@ import type { Ecosystem, WalletDefinition, WalletKind } from "../types.ts";
 
 import { metamask } from "./metamask.ts";
 import { phantom } from "./phantom.ts";
+import { rabby } from "./rabby.ts";
 import { slush } from "./slush.ts";
 
 export const wallets: Record<WalletKind, WalletDefinition> = {
   metamask,
   phantom,
+  rabby,
   slush,
 };
 

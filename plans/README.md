@@ -62,7 +62,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
 | 021  | Add reject to Slush (spike + implement)            | P2       | M      | LOW     | none       | DONE   |
 | 022  | Resolve the network.switch API trap (decision)     | P3       | S/M    | LOW/MED | none       | DONE   |
 | 023  | Multi-chain Wallet-Standard mock (design spike)    | P3       | M      | LOW     | none       | DONE   |
-| 024  | Add Rabby EVM wallet (discovery + build spike)     | P3       | M      | LOW     | none       | TODO   |
+| 024  | Add Rabby EVM wallet (discovery + build spike)     | P3       | M      | LOW     | none       | DONE   |
 | 025  | Fix api-reference root-vs-subpath claim            | P3       | S      | LOW     | none       | DONE   |
 | 026  | Housekeeping bundle (deps, CI drift, cruft)        | P3       | S      | LOW     | none       | DONE   |
 | 027  | Graduate Wallet-Standard Solana mock (from 023)    | P3       | M      | LOW     | 023        | DONE   |
@@ -105,11 +105,15 @@ Verified headed: `pnpm test:cache:one slush` builds a profile and `apps/demo/tes
   populated, `#suiSignature` empty); the extension logs "User rejected the request." Verified headed
   across two runs. Docs updated (`api-reference.mdx`).
 
-Still TODO:
+024 DONE 2026-07-21: Rabby ships as the second verified EVM wallet. The discovery was done by
+driving the real extension headed. Findings are recorded in the AGENTS.md "Rabby (EVM), verified"
+section; the two that cost the most time were that Rabby's approval window unmounts when it loses
+focus (so approvals must be driven with an in-page `evaluate` click rather than `locator.click()`,
+or the dapp sees "User rejected the request"), and that signing is a two-step "Sign" then "Confirm"
+footer while connect is one step. Verified headed: a cold run that re-downloads the CRX, re-onboards,
+and passes `apps/demo/tests/rabby.spec.ts` (connect + personal_sign), green across three runs.
 
-- 024 (Rabby wallet): needs CRX download + interactive onboarding-selector discovery + headed
-  connect/sign; an autonomous executor cannot do the discovery, and this was additionally blocked by
-  the org monthly spend limit during cycle-3 execution.
+All cycle-3 plans are now complete.
 
 ## Dependency notes
 

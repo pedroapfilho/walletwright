@@ -6,6 +6,12 @@ export const metamaskSetup: WalletSetup = {
   wallet: "metamask",
 };
 
+export const rabbySetup: WalletSetup = {
+  password: "Tester@1234",
+  seedPhrase: "test test test test test test test test test test test junk",
+  wallet: "rabby",
+};
+
 // Phantom flags the famous public test seed as malicious and silently drops connections, so use a
 // dedicated (unfunded) mnemonic for Phantom.
 export const phantomSetup: WalletSetup = {

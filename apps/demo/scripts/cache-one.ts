@@ -1,8 +1,13 @@
 import { buildCache } from "walletwright";
 
-import { metamaskSetup, phantomSetup, slushSetup } from "../wallet-setup.ts";
+import { metamaskSetup, phantomSetup, rabbySetup, slushSetup } from "../wallet-setup.ts";
 
-const setups = { metamask: metamaskSetup, phantom: phantomSetup, slush: slushSetup };
+const setups = {
+  metamask: metamaskSetup,
+  phantom: phantomSetup,
+  rabby: rabbySetup,
+  slush: slushSetup,
+};
 const name = process.argv[2] as keyof typeof setups;
 const setup = setups[name];
 if (!setup) {

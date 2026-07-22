@@ -1,9 +1,9 @@
 ---
 title: Wallets
-description: "MetaMask (EVM + Solana), Phantom (EVM + Solana), and Slush (Sui): supported flows, seed-phrase caveats, and pinning extension versions."
+description: "MetaMask (EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), and Slush (Sui): supported flows, seed-phrase caveats, and pinning extension versions."
 ---
 
-walletwright ships definitions for MetaMask, Phantom, and Slush. Pick one per `WalletSetup` with the
+walletwright ships definitions for MetaMask, Phantom, Rabby, and Slush. Pick one per `WalletSetup` with the
 `wallet` field; the runtime `wallet` fixture is the same regardless of chain. Each definition declares
 its `ecosystems` (`evm`, `svm`, `sui`, `dot`, `btc`), and `walletKindsByEcosystem(eco)` lists the
 wallets that drive a chain. The roadmap is the top 3 wallets per ecosystem, and a wallet ships only
@@ -83,6 +83,29 @@ test("phantom EVM + Solana", async ({ page, wallet }) => {
   trusts for a second chain. `confirmSignature()` requires a popup and fails if none appears.
 </Callout>
 
+## Rabby (EVM)
+
+```ts
+import type { WalletSetup } from "walletwright";
+
+export const rabby: WalletSetup = {
+  wallet: "rabby",
+  seedPhrase: "test test test test test test test test test test test junk",
+  password: "Tester@1234",
+};
+```
+
+- Drives `window.ethereum`: connect and `personal_sign`, with the same `connectToDapp()` and
+  `confirmSignature()` calls as MetaMask.
+- Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+- The public `test … junk` seed is fine here, giving the usual `0xf39F…2266` first account.
+
+<Callout type="info">
+  Rabby confirms a signature in two steps ("Sign", then "Confirm") and its approval window tears
+  itself down when it loses focus. walletwright drives both steps inside the `wallet` fixture, so
+  your test stays `connectToDapp()` then `confirmSignature()`.
+</Callout>
+
 ## Slush (Sui)
 
 ```ts
@@ -108,8 +131,8 @@ export const slush: WalletSetup = {
 
 ## Pinning versions
 
-`version` pins the extension build for reproducible runs (MetaMask only; Phantom and Slush track the
-Web Store). Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached
+`version` pins the extension build for reproducible runs (MetaMask only; Phantom, Rabby, and Slush
+track the Web Store). Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached
 profile, so bumping a version re-onboards automatically on the next `buildCache`.
 
 ## Adding a wallet
