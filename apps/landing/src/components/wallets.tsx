@@ -63,8 +63,8 @@ const Wallets = () => (
       <p className="text-muted-foreground mt-4 max-w-[56ch] text-lg text-pretty">
         The same{" "}
         <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono text-[0.9em]">wallet</code>{" "}
-        fixture drives MetaMask, Phantom, Rabby, and Slush, so your tests use one API and never
-        branch per chain.
+        fixture drives MetaMask, Phantom, Rabby, Solflare, and Slush, so your tests use one API and
+        never branch per chain.
       </p>
     </div>
 

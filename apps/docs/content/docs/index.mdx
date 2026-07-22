@@ -1,12 +1,12 @@
 ---
 title: Introduction
-description: walletwright is Playwright wallet automation for MetaMask (EVM + Solana), Phantom (EVM + Solana), and Slush (Sui). Onboard once, then connect and sign in real browser extensions.
+description: walletwright is Playwright wallet automation for MetaMask (EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), Solflare (Solana), and Slush (Sui). Onboard once, then connect and sign in real browser extensions.
 ---
 
 walletwright drives **real wallet extensions** in Playwright tests. It onboards a wallet from a seed
 phrase into a cached browser profile, then unlocks it and clicks through the extension's connect and
 signature popups against your dapp. There are no mocked providers and no forked test framework, just
-`@playwright/test` and the actual MetaMask, Phantom, and Slush extensions.
+`@playwright/test` and the actual MetaMask, Phantom, Rabby, Solflare, and Slush extensions.
 
 The approach is simple and proven: onboard once, cache the profile, drive the popups. walletwright
 runs it on plain `@playwright/test` with current wallet and Chromium versions, with no fork and no
@@ -14,7 +14,8 @@ version pinning to maintain.
 
 ## At a glance
 
-- Real MetaMask, Phantom, and Slush builds, loaded unpacked into Chromium. No mocked providers.
+- Real MetaMask, Phantom, Rabby, Solflare, and Slush builds, loaded unpacked into Chromium. No
+  mocked providers.
 - One `wallet` fixture covers EVM (`window.ethereum`), Solana (`window.phantom.solana`), and Sui (the
   Wallet Standard).
 - `buildCache()` imports the seed into a profile on disk once. Tests launch from a copy and only
@@ -47,7 +48,7 @@ test("connect and sign", async ({ page, wallet }) => {
 
 - [Getting started](/getting-started): install, describe the wallet, build the cache, write a test.
 - [Examples](/examples): copy-paste recipes for connect/sign, transactions, global setup, and more.
-- [Wallets](/wallets): MetaMask, Phantom, and Slush specifics, seeds, and versions.
+- [Wallets](/wallets): MetaMask, Phantom, Rabby, Solflare, and Slush specifics, seeds, and versions.
 - [Comparison with Synpress](/comparison): a feature table, side-by-side code, and a migration map.
 - [Continuous integration](/continuous-integration): running headed on CI and caching profiles.
 - [How it works](/how-it-works): the three phases and the extension-automation details.
