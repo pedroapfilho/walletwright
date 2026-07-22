@@ -6,7 +6,7 @@ this file.
 ## What this repo is
 
 `walletwright` is a **Playwright wallet-automation library** for **MetaMask (EVM + Solana)**,
-**Phantom (EVM + Solana)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
+**Phantom (EVM + Solana)**, **Rabby (EVM)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
 unlocks and drives the extension's connect/sign approval popups against a dapp under test.
 
 walletwright takes the approach that works — onboard once, cache the profile, drive the popups — and
@@ -22,12 +22,12 @@ packages/
     src/types.ts         WalletSetup, WalletDefinition, Wallet
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
-    src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, slush.ts) + registry
+    src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts) + registry
     src/internal/        engine: cache (build), launch, controller, download, onboarding-patch, utils
   config-typescript/   @repo/typescript-config (tsconfig presets)
   config-vitest/        @repo/config-vitest (node vitest preset)
 apps/
-  demo/                Vite dapp + Playwright specs for MetaMask, Phantom, and Slush (workspace:*)
+  demo/                Vite dapp + Playwright specs for MetaMask, Phantom, Rabby, and Slush (workspace:*)
   docs/                Fumadocs (Next 16) documentation site; content in apps/docs/content/docs
   landing/             Marketing landing page (Next 16 + Tailwind v4, neutral/ink theme, shiki)
 ```
@@ -55,7 +55,7 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   returns a `Wallet`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
   `approve` by finding the approval popup and clicking the wallet's confirm button.
-- `wallets/{metamask,phantom,slush}.ts` hold the per-wallet definitions. A wallet with more than a
+- `wallets/{metamask,phantom,rabby,slush}.ts` hold the per-wallet definitions. A wallet with more than a
   file's worth of flow keeps its helpers in a folder of the same name, so the definition file stays
   the import site: `metamask.ts` assembles, `metamask/onboarding.ts` and `metamask/approve.ts` and
   `metamask/actions/*.ts` implement.
@@ -79,7 +79,7 @@ the whole point of walletwright. Everything else is roadmap.
 
 | Ecosystem | Verified          | Roadmap (next)                   |
 | --------- | ----------------- | -------------------------------- |
-| EVM       | MetaMask          | Rabby, Coinbase Wallet           |
+| EVM       | MetaMask, Rabby   | Coinbase Wallet, Trust Wallet    |
 | SVM       | Phantom, MetaMask | Solflare, Backpack               |
 | SUI       | Slush             | Suiet, Nightly                   |
 | DOT       | none yet          | Talisman, SubWallet, Polkadot.js |
@@ -115,6 +115,37 @@ debugging:
   reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
   `tests/slush.spec.ts`).
+
+### Rabby (EVM), verified
+
+Rabby (`src/wallets/rabby.ts`) is MV3 with no manifest `key`, so its id is path-derived like
+MetaMask's, and its approvals use the standard `notification.html`. It is a hash-router SPA. What
+cost real debugging:
+
+- **Drive approvals with an in-page `evaluate` click, not `locator.click()`.** Rabby's approval
+  window unmounts its contents seconds after losing focus, and Playwright's click (which waits for
+  actionability, then for the click to settle) loses the window mid-action. Rabby reads the vanished
+  window as a dismissal, so the dapp gets `User rejected the request` even though the button was
+  visible and enabled. Rabby is a plain React app, so `evaluate` works (unlike MetaMask, item 12).
+- **Signing is two steps.** "Sign" swaps itself for "Confirm", which must also be clicked, and both
+  start disabled while Rabby analyses the request. Connect is one step ("Connect"). So click each
+  distinct label once and treat the window closing as the only completion signal: re-clicking a
+  still-open "Connect" re-issues the request and the dapp ends up with nothing.
+- **Onboard through `index.html#/new-user/guide`.** Plain `index.html` lands on a marketing carousel
+  whose "Get Started" leads to an add-address menu that reopens the new-user route in a _second tab_.
+  The flow is: "I already have an address" → "Seed Phrase or Private Key" → `#/new-user/import/
+seed-or-key` → `#/new-user/import/seed-phrase/set-password` → `#/new-user/success`. The success
+  screen persists the keyring; "Open Wallet" is not needed.
+- **Anchor each onboarding step on its route, and poll for it.** `waitForURL` never settles on a hash
+  router (a hash change fires no navigation event). It matters because screens share the
+  `input[type="password"]` selector: the seed screen has twelve of them, so reading `nth(1)` as the
+  password-confirm field on the seed screen silently overwrites word 2.
+- **Fill the seed by pasting into the first box.** The twelve word boxes are unlabelled
+  `type=password` inputs that re-render as they fill, so filling them one by one drops words. Rabby
+  splits a pasted phrase across every box. Keep a per-box fallback for when clipboard access is
+  denied.
+- Verified end-to-end via `apps/demo` (EVM section, `tests/rabby.spec.ts`), including a cold run that
+  re-downloads the CRX and re-onboards.
 
 ## Wallet automation: hard-won knowledge
 

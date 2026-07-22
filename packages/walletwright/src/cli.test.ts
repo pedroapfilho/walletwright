@@ -37,7 +37,7 @@ describe("resolveSetup", () => {
   it("rejects an unknown --wallet and lists the valid kinds", async () => {
     const flags = parseFlags(["--wallet", "foo", "--seed", "a b c", "--password", "pw"]);
     await expect(resolveSetup(flags)).rejects.toThrow(
-      /unknown --wallet "foo"\. Expected one of: metamask, phantom, slush\./v,
+      /unknown --wallet "foo"\. Expected one of: metamask, phantom, rabby, slush\./v,
     );
   });
 

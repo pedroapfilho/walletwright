@@ -4,6 +4,7 @@ import {
   NetworkSui,
   WalletMetamask,
   WalletPhantom,
+  WalletRabby,
 } from "@web3icons/react";
 import type { ReactNode } from "react";
 
@@ -35,6 +36,11 @@ const TARGETS: Array<Target> = [
     wallet: { icon: <WalletPhantom aria-hidden size={32} variant="branded" />, name: "Phantom" },
   },
   {
+    capability: "Connect and personal_sign on window.ethereum.",
+    chain: { icon: <NetworkEthereum aria-hidden size={18} variant="branded" />, name: "EVM" },
+    wallet: { icon: <WalletRabby aria-hidden size={32} variant="branded" />, name: "Rabby" },
+  },
+  {
     capability: "Connect and sign through the Sui Wallet Standard.",
     chain: { icon: <NetworkSui aria-hidden size={18} variant="branded" />, name: "Sui" },
     // @web3icons/react has no Slush brand mark, so reuse the Sui network icon as the wallet icon.
@@ -51,8 +57,8 @@ const Wallets = () => (
       <p className="text-muted-foreground mt-4 max-w-[56ch] text-lg text-pretty">
         The same{" "}
         <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono text-[0.9em]">wallet</code>{" "}
-        fixture drives MetaMask, Phantom, and Slush, so your tests use one API and never branch per
-        chain.
+        fixture drives MetaMask, Phantom, Rabby, and Slush, so your tests use one API and never
+        branch per chain.
       </p>
     </div>
 

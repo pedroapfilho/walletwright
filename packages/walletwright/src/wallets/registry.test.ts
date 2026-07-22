@@ -6,7 +6,9 @@ import { walletKindsByEcosystem, wallets } from "./index.ts";
 
 describe("wallet registry", () => {
   it("maps ecosystems to the wallets that drive them", () => {
-    expect(walletKindsByEcosystem("evm")).toEqual(expect.arrayContaining(["metamask", "phantom"]));
+    expect(walletKindsByEcosystem("evm")).toEqual(
+      expect.arrayContaining(["metamask", "phantom", "rabby"]),
+    );
     expect(walletKindsByEcosystem("svm")).toEqual(expect.arrayContaining(["metamask", "phantom"]));
     expect(walletKindsByEcosystem("sui")).toContain("slush");
   });

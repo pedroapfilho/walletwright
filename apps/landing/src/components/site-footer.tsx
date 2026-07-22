@@ -57,8 +57,8 @@ const SiteFooter = () => (
           <BrandLogo />
         </Link>
         <p className="text-muted-foreground mt-4 max-w-[40ch] text-sm text-pretty">
-          Playwright wallet automation for MetaMask, Phantom, and Slush. Real extensions across EVM,
-          Solana, and Sui.
+          Playwright wallet automation for MetaMask, Phantom, Rabby, and Slush. Real extensions
+          across EVM, Solana, and Sui.
         </p>
       </div>
 
