@@ -115,6 +115,26 @@ and passes `apps/demo/tests/rabby.spec.ts` (connect + personal_sign), green acro
 
 All cycle-3 plans are now complete.
 
+### Cycle 4 (2026-07-21/22, the wallet-roadmap sweep)
+
+| Plan | Title                                     | Priority | Effort | Depends on | Status                                 |
+| ---- | ----------------------------------------- | -------- | ------ | ---------- | -------------------------------------- |
+| 028  | Add Solflare SVM wallet                   | P3       | M      | none       | DONE                                   |
+| 029  | Add Coinbase Wallet (EVM)                 | P3       | M      | none       | BLOCKED (eth_requestAccounts hang)     |
+| 030  | Remaining roadmap wallets, triage + notes | P3       | L      | none       | IN PROGRESS (per-wallet status inside) |
+
+Cycle-4 notes:
+
+- 028 and 029 were executed directly from the roadmap sweep and have no standalone plan file; their
+  findings live in `plans/030-remaining-roadmap-wallets.md` and AGENTS.md.
+- 028 merged 2026-07-22 (#39): Solflare verified connect + sign headed (strict address/signature
+  assertions), registry and docs updated. Landing/docs wallet enumerations completed in #41.
+- 029 is fully discovered but blocked: `eth_requestAccounts` never settles under the walletwright
+  fixture while the identical cached profile works from a standalone script. The ruled-out list and
+  the next lead are in plan 030's Coinbase section.
+- 030 (#40) is the umbrella for everything left: Nightly, Trust, OKX, Backpack, Coinbase, then the
+  DOT and BTC dapp sections and their wallets. One wallet per PR, verified headed or not registered.
+
 ## Dependency notes
 
 - 006 shares `download.ts` and `download.test.ts` with 005; do 005 first so the edits compose (both

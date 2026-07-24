@@ -37,17 +37,18 @@ its time driving flows rather than rediscovering ids, entry points, and dead end
 All ids below are the Chrome Web Store ids. Every candidate ships without a manifest `key` except
 Trust, so its loaded-unpacked id is path-derived and changes if the cache path changes.
 
-| Wallet      | Eco | Store id                           | MV  | Version  | Manifest `key` | Approval page (likely)     |
-| ----------- | --- | ---------------------------------- | --- | -------- | -------------- | -------------------------- |
-| Coinbase    | evm | `hnfanknocfeofbddgcijnmhnfnkdnaad` | 3   | 3.141.1  | no             | `index.html` + query       |
-| Trust       | evm | `egjidjbpglichdcondbcbdnbeeppgdph` | 3   | 2.91.2   | **yes**        | `popup.html` / `home.html` |
-| Solflare    | svm | `bhhhlbepdkbapadjdnnojkbgioiodbic` | 3   | 2.31.0   | no             | `confirm_popup.html`       |
-| Backpack    | svm | `aflkmfhebedbjioipglgcbcmnbpgliof` | 3   | 0.10.209 | no             | `popout.html`              |
-| Nightly     | sui | `fiikommddbeccaoicoejoniammnalkfa` | 3   | 1.49.48  | no             | `popup.html`               |
-| Polkadot.js | dot | `mopnmbcafieddcagagdcbnhejhlodfdd` | 3   | 0.63.1   | no             | `notification.html`        |
-| Talisman    | dot | `fijngjgcjhjmmpcmkeiomlglpeiijkld` | 3   | 3.7.1    | no             | `popup.html`               |
-| Xverse      | btc | `idnnbdplmphpflfnlkomgpfbpcgelopg` | 3   | 2.5.6    | no             | `popup.html`               |
-| UniSat      | btc | `ppbibelpcjmhbdihakflkdcoccbgbkpo` | 3   | 1.7.17   | no             | `notification.html`        |
+| Wallet      | Eco     | Store id                           | MV  | Version  | Manifest `key` | Approval page (likely)     |
+| ----------- | ------- | ---------------------------------- | --- | -------- | -------------- | -------------------------- |
+| Coinbase    | evm     | `hnfanknocfeofbddgcijnmhnfnkdnaad` | 3   | 3.141.1  | no             | `index.html` + query       |
+| Trust       | evm     | `egjidjbpglichdcondbcbdnbeeppgdph` | 3   | 2.91.2   | **yes**        | `popup.html` / `home.html` |
+| OKX         | evm+svm | `mcohilncbfahbmgdjkbpemcciiolgcge` | 3   | 4.9.9    | no             | `notification.html`        |
+| Solflare    | svm     | `bhhhlbepdkbapadjdnnojkbgioiodbic` | 3   | 2.31.0   | no             | `confirm_popup.html`       |
+| Backpack    | svm     | `aflkmfhebedbjioipglgcbcmnbpgliof` | 3   | 0.10.209 | no             | `popout.html`              |
+| Nightly     | sui     | `fiikommddbeccaoicoejoniammnalkfa` | 3   | 1.49.48  | no             | `popup.html`               |
+| Polkadot.js | dot     | `mopnmbcafieddcagagdcbnhejhlodfdd` | 3   | 0.63.1   | no             | `notification.html`        |
+| Talisman    | dot     | `fijngjgcjhjmmpcmkeiomlglpeiijkld` | 3   | 3.7.1    | no             | `popup.html`               |
+| Xverse      | btc     | `idnnbdplmphpflfnlkomgpfbpcgelopg` | 3   | 2.5.6    | no             | `popup.html`               |
+| UniSat      | btc     | `ppbibelpcjmhbdihakflkdcoccbgbkpo` | 3   | 1.7.17   | no             | `notification.html`        |
 
 **Suiet is unavailable**: its Web Store CRX download returns a non-CRX payload (delisted, or the id
 changed). Re-check the id before planning it; Nightly is the better SUI target meanwhile.
@@ -104,6 +105,19 @@ The blocker is at the dapp boundary, not in the wallet UI.
 - Root pages are `home.html`, `popup.html`, `sidepanel.html`. Start onboarding at `home.html`.
 - Reuses the demo's existing EVM section (`#connectButton` / `#signButton`), so no dapp work.
 
+### OKX Wallet (EVM + SVM): not started, added 2026-07-24 on usage grounds
+
+- Added to the triage because it outranks several listed candidates by extension usage (strong
+  outside the US) and drives both ecosystems the demo already has sections for, so one wallet
+  verifies two rows of the roadmap table with **no dapp changes**.
+- CRX pulled and manifest read 2026-07-24 (row above): MV3, no `key` (path-derived id). Root pages
+  include `home.html` (likely onboarding entry) and a standard `notification.html` (likely approval
+  page, same shape as MetaMask/Phantom).
+- **Caveat before driving it**: the bundle ships `ses.html` / `ses-sandbox.html`, so OKX likely
+  hardens its pages with SES the way MetaMask does with LavaMoat (item 12 in AGENTS.md). Expect
+  `page.evaluate` to be blocked inside the wallet's own pages; plan on locators from the start.
+- Still to discover: the whole onboarding flow, unlock, and both approval popups.
+
 ### Nightly (SUI): not started
 
 - Root pages include `popup.html`, `options.html`, `extension-popup-root.html`. Try `options.html`
@@ -127,10 +141,10 @@ the dapp work first, as its own PR, then the wallets:
 ## Suggested order
 
 1. Nightly (SUI) and Trust (EVM): both reuse existing demo sections, so they are pure wallet work.
-2. Backpack (SVM): resume from the network-picker step above.
-3. Coinbase (EVM): a debugging task, not a discovery task. Start from the ruled-out list.
-4. DOT dapp section, then Polkadot.js, then Talisman.
-5. BTC dapp section, then UniSat, then Xverse.
+2. OKX (EVM + SVM): also pure wallet work, and one verification covers two ecosystems.
+3. Backpack (SVM): resume from the network-picker step above.
+4. Coinbase (EVM): a debugging task, not a discovery task. Start from the ruled-out list.
+5. DOT dapp section, then Polkadot.js, then Talisman. Then BTC dapp section, UniSat, Xverse.
 
 ## Done criteria
 
