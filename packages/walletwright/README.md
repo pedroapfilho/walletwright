@@ -1,10 +1,11 @@
 # walletwright
 
-Playwright wallet automation for **MetaMask (EVM + Solana)**, **Phantom (EVM + Solana)**, and
-**Slush (Sui)**.
+Playwright wallet automation for **MetaMask (EVM + Solana)**, **Phantom (EVM + Solana)**,
+**Rabby (EVM)**, **Solflare (Solana)**, and **Slush (Sui)**.
 It connects and signs in the real browser extensions.
 
-- Real extensions, no mocks: MetaMask, Phantom, and Slush on their current versions.
+- Real extensions, no mocks: MetaMask, Phantom, Rabby, Solflare, and Slush on their current
+  versions.
 - EVM, Solana, and Sui from one fixture: `window.ethereum`, `window.phantom.solana`, and the Sui
   Wallet Standard.
 - Onboard a wallet once into a cached profile, then unlock it and drive the popups in every test.
@@ -101,8 +102,8 @@ await context.close();
 - **Run headed.** Extension approval popups do not open in headless Chromium. On CI, give it a virtual
   display: `xvfb-run pnpm exec playwright test`. `buildCache` can run headless, since onboarding has
   no popups.
-- MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom and
-  Slush always use the current Web Store build.
+- MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom,
+  Rabby, Solflare, and Slush always use the current Web Store build.
 - The cache lives in `.walletwright/` (override it with `WalletSetup.cacheDir`). Add that directory to
   `.gitignore`.
 

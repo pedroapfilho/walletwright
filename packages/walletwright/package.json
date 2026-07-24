@@ -1,15 +1,17 @@
 {
   "name": "walletwright",
   "version": "0.1.0",
-  "description": "Playwright wallet automation for MetaMask, Phantom, and Slush across EVM, Solana, and Sui. Connect and sign in real browser extensions.",
+  "description": "Playwright wallet automation for MetaMask, Phantom, Rabby, Solflare, and Slush across EVM, Solana, and Sui. Connect and sign in real browser extensions.",
   "keywords": [
     "e2e",
     "ethereum",
     "metamask",
     "phantom",
     "playwright",
+    "rabby",
     "slush",
     "solana",
+    "solflare",
     "sui",
     "testing",
     "wallet",
@@ -26,7 +28,8 @@
     "walletwright": "dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "type": "module",
   "types": "dist/index.d.mts",
