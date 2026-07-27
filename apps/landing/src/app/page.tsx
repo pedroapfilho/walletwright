@@ -9,11 +9,12 @@ import { Wallets } from "@/components/wallets";
 const Page = () => (
   <>
     <SiteHeader />
-    <main>
+    {/* tabIndex is required for Safari to actually move focus on the skip link. */}
+    <main className="focus:outline-none" id="main-content" tabIndex={-1}>
       <Hero />
+      <CodeExample />
       <Wallets />
       <Features />
-      <CodeExample />
       <DocsCta />
     </main>
     <SiteFooter />

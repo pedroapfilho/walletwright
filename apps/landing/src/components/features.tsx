@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { SectionHeading } from "@/components/section-heading";
+
 type Feature = {
   description: string;
   icon: ReactNode;
@@ -90,29 +92,32 @@ const FEATURES: Array<Feature> = [
   },
 ];
 
-const Features = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-    <div>
-      <h2 className="max-w-[24ch] text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-        Everything you need to test a real wallet.
-      </h2>
-      <p className="text-muted-foreground mt-4 max-w-[60ch] text-lg text-pretty">
-        walletwright handles extension download, onboarding, caching, and popup approval, the parts
-        that make wallet E2E flaky, so your tests stay focused on your dapp.
-      </p>
-    </div>
+const CARD_CLASSES =
+  "border-border bg-card shadow-card hover:shadow-card-hover hover:border-foreground/20 rounded-lg border p-6 transition-[box-shadow,border-color,translate] duration-200 ease-out hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0";
 
-    <dl className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {FEATURES.map((feature) => (
-        <div className="border-border bg-card rounded-lg border p-6" key={feature.title}>
-          <div className="bg-foreground/[0.06] text-foreground flex size-10 items-center justify-center rounded-md">
-            {feature.icon}
+const Features = () => (
+  <section className="border-border bg-muted/40 border-y">
+    <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
+      <SectionHeading eyebrow="Capabilities" title="Everything you need to test a real wallet.">
+        walletwright rebuilds the approach that works: onboard once, cache the profile, drive the
+        popups. Plain @playwright/test, current wallet and Chromium versions, no fork and no patched
+        dependencies.
+      </SectionHeading>
+
+      <dl className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {FEATURES.map((feature) => (
+          <div className={CARD_CLASSES} key={feature.title}>
+            <div className="bg-brand/10 text-brand ring-brand/20 flex size-10 items-center justify-center rounded-md ring-1 ring-inset">
+              {feature.icon}
+            </div>
+            <dt className="text-card-foreground mt-4 font-medium">{feature.title}</dt>
+            <dd className="text-muted-foreground mt-2 text-sm text-pretty">
+              {feature.description}
+            </dd>
           </div>
-          <dt className="text-card-foreground mt-4 font-medium">{feature.title}</dt>
-          <dd className="text-muted-foreground mt-2 text-sm text-pretty">{feature.description}</dd>
-        </div>
-      ))}
-    </dl>
+        ))}
+      </dl>
+    </div>
   </section>
 );
 
