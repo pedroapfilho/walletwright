@@ -1,11 +1,12 @@
 import "@fontsource-variable/geist/index.css";
+import "@fontsource-variable/geist-mono/index.css";
 import "./globals.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 const DESCRIPTION =
-  "walletwright drives real MetaMask and Phantom extensions in Playwright: onboard from a seed, cache the profile, then unlock and click through connect and signature popups. EVM and Solana, no mocks.";
+  "walletwright drives real MetaMask, Phantom, Rabby, Solflare, and Slush extensions in Playwright tests. Connect and sign on EVM, Solana, and Sui, with no mocks.";
 const TITLE = "walletwright: Playwright wallet automation";
 
 const metadata: Metadata = {
@@ -25,6 +26,11 @@ const metadata: Metadata = {
     "EVM testing",
     "Solana testing",
     "browser extension testing",
+    "Rabby Playwright",
+    "Solflare Playwright",
+    "Slush Playwright",
+    "Sui testing",
+    "Synpress alternative",
     "walletwright",
   ],
   metadataBase: new URL("https://walletwright.dev"),
@@ -47,11 +53,29 @@ const metadata: Metadata = {
   },
 };
 
+// `#0a0a0a` is the sRGB value of the dark `--background`, so the mobile URL bar
+// blends into the page instead of banding against it.
+const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { color: "#ffffff", media: "(prefers-color-scheme: light)" },
+    { color: "#0a0a0a", media: "(prefers-color-scheme: dark)" },
+  ],
+};
+
 const RootLayout = ({ children }: { children: ReactNode }) => (
   <html lang="en">
-    <body>{children}</body>
+    <body>
+      <a
+        className="focus:border-border focus:bg-background focus-visible:outline-ring sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-60 focus:rounded-md focus:border focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus-visible:outline-2"
+        href="#main-content"
+      >
+        Skip to content
+      </a>
+      {children}
+    </body>
   </html>
 );
 
-export { metadata };
+export { metadata, viewport };
 export default RootLayout;

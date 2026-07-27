@@ -29,7 +29,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 const FooterColumn = ({ links, title }: FooterColumnProps) => (
   <div>
-    <h2 className="text-foreground text-sm font-medium">{title}</h2>
+    <h3 className="text-foreground text-sm font-medium">{title}</h3>
     <ul className="mt-4 space-y-3">
       {links.map((link) => (
         <li key={link.label}>
@@ -47,6 +47,7 @@ const FooterColumn = ({ links, title }: FooterColumnProps) => (
 
 const SiteFooter = () => (
   <footer className="border-border border-t">
+    <h2 className="sr-only">Footer</h2>
     <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-6 py-12 sm:grid-cols-4">
       <div className="col-span-2">
         <Link
@@ -66,7 +67,7 @@ const SiteFooter = () => (
       <FooterColumn links={PROJECT_LINKS} title="Project" />
     </div>
 
-    <div className="mx-auto w-full max-w-6xl px-6 pb-10">
+    <div className="mx-auto w-full max-w-6xl px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <p className="text-muted-foreground text-sm">© {CURRENT_YEAR} walletwright · MIT-licensed</p>
     </div>
   </footer>

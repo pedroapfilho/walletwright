@@ -1,22 +1,26 @@
 import { ButtonLink } from "@/components/button-link";
-import { GETTING_STARTED_URL, GITHUB_URL } from "@/lib/site";
+import { DEMO_TESTS_URL, DOCS_URL } from "@/lib/site";
 
 const DocsCta = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-28">
-    <div className="border-border bg-card flex flex-col items-center rounded-2xl border px-6 py-14 text-center sm:py-20">
+  <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
+    <div className="border-border bg-card shadow-card flex flex-col items-center rounded-xl border px-6 py-12 text-center sm:py-16">
       <h2 className="mx-auto max-w-[20ch] text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
-        Ready to test your dapp?
+        Write your first connect-and-sign test.
       </h2>
       <p className="text-muted-foreground mx-auto mt-5 max-w-[52ch] text-lg text-pretty">
-        Install, describe a wallet, build the cache, and write a connect-and-sign test. It’s all in
-        the getting-started guide.
+        The getting-started guide covers install, wallet setup, the cache build, and the first spec.
       </p>
       <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row">
-        <ButtonLink href={GETTING_STARTED_URL} variant="primary">
+        <ButtonLink href={DOCS_URL} variant="primary">
           Read the docs
         </ButtonLink>
-        <ButtonLink href={GITHUB_URL} rel="noopener noreferrer" target="_blank" variant="secondary">
-          View on GitHub
+        <ButtonLink
+          href={DEMO_TESTS_URL}
+          rel="noopener noreferrer"
+          target="_blank"
+          variant="secondary"
+        >
+          Browse the demo specs
         </ButtonLink>
       </div>
     </div>
