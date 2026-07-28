@@ -1,6 +1,6 @@
-import { prepareWebStoreExtension } from "../internal/download.ts";
-import { sleep } from "../internal/utils.ts";
-import type { WalletDefinition } from "../types.ts";
+import { prepareWebStoreExtension } from "../internal/download";
+import { sleep } from "../internal/utils";
+import type { WalletDefinition } from "../types";
 
 // Phantom's old crx-backup host is dead; pull from the Chrome Web Store (stable extension id).
 const PHANTOM_EXTENSION_ID = "bfnaelmomeimhlpmgjnjophhpkkoljpa";

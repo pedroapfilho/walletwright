@@ -1,13 +1,13 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-import type { Wallet, WalletActionContext, WalletDefinition } from "../types.ts";
+import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
 import {
   DEFAULT_NOTIFICATION_MATCH,
   findNotificationPopup,
   hasNotificationPopup,
   sleep,
-} from "./utils.ts";
+} from "./utils";
 
 type ResolveOptions = { optional?: boolean };
 

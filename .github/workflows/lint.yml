@@ -14,4 +14,5 @@ jobs:
         with:
           runtime: node@24
           cache: true
+      - run: pnpm build
       - run: pnpm oxlint --format=github .

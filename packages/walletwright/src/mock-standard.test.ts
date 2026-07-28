@@ -2,7 +2,7 @@ import { createPublicKey, verify } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { createStandardHandler, encodeBase58, privateKeyFromSeed } from "./mock-standard.ts";
+import { createStandardHandler, encodeBase58, privateKeyFromSeed } from "./mock-standard";
 
 const SEED_HEX = "0101010101010101010101010101010101010101010101010101010101010101";
 

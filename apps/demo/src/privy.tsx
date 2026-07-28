@@ -23,11 +23,11 @@ const Dapp = () => {
     }
     try {
       const provider = await wallet.getEthereumProvider();
-      const result = await provider.request({
+      const result: unknown = await provider.request({
         method: "personal_sign",
         params: ["Hello Privy", wallet.address],
       });
-      setSignature(result as string);
+      setSignature(String(result));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
     }
@@ -53,7 +53,13 @@ const Dapp = () => {
           </p>
         </>
       ) : (
-        <button data-testid="privy-login" onClick={() => login()} type="button">
+        <button
+          data-testid="privy-login"
+          onClick={() => {
+            login();
+          }}
+          type="button"
+        >
           Log in with Privy
         </button>
       )}

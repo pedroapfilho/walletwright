@@ -3,16 +3,16 @@ import path from "node:path";
 
 import { ClassicLevel } from "classic-level";
 
-type OnboardingState = {
-  [key: string]: unknown;
-  completedOnboarding?: boolean;
-  firstTimeFlowType?: string;
-};
+type OnboardingState = Record<string, unknown>;
+
+const asState = (value: unknown): OnboardingState | undefined =>
+  typeof value === "object" && value !== null ? { ...value } : undefined;
 
 const markOnboarded = (onboarding: OnboardingState): OnboardingState => ({
   ...onboarding,
   completedOnboarding: true,
-  firstTimeFlowType: onboarding.firstTimeFlowType ?? "import",
+  firstTimeFlowType:
+    typeof onboarding.firstTimeFlowType === "string" ? onboarding.firstTimeFlowType : "import",
   onboardingTabs: {},
 });
 
@@ -33,7 +33,7 @@ export const markMetaMaskOnboarded = async (
     return;
   }
 
-  const db = new ClassicLevel<string, string>(dbDir, {
+  const db = new ClassicLevel(dbDir, {
     createIfMissing: false,
     keyEncoding: "utf8",
     valueEncoding: "utf8",
@@ -42,27 +42,36 @@ export const markMetaMaskOnboarded = async (
     await db.open();
 
     const perController = await db.get("OnboardingController").catch(() => null);
-    if (perController) {
-      const onboarding = JSON.parse(perController) as OnboardingState;
-      if (!onboarding.completedOnboarding) {
+    if (perController !== null && perController !== "") {
+      const onboarding = asState(JSON.parse(perController));
+      if (onboarding !== undefined && onboarding.completedOnboarding !== true) {
         await db.put("OnboardingController", JSON.stringify(markOnboarded(onboarding)));
       }
       return;
     }
 
     const raw = await db.get("data").catch(() => null);
-    if (!raw) {
+    if (raw === null || raw === "") {
       return;
     }
-    const state = JSON.parse(raw) as { data?: Record<string, OnboardingState> } & Record<
-      string,
-      OnboardingState
-    >;
-    const root = state.data ?? state;
-    if (root.OnboardingController) {
-      root.OnboardingController = markOnboarded(root.OnboardingController);
-      await db.put("data", JSON.stringify(state));
+    const state = asState(JSON.parse(raw));
+    if (state === undefined) {
+      return;
     }
+    const nested = asState(state.data);
+    const controller = asState((nested ?? state).OnboardingController);
+    if (controller === undefined) {
+      return;
+    }
+    const patched = markOnboarded(controller);
+    await db.put(
+      "data",
+      JSON.stringify(
+        nested === undefined
+          ? { ...state, OnboardingController: patched }
+          : { ...state, data: { ...nested, OnboardingController: patched } },
+      ),
+    );
   } finally {
     await db.close();
   }

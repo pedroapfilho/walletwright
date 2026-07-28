@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { parseFlags, resolveSetup } from "./cli.ts";
+import { parseFlags, resolveSetup } from "./cli";
 
 const tempDirs: Array<string> = [];
 

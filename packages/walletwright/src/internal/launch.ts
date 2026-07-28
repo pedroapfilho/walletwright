@@ -5,11 +5,11 @@ import path from "node:path";
 
 import { type BrowserContext, chromium, type Page } from "@playwright/test";
 
-import type { Wallet, WalletSetup } from "../types.ts";
-import { wallets } from "../wallets/index.ts";
+import type { Wallet, WalletSetup } from "../types";
+import { wallets } from "../wallets/index";
 
-import { createWallet } from "./controller.ts";
-import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey } from "./utils.ts";
+import { createWallet } from "./controller";
+import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey } from "./utils";
 
 export type LaunchedWallet = {
   context: BrowserContext;

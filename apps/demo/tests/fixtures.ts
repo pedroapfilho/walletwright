@@ -8,7 +8,7 @@ import {
   rabbySetup,
   slushSetup,
   solflareSetup,
-} from "../wallet-setup.ts";
+} from "../wallet-setup";
 
 export const metamaskTest = createWalletFixtures(metamaskSetup);
 export const phantomTest = createWalletFixtures(phantomSetup);

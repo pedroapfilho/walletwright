@@ -44,7 +44,7 @@ export const downloadAndExtractExtension = async (options: {
   }
   const bytes = Buffer.from(await response.arrayBuffer());
 
-  if (sha256) {
+  if (sha256 !== undefined && sha256 !== "") {
     const actual = createHash("sha256").update(bytes).digest("hex");
     if (actual !== sha256.toLowerCase()) {
       throw new Error(

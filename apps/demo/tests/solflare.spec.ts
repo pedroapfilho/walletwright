@@ -1,4 +1,4 @@
-import { solflareTest } from "./fixtures.ts";
+import { solflareTest } from "./fixtures";
 
 const test = solflareTest;
 const { expect } = test;

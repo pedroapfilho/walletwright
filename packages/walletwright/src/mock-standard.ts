@@ -43,7 +43,7 @@ const encodeBase58 = (bytes: Uint8Array): string => {
   for (const byte of bytes) {
     let carry = byte;
     for (let index = 0; index < digits.length; index += 1) {
-      carry += (digits[index] as number) * 256;
+      carry += digits[index] * 256;
       digits[index] = carry % 58;
       carry = Math.floor(carry / 58);
     }
@@ -106,7 +106,9 @@ const installMockStandardWallet = async (
 ): Promise<MockStandardAccount> => {
   const { ecosystem = "svm", name = "Walletwright Mock", seedHex = DEFAULT_SEED_HEX } = options;
   if (ecosystem !== "svm") {
-    throw new Error(`[walletwright/mock-standard] prototype supports only svm, got ${ecosystem}`);
+    throw new Error(
+      `[walletwright/mock-standard] prototype supports only svm, got ${String(ecosystem)}`,
+    );
   }
   const seed = Buffer.from(seedHex, "hex");
   if (seed.length !== 32) {
@@ -171,7 +173,9 @@ const installMockStandardWallet = async (
         version: "1.0.0" as const,
       };
 
-      const callback = (api: { register: (w: typeof wallet) => void }) => api.register(wallet);
+      const callback = (api: { register: (w: typeof wallet) => void }) => {
+        api.register(wallet);
+      };
       try {
         window.dispatchEvent(
           new CustomEvent("wallet-standard:register-wallet", { detail: callback }),
@@ -180,7 +184,7 @@ const installMockStandardWallet = async (
         // The app may not be listening yet; the app-ready handler below covers that case.
       }
       window.addEventListener("wallet-standard:app-ready", (event) => {
-        callback((event as CustomEvent).detail);
+        callback((event as CustomEvent<{ register: (w: typeof wallet) => void }>).detail);
       });
     },
     [

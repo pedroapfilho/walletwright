@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import type { AccountActions, WalletActionContext } from "../../../types.ts";
+import type { AccountActions, WalletActionContext } from "../../../types";
 
 const openAccountMenu = async (home: Page): Promise<void> => {
   await home.getByTestId("account-menu-icon").click();

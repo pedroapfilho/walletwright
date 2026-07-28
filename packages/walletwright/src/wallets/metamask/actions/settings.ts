@@ -1,5 +1,5 @@
-import type { SettingsActions } from "../../../types.ts";
-import { unlock as unlockScreen } from "../onboarding.ts";
+import type { SettingsActions } from "../../../types";
+import { unlock as unlockScreen } from "../onboarding";
 
 export const settings: SettingsActions = {
   lock: async ({ home }) => {

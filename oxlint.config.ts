@@ -3,6 +3,10 @@ import awesomeness from "oxlint-config-awesomeness";
 
 export default defineConfig({
   extends: [awesomeness],
+  options: {
+    typeAware: true,
+    typeCheck: true,
+  },
   overrides: [
     // oxfmt always lowercases hex literals, while `number-literal-case` wants
     // uppercase. The two tools conflict, so disable the oxlint rule for test
@@ -10,6 +14,8 @@ export default defineConfig({
     {
       files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
       rules: {
+        // Fixtures are built and torn down synchronously; an async fs call would race the test body.
+        "no-sync": "off",
         "number-literal-case": "off",
       },
     },
@@ -36,11 +42,38 @@ export default defineConfig({
       files: ["packages/walletwright/**/*.ts"],
       rules: {
         "no-await-in-loop": "off",
+        // Extension ids and cache lookups are computed inside synchronous functions the public API
+        // exposes as sync; the reads are one-shot local file probes, not a hot path.
+        "no-sync": "off",
         "react-doctor/async-await-in-loop": "off",
+        // Settling before a click is the point of the await, not an accident of ordering.
+        "react-doctor/async-defer-await": "off",
         "react-doctor/js-index-maps": "off",
+        // Fires on `String.includes` and on 2-element label arrays, neither of which scales badly.
+        "react-doctor/js-set-map-lookups": "off",
         "react-doctor/no-dynamic-import-path": "off",
         "react-doctor/server-sequential-independent-await": "off",
         "react-hooks/rules-of-hooks": "off",
+      },
+    },
+    // The mock providers' bodies are serialized into the page by `addInitScript`, so reaching the
+    // injected binding or `window.ethereum` means asserting onto a window TypeScript can't see.
+    {
+      files: ["packages/walletwright/src/mock.ts", "packages/walletwright/src/mock-standard.ts"],
+      rules: {
+        "no-unsafe-type-assertion": "off",
+      },
+    },
+    // The demo dapp is a vanilla-DOM reference: handlers are async by nature and the provider it
+    // talks to is whatever the injected wallet put on `window`.
+    {
+      files: ["apps/demo/**/*.ts", "apps/demo/**/*.tsx"],
+      rules: {
+        "no-misused-promises": "off",
+        "no-unnecessary-type-parameters": "off",
+        "no-unsafe-type-assertion": "off",
+        "strict-boolean-expressions": "off",
+        "strict-void-return": "off",
       },
     },
   ],
