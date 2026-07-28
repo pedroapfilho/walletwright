@@ -1,6 +1,8 @@
 {
   // tsdown reads this build config at build time; it's an entry point, not dead code.
-  "entry": ["packages/walletwright/tsdown.config.ts"],
+  // The privy page is the demo's second Vite input: fallow's vite plugin only
+  // reads the deprecated `build.rollupOptions`, not Vite 8's `rolldownOptions`.
+  "entry": ["packages/walletwright/tsdown.config.ts", "apps/demo/src/privy.tsx"],
   // Consumed by `vitest run --coverage` via the v8 provider, referenced by name not import.
   "ignoreDependencies": ["@vitest/coverage-v8"],
   // Next.js calls this route export at build time.
