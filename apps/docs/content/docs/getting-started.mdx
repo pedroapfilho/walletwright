@@ -51,7 +51,7 @@ await buildCache(metamask);
 ```
 
 ```bash
-node scripts/build-cache.ts
+pnpm exec tsx scripts/build-cache.ts
 ```
 
 There is also a CLI. It either takes the wallet inline, or loads a file that **default-exports** a
@@ -115,7 +115,7 @@ export default defineConfig({
 Run it:
 
 ```bash
-node scripts/build-cache.ts   # once
+pnpm exec tsx scripts/build-cache.ts   # once
 pnpm exec playwright test
 ```
 
