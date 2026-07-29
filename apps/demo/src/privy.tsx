@@ -39,7 +39,7 @@ const Dapp = () => {
 
   return (
     <section>
-      <h2>Privy — external wallets (EVM)</h2>
+      <h2>Privy: external wallets (EVM)</h2>
       {authenticated ? (
         <>
           <p>
