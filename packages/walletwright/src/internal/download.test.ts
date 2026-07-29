@@ -8,7 +8,7 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { chromeWebStoreCrxUrl, downloadAndExtractExtension } from "./download.ts";
+import { chromeWebStoreCrxUrl, downloadAndExtractExtension } from "./download";
 
 const serve = async (bytes: Buffer): Promise<{ close: () => Promise<void>; url: string }> => {
   const server: Server = createServer((_req, res) => {
@@ -23,7 +23,9 @@ const serve = async (bytes: Buffer): Promise<{ close: () => Promise<void>; url: 
   return {
     close: () =>
       new Promise<void>((resolve) => {
-        server.close(() => resolve());
+        server.close(() => {
+          resolve();
+        });
       }),
     url: `http://127.0.0.1:${port}/ext.zip`,
   };

@@ -23,6 +23,8 @@ type Rpc = { method: string; params?: ReadonlyArray<unknown> };
 
 const toHex = (value: number): string => `0x${value.toString(16)}`;
 
+const isHexMessage = (value: string): value is `0x${string}` => /^0x[\da-fA-F]*$/v.test(value);
+
 /** The EIP-1193 handler a mock provider answers with. Exported for direct, browser-free testing. */
 const createRpcHandler =
   (account: PrivateKeyAccount, chainIdHex: string) =>
@@ -37,9 +39,14 @@ const createRpcHandler =
       }
       case "personal_sign": {
         // params: [message, address]. Dapps pass either a 0x-hex message or a plain UTF-8 string.
-        const message = params[0] as string;
+        const [message] = params;
+        if (typeof message !== "string") {
+          return Promise.reject(
+            new Error("[walletwright/mock] personal_sign expects a string message"),
+          );
+        }
         return account.signMessage({
-          message: /^0x[0-9a-fA-F]*$/v.test(message) ? { raw: message as `0x${string}` } : message,
+          message: isHexMessage(message) ? { raw: message } : message,
         });
       }
       case "wallet_switchEthereumChain":

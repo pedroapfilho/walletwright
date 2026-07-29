@@ -43,15 +43,9 @@ const TARGETS: Array<Target> = [
     chain: { icon: <NetworkEthereum aria-hidden size={18} variant="branded" />, name: "EVM" },
     wallet: { icon: <WalletMetamask aria-hidden size={32} variant="branded" />, name: "MetaMask" },
   },
-  {
-    /* Phantom EVM */
-  },
-  {
-    /* Phantom Solana, chain icon NetworkSolana */
-  },
-  {
-    /* Slush Sui */
-  },
+  {/* Phantom EVM */},
+  {/* Phantom Solana, chain icon NetworkSolana */},
+  {/* Slush Sui */},
 ];
 ```
 

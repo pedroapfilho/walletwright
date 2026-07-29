@@ -1,4 +1,4 @@
-import { slushTest } from "./fixtures.ts";
+import { slushTest } from "./fixtures";
 
 const test = slushTest;
 const { expect } = test;

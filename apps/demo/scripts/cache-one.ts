@@ -6,7 +6,7 @@ import {
   rabbySetup,
   slushSetup,
   solflareSetup,
-} from "../wallet-setup.ts";
+} from "../wallet-setup";
 
 const setups = {
   metamask: metamaskSetup,
@@ -18,7 +18,7 @@ const setups = {
 const name = process.argv[2] as keyof typeof setups;
 const setup = setups[name];
 if (!setup) {
-  throw new Error(`usage: node scripts/cache-one.ts <${Object.keys(setups).join("|")}>`);
+  throw new Error(`usage: pnpm test:cache:one <${Object.keys(setups).join("|")}>`);
 }
 const dir = await buildCache(setup, { headless: process.argv.includes("--headless") });
 process.stdout.write(`${name} cache → ${dir}\n`);

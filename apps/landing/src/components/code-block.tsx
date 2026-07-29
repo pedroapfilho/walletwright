@@ -38,7 +38,7 @@ const CodeBlock = async ({ code, filename, label, lang = "tsx", wrap = false }: 
         wrap && "[&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap",
       )}
     >
-      {filename ? (
+      {filename !== undefined && filename !== "" ? (
         <div className="flex items-center gap-2 border-b border-white/10 py-2 pr-2 pl-4">
           <span className="grow truncate text-white/50">{filename}</span>
           <CopyButton

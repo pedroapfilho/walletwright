@@ -20,9 +20,9 @@ const SectionHeading = ({ children, eyebrow, title, titleClassName }: SectionHea
     >
       {title}
     </h2>
-    {children ? (
+    {children === undefined || children === null ? null : (
       <p className="text-muted-foreground mt-4 max-w-[60ch] text-lg text-pretty">{children}</p>
-    ) : null}
+    )}
   </div>
 );
 

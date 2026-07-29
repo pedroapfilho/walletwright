@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { chromium } from "@playwright/test";
 
-import type { WalletSetup } from "../types.ts";
-import { wallets } from "../wallets/index.ts";
+import type { WalletSetup } from "../types";
+import { wallets } from "../wallets/index";
 
-import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey, sleep } from "./utils.ts";
+import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey, sleep } from "./utils";
 
 /**
  * Import the wallet once and persist an onboarded browser profile to disk (the "cache"), so tests
@@ -31,7 +31,7 @@ export const buildCache = async (
     `--disable-extensions-except=${extensionPath}`,
     `--load-extension=${extensionPath}`,
   ];
-  if (options.headless) {
+  if (options.headless === true) {
     args.push("--headless=new");
   }
 

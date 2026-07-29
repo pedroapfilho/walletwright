@@ -1,8 +1,8 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { prepareWebStoreExtension } from "../internal/download.ts";
-import { sleep } from "../internal/utils.ts";
-import type { WalletDefinition } from "../types.ts";
+import { prepareWebStoreExtension } from "../internal/download";
+import { sleep } from "../internal/utils";
+import type { WalletDefinition } from "../types";
 
 // Rabby, by DeBank. Pulled from the Chrome Web Store. No manifest `key`, so its id is path-derived.
 const RABBY_EXTENSION_ID = "acmacodkjbdgmoleebolmdjonilkdbch";

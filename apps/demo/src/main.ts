@@ -1,5 +1,5 @@
-import { connectStandard, findStandardWallet } from "./wallet-standard.ts";
-import type { StandardAccount } from "./wallet-standard.ts";
+import { connectStandard, findStandardWallet } from "./wallet-standard";
+import type { StandardAccount } from "./wallet-standard";
 
 type Eip1193Provider = {
   request: (args: { method: string; params?: Array<unknown> }) => Promise<unknown>;

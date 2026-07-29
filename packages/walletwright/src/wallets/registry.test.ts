@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { WalletKind } from "../types.ts";
+import type { WalletKind } from "../types";
 
-import { walletKindsByEcosystem, wallets } from "./index.ts";
+import { walletKindsByEcosystem, wallets } from "./index";
 
 describe("wallet registry", () => {
   it("maps ecosystems to the wallets that drive them", () => {

@@ -30,6 +30,8 @@ const RootLayout = ({ children }: { children: ReactNode }) => (
         className="reading-progress-bar fixed top-0 left-0 z-50 h-0.5 bg-[--primary] [animation-range:0%_100%]"
         style={{ width: "0%" }}
       />
+      {/* oxlint-disable-next-line typescript/no-deprecated -- the replacement is a hand-rolled
+          search dialog; static search stays until the docs get one. */}
       <RootProvider search={{ options: { type: "static" } }}>{children}</RootProvider>
     </body>
   </html>

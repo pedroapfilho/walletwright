@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 import { describe, expect, it } from "vitest";
 
-import type { WalletSetup } from "../types.ts";
+import type { WalletSetup } from "../types";
 
-import { extensionIdFromPath, isApprovalPopup, profileKey } from "./utils.ts";
+import { extensionIdFromPath, isApprovalPopup, profileKey } from "./utils";
 
 const fakePage = (url: string, closed = false): Page =>
   ({ isClosed: () => closed, url: () => url }) as unknown as Page;

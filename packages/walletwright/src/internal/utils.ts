@@ -4,7 +4,7 @@ import path from "node:path";
 
 import type { BrowserContext, Page } from "@playwright/test";
 
-import type { WalletSetup } from "../types.ts";
+import type { WalletSetup } from "../types";
 
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -43,14 +43,19 @@ export const extensionIdFromPath = (extensionPath: string): string => {
   })();
   let key: string | undefined;
   try {
-    key = (JSON.parse(readFileSync(path.join(abs, "manifest.json"), "utf8")) as { key?: string })
-      .key;
+    const manifest: unknown = JSON.parse(readFileSync(path.join(abs, "manifest.json"), "utf8"));
+    if (typeof manifest === "object" && manifest !== null && "key" in manifest) {
+      key = typeof manifest.key === "string" ? manifest.key : undefined;
+    }
   } catch {
     // manifest not present yet, fall back to the path
   }
-  const source = key ? Buffer.from(key, "base64") : Buffer.from(abs, "utf8");
+  const source =
+    key === undefined || key === "" ? Buffer.from(abs, "utf8") : Buffer.from(key, "base64");
   const hex = createHash("sha256").update(source).digest("hex").slice(0, 32);
-  return [...hex].map((nibble) => String.fromCodePoint(97 + Number.parseInt(nibble, 16))).join("");
+  return Array.from(hex, (nibble) => String.fromCodePoint(97 + Number.parseInt(nibble, 16))).join(
+    "",
+  );
 };
 
 /**

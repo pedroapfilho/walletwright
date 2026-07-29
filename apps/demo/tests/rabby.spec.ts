@@ -1,4 +1,4 @@
-import { rabbyTest } from "./fixtures.ts";
+import { rabbyTest } from "./fixtures";
 
 const test = rabbyTest;
 const { expect } = test;

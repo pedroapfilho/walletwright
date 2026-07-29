@@ -1,4 +1,4 @@
-import { phantomTest } from "./fixtures.ts";
+import { phantomTest } from "./fixtures";
 
 const test = phantomTest;
 const { expect } = test;

@@ -28,7 +28,12 @@ const CopyButton = ({ className, label, value }: CopyButtonProps) => {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(
+    () => () => {
+      clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   const handleCopy = async () => {
     try {
@@ -37,7 +42,9 @@ const CopyButton = ({ className, label, value }: CopyButtonProps) => {
       // Without clearing, a second click inside the window lets the first
       // timer fire and blank the checkmark while the new copy is still fresh.
       clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setCopied(false), RESET_DELAY_MS);
+      timerRef.current = setTimeout(() => {
+        setCopied(false);
+      }, RESET_DELAY_MS);
     } catch {
       // Clipboard unavailable (insecure context or denied permission); do nothing.
     }
@@ -51,7 +58,9 @@ const CopyButton = ({ className, label, value }: CopyButtonProps) => {
           "focus-visible:outline-ring relative inline-flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
           className,
         )}
-        onClick={handleCopy}
+        onClick={() => {
+          void handleCopy();
+        }}
         type="button"
       >
         {copied ? (

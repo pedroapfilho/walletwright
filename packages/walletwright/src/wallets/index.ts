@@ -1,10 +1,10 @@
-import type { Ecosystem, WalletDefinition, WalletKind } from "../types.ts";
+import type { Ecosystem, WalletDefinition, WalletKind } from "../types";
 
-import { metamask } from "./metamask.ts";
-import { phantom } from "./phantom.ts";
-import { rabby } from "./rabby.ts";
-import { slush } from "./slush.ts";
-import { solflare } from "./solflare.ts";
+import { metamask } from "./metamask";
+import { phantom } from "./phantom";
+import { rabby } from "./rabby";
+import { slush } from "./slush";
+import { solflare } from "./solflare";
 
 export const wallets: Record<WalletKind, WalletDefinition> = {
   metamask,
@@ -14,8 +14,11 @@ export const wallets: Record<WalletKind, WalletDefinition> = {
   solflare,
 };
 
+/** Narrow an arbitrary string (CLI flag, setup file field) to a supported wallet. */
+export const isWalletKind = (value: string): value is WalletKind => Object.hasOwn(wallets, value);
+
+const walletKinds = Object.keys(wallets).filter(isWalletKind);
+
 /** Wallet kinds that can drive the given ecosystem (e.g. `"evm"` → MetaMask, Phantom). */
 export const walletKindsByEcosystem = (ecosystem: Ecosystem): Array<WalletKind> =>
-  (Object.keys(wallets) as Array<WalletKind>).filter((kind) =>
-    wallets[kind].ecosystems.includes(ecosystem),
-  );
+  walletKinds.filter((kind) => wallets[kind].ecosystems.includes(ecosystem));

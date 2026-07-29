@@ -2,9 +2,9 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { buildCache } from "./internal/cache.ts";
-import type { WalletKind, WalletSetup } from "./types.ts";
-import { wallets } from "./wallets/index.ts";
+import { buildCache } from "./internal/cache";
+import type { WalletSetup } from "./types";
+import { isWalletKind, wallets } from "./wallets/index";
 
 const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
 
@@ -45,17 +45,30 @@ const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
   return flags;
 };
 
-const loadSetup = async (file: string): Promise<WalletSetup> => {
-  const resolved = pathToFileURL(path.resolve(file)).href;
-  const mod = (await import(resolved)) as { default?: WalletSetup };
-  if (!mod.default) {
-    throw new Error(`[walletwright] ${file} must default-export a WalletSetup`);
-  }
-  return mod.default;
-};
-
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
+
+const isWalletSetup = (value: unknown): value is WalletSetup =>
+  typeof value === "object" &&
+  value !== null &&
+  "wallet" in value &&
+  typeof value.wallet === "string" &&
+  isWalletKind(value.wallet) &&
+  "seedPhrase" in value &&
+  isNonEmptyString(value.seedPhrase) &&
+  "password" in value &&
+  isNonEmptyString(value.password);
+
+const loadSetup = async (file: string): Promise<WalletSetup> => {
+  const resolved = pathToFileURL(path.resolve(file)).href;
+  const mod: unknown = await import(resolved);
+  const setup =
+    typeof mod === "object" && mod !== null && "default" in mod ? mod.default : undefined;
+  if (!isWalletSetup(setup)) {
+    throw new Error(`[walletwright] ${file} must default-export a WalletSetup`);
+  }
+  return setup;
+};
 
 const resolveSetup = async (flags: Record<string, string | boolean>): Promise<WalletSetup> => {
   if (typeof flags.setup === "string") {
@@ -64,21 +77,17 @@ const resolveSetup = async (flags: Record<string, string | boolean>): Promise<Wa
       ? { ...loaded, cacheDir: flags["cache-dir"] }
       : loaded;
   }
-  if (
-    isNonEmptyString(flags.wallet) &&
-    isNonEmptyString(flags.seed) &&
-    isNonEmptyString(flags.password)
-  ) {
-    const kinds = Object.keys(wallets) as Array<WalletKind>;
-    if (!kinds.includes(flags.wallet as WalletKind)) {
+  const { password, seed, wallet } = flags;
+  if (isNonEmptyString(wallet) && isNonEmptyString(seed) && isNonEmptyString(password)) {
+    if (!isWalletKind(wallet)) {
       throw new Error(
-        `[walletwright] unknown --wallet "${flags.wallet}". Expected one of: ${kinds.join(", ")}.`,
+        `[walletwright] unknown --wallet "${wallet}". Expected one of: ${Object.keys(wallets).join(", ")}.`,
       );
     }
     return {
-      password: flags.password,
-      seedPhrase: flags.seed,
-      wallet: flags.wallet as WalletKind,
+      password,
+      seedPhrase: seed,
+      wallet,
       ...(typeof flags.version === "string" ? { version: flags.version } : {}),
       ...(typeof flags["cache-dir"] === "string" ? { cacheDir: flags["cache-dir"] } : {}),
     };
@@ -92,7 +101,7 @@ const main = async (): Promise<void> => {
   const [command, ...rest] = process.argv.slice(2);
   const flags = parseFlags(rest);
 
-  if (!command || command === "help" || flags.help || flags.h) {
+  if (!command || command === "help" || flags.help !== undefined || flags.h !== undefined) {
     process.stdout.write(HELP);
     return;
   }

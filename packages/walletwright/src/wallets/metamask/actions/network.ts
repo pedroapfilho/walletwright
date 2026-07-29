@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import type { NetworkActions, NetworkConfig, WalletActionContext } from "../../../types.ts";
+import type { NetworkActions, NetworkConfig, WalletActionContext } from "../../../types";
 
 const closeButton = (home: Page) =>
   home.getByTestId("modal-header-close-button").filter({ visible: true }).first();

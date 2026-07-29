@@ -1,4 +1,4 @@
-import { connectMetamask, metamaskTest } from "./fixtures.ts";
+import { connectMetamask, metamaskTest } from "./fixtures";
 
 const test = metamaskTest;
 const { expect } = test;

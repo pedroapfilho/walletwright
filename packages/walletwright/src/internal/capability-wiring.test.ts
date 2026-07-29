@@ -1,9 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
-import type { WalletDefinition } from "../types.ts";
+import type { WalletDefinition } from "../types";
 
-import { createWallet } from "./controller.ts";
+import { createWallet } from "./controller";
 
 describe("capability wiring", () => {
   it("dispatches every declared capability method to its definition function", async () => {

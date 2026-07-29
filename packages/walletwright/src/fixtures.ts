@@ -1,7 +1,7 @@
 import { test as base } from "@playwright/test";
 
-import { launchWalletContext } from "./internal/launch.ts";
-import type { Wallet, WalletSetup } from "./types.ts";
+import { launchWalletContext } from "./internal/launch";
+import type { Wallet, WalletSetup } from "./types";
 
 export type WalletFixtures = {
   wallet: Wallet;

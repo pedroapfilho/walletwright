@@ -1,4 +1,4 @@
-import { metamaskTest } from "./fixtures.ts";
+import { metamaskTest } from "./fixtures";
 
 const test = metamaskTest;
 const { expect } = test;

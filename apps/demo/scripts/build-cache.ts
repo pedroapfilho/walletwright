@@ -1,6 +1,6 @@
 import { buildCache } from "walletwright";
 
-import { metamaskSetup, phantomSetup, rabbySetup, slushSetup } from "../wallet-setup.ts";
+import { metamaskSetup, phantomSetup, rabbySetup, slushSetup } from "../wallet-setup";
 
 const headless = process.argv.includes("--headless");
 

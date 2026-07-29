@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         index: resolve(import.meta.dirname, "index.html"),
         privy: resolve(import.meta.dirname, "privy.html"),

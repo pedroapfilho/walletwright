@@ -1,7 +1,7 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { prepareWebStoreExtension } from "../internal/download.ts";
-import type { WalletDefinition } from "../types.ts";
+import { prepareWebStoreExtension } from "../internal/download";
+import type { WalletDefinition } from "../types";
 
 // Solflare. Pulled from the Chrome Web Store. No manifest `key`, so its id is path-derived.
 const SOLFLARE_EXTENSION_ID = "bhhhlbepdkbapadjdnnojkbgioiodbic";

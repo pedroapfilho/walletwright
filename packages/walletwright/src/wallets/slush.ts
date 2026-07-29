@@ -1,8 +1,8 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { prepareWebStoreExtension } from "../internal/download.ts";
-import { sleep } from "../internal/utils.ts";
-import type { WalletDefinition } from "../types.ts";
+import { prepareWebStoreExtension } from "../internal/download";
+import { sleep } from "../internal/utils";
+import type { WalletDefinition } from "../types";
 
 // Slush (formerly Sui Wallet), by Mysten Labs. Pulled from the Chrome Web Store.
 const SLUSH_EXTENSION_ID = "opcgpfmipidbgpenhmajoajpbobppdil";
@@ -43,7 +43,7 @@ export const slush: WalletDefinition = {
     }
     await sleep(1500);
     const input = popup.locator('input[type="password"]');
-    if (await input.isVisible({ timeout: 4000 }).catch(() => false)) {
+    if (await input.isVisible().catch(() => false)) {
       await input.fill(password);
       await fclick(popup, "Unlock");
     }
@@ -141,7 +141,7 @@ export const slush: WalletDefinition = {
   unlock: async (page, password) => {
     // Slush typically reopens unlocked; only fill if it shows the password screen.
     const input = page.locator('input[type="password"]');
-    if (await input.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await input.isVisible().catch(() => false)) {
       await input.fill(password);
       await fclick(page, "Unlock");
       await sleep(1500);
