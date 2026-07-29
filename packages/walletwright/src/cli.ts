@@ -6,15 +6,17 @@ import { buildCache } from "./internal/cache";
 import type { WalletSetup } from "./types";
 import { isWalletKind, wallets } from "./wallets/index";
 
+const KINDS = Object.keys(wallets);
+
 const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
 
 Usage:
   walletwright cache --setup <file>            Build cache from a module's default-exported WalletSetup
-  walletwright cache --wallet <metamask|phantom|slush> --seed "<phrase>" --password "<pw>" [--version <v>]
+  walletwright cache --wallet <${KINDS.join("|")}> --seed "<phrase>" --password "<pw>" [--version <v>]
 
 Options:
   --setup <file>     A module whose default export is a WalletSetup (.ts works on modern Node)
-  --wallet <kind>    metamask | phantom | slush
+  --wallet <kind>    ${KINDS.join(" | ")}
   --seed <phrase>    seed phrase to import
   --password <pw>    wallet password
   --version <v>      pin an extension version
