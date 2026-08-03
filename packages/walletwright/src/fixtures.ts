@@ -1,10 +1,15 @@
 import { test as base } from "@playwright/test";
 
-import { launchWalletContext } from "./internal/launch";
+import { type LaunchedWallet, launchWallet } from "./internal/launch";
 import type { Wallet, WalletSetup } from "./types";
 
 export type WalletFixtures = {
   wallet: Wallet;
+};
+
+/** One launch per test, which the `context` and `wallet` fixtures then read from. */
+type LaunchFixture = {
+  walletLaunch: LaunchedWallet;
 };
 
 /**
@@ -20,26 +25,19 @@ export type WalletFixtures = {
  * });
  * ```
  */
-export const createWalletFixtures = (setup: WalletSetup) => {
-  // Handoff from the (overridden) context fixture to the wallet fixture within a worker.
-  let current: Wallet | undefined;
-
-  return base.extend<WalletFixtures>({
-    context: async ({ browser: _browser }, use) => {
-      const { context, wallet } = await launchWalletContext(setup);
-      current = wallet;
-      await use(context);
-      await context.close();
-      current = undefined;
+export const createWalletFixtures = (setup: WalletSetup) =>
+  base.extend<LaunchFixture & WalletFixtures>({
+    context: async ({ walletLaunch }, use) => {
+      await use(walletLaunch.context);
     },
-    page: async ({ context }, use) => {
-      await use(await context.newPage());
+    wallet: async ({ walletLaunch }, use) => {
+      await use(walletLaunch.wallet);
     },
-    wallet: async ({ context: _context }, use) => {
-      if (!current) {
-        throw new Error("[walletwright] wallet fixture used before the context was initialized");
-      }
-      await use(current);
+    // Depends on nothing: Playwright's own `browser` fixture would launch a second Chromium that
+    // no test ever drives, since the wallet needs a persistent context of its own.
+    walletLaunch: async ({}, use) => {
+      const launched = await launchWallet(setup);
+      await use(launched);
+      await launched.context.close();
     },
   });
-};

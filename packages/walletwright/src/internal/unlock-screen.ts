@@ -1,0 +1,113 @@
+import type { BrowserContext, Locator, Page } from "@playwright/test";
+
+import { formatTimeout, gotoWithRetry, waitUntil } from "./wait";
+
+const PASSWORD_FIELD = 'input[type="password"]';
+
+const NAVIGATION_TIMEOUT_MS = 15_000;
+const FIRST_SETTLE_TIMEOUT_MS = 20_000;
+const RELOAD_ATTEMPTS = 5;
+const RELOAD_SETTLE_TIMEOUT_MS = 5000;
+const PROBE_INTERVAL_MS = 500;
+const PASSWORD_CLEARED_TIMEOUT_MS = 15_000;
+
+type UnlockScreenOptions = {
+  /** Extension-relative page that renders the unlock screen (e.g. `home.html`). */
+  entry: string;
+  /**
+   * Resolves true once the wallet's already-unlocked UI is up. Only wallets that can reopen unlocked
+   * (Phantom, Slush) declare it: without a positive signal for that state, a warm launch is
+   * indistinguishable from an extension page that rendered nothing at all, and the run continues
+   * against a dead wallet until some later approval fails for no visible reason.
+   */
+  isUnlocked?: (page: Page) => Promise<boolean>;
+  /** Submit the filled password. Defaults to pressing Enter in the field. */
+  submit?: (page: Page, field: Locator) => Promise<void>;
+  wallet: string;
+};
+
+type UnlockScreen = {
+  reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
+  unlock: (page: Page, password: string) => Promise<void>;
+};
+
+/**
+ * The shared unlock flow: open the wallet's own page, wait for it to settle into a state we can
+ * name, and type the password. Every wallet differs only in its entry page, how it submits, and
+ * whether it can come back already unlocked.
+ */
+export const createUnlockScreen = ({
+  entry,
+  isUnlocked,
+  submit,
+  wallet,
+}: UnlockScreenOptions): UnlockScreen => {
+  const settled = async (page: Page): Promise<"locked" | "unlocked" | undefined> => {
+    const locked = await page
+      .locator(PASSWORD_FIELD)
+      .isVisible()
+      .catch(() => false);
+    if (locked) {
+      return "locked";
+    }
+    const unlocked = await isUnlocked?.(page).catch(() => false);
+    return unlocked === true ? "unlocked" : undefined;
+  };
+
+  const settleWithin = (page: Page, timeoutMs: number) =>
+    waitUntil(() => settled(page), { intervalMs: PROBE_INTERVAL_MS, timeoutMs });
+
+  const reachUnlockScreen = async (context: BrowserContext, extensionId: string): Promise<Page> => {
+    const page = await context.newPage();
+    await gotoWithRetry(page, `chrome-extension://${extensionId}/${entry}`, {
+      label: `${wallet} ${entry}`,
+      timeoutMs: NAVIGATION_TIMEOUT_MS,
+    });
+
+    // The MV3 service worker needs a few seconds to restore the vault; be patient, then reload
+    // (re-navigating resets the page before the worker responds).
+    let state = await settleWithin(page, FIRST_SETTLE_TIMEOUT_MS);
+    for (let attempt = 0; attempt < RELOAD_ATTEMPTS && state === undefined; attempt++) {
+      await page.reload().catch(() => {});
+      state = await settleWithin(page, RELOAD_SETTLE_TIMEOUT_MS);
+    }
+    if (state === undefined) {
+      throw new Error(
+        `[walletwright] ${wallet} never reached its unlock screen (gave up after ${formatTimeout(
+          FIRST_SETTLE_TIMEOUT_MS + RELOAD_ATTEMPTS * RELOAD_SETTLE_TIMEOUT_MS,
+        )})`,
+      );
+    }
+    return page;
+  };
+
+  const unlock = async (page: Page, password: string): Promise<void> => {
+    const field = page.locator(PASSWORD_FIELD);
+    const locked = await field.isVisible().catch(() => false);
+    if (!locked) {
+      const unlocked = await isUnlocked?.(page).catch(() => false);
+      if (unlocked === true) {
+        return;
+      }
+      throw new Error(
+        `[walletwright] ${wallet} showed neither an unlock screen nor an unlocked wallet`,
+      );
+    }
+
+    await field.fill(password);
+    await (submit === undefined ? field.press("Enter") : submit(page, field));
+    const cleared = await field
+      .waitFor({ state: "hidden", timeout: PASSWORD_CLEARED_TIMEOUT_MS })
+      .then(() => true)
+      .catch(() => false);
+    if (!cleared) {
+      throw new Error(
+        `[walletwright] ${wallet} unlock failed (password screen still visible after ${formatTimeout(
+          PASSWORD_CLEARED_TIMEOUT_MS,
+        )})`,
+      );
+    }
+  };
+
+  return { reachUnlockScreen, unlock };
+};

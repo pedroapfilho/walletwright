@@ -1,5 +1,5 @@
 import { connectStandard, findStandardWallet } from "./wallet-standard";
-import type { StandardAccount } from "./wallet-standard";
+import type { StandardAccount, StandardWallet } from "./wallet-standard";
 
 type Eip1193Provider = {
   request: (args: { method: string; params?: Array<unknown> }) => Promise<unknown>;
@@ -103,6 +103,28 @@ const handleSwitchChain = async () => {
   }
 };
 
+const handleSendTx = async () => {
+  $("#error").textContent = "";
+  try {
+    const hash = (await (
+      await getEthereum()
+    ).request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: mmAccount,
+          // 0.001 ETH to the second anvil test account.
+          to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+          value: "0x38d7ea4c68000",
+        },
+      ],
+    })) as string;
+    $("#txHash").textContent = hash;
+  } catch (error) {
+    showError(error);
+  }
+};
+
 // --- Phantom EVM (window.phantom.ethereum) ---
 const getPhantomEvm = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.ethereum);
@@ -163,188 +185,138 @@ const handlePhantomSvmSign = async () => {
   }
 };
 
-// --- MetaMask Solana (Wallet Standard, solana:* features) ---
-const getMetamaskSolana = () =>
-  waitFor(() =>
-    findStandardWallet(
-      (wallet) =>
-        wallet.name === "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
-    ),
-  );
-
-let mmSvmAccount: StandardAccount | undefined;
-
-const handleMmSvmConnect = async () => {
-  $("#mmSvmError").textContent = "";
-  try {
-    const wallet = await getMetamaskSolana();
-    mmSvmAccount = await connectStandard(wallet);
-    $("#mmSvmAccount").textContent = mmSvmAccount.address;
-    $<HTMLButtonElement>("#mmSvmSign").disabled = false;
-  } catch (error) {
-    showError(error, "#mmSvmError");
-  }
+// --- Wallet Standard sections (MetaMask Solana, mock Solana, Slush Sui) ---
+// One shape, three wallets: the sections differ only in which wallet they match, which feature signs,
+// and which elements they render into.
+type StandardSection = {
+  ids: { account: string; connect: string; error: string; sign: string; signature: string };
+  label: string;
+  match: (wallet: StandardWallet) => boolean;
+  sign: (wallet: StandardWallet, account: StandardAccount) => Promise<string>;
 };
 
-const handleMmSvmSign = async () => {
-  $("#mmSvmError").textContent = "";
-  try {
-    const account = mmSvmAccount;
-    if (!account) {
-      throw new Error("connect MetaMask (Solana) before signing");
-    }
-    const wallet = await getMetamaskSolana();
-    const feature = wallet.features["solana:signMessage"] as {
-      signMessage: (input: {
-        account: StandardAccount;
-        message: Uint8Array;
-      }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
-    };
-    const [output] = await feature.signMessage({
-      account,
-      message: new TextEncoder().encode("Hello walletwright Solana"),
-    });
-    if (!output?.signature) {
-      throw new Error("solana:signMessage returned no signature");
-    }
-    $("#mmSvmSignature").textContent = toHex(output.signature);
-  } catch (error) {
-    showError(error, "#mmSvmError");
+const signSolanaMessage = async (
+  wallet: StandardWallet,
+  account: StandardAccount,
+  message: string,
+): Promise<string> => {
+  const feature = wallet.features["solana:signMessage"] as {
+    signMessage: (input: {
+      account: StandardAccount;
+      message: Uint8Array;
+    }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
+  };
+  const [output] = await feature.signMessage({
+    account,
+    message: new TextEncoder().encode(message),
+  });
+  if (!output?.signature) {
+    throw new Error("solana:signMessage returned no signature");
   }
+  return toHex(output.signature);
 };
 
-// --- Mock Solana (Wallet Standard, solana:* features, name-agnostic) ---
-// Unlike the MetaMask-Solana section this matches any non-MetaMask Wallet-Standard Solana wallet, so
-// walletwright/mock-standard drives it without impersonating a named extension.
-const getMockSolana = () =>
-  waitFor(() =>
-    findStandardWallet(
-      (wallet) =>
-        wallet.name !== "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
-    ),
-  );
-
-let mockSvmAccount: StandardAccount | undefined;
-
-const handleMockSvmConnect = async () => {
-  $("#mockSvmError").textContent = "";
-  try {
-    const wallet = await getMockSolana();
-    mockSvmAccount = await connectStandard(wallet);
-    $("#mockSvmAccount").textContent = mockSvmAccount.address;
-    $<HTMLButtonElement>("#mockSvmSign").disabled = false;
-  } catch (error) {
-    showError(error, "#mockSvmError");
+const signSuiMessage = async (
+  wallet: StandardWallet,
+  account: StandardAccount,
+  message: string,
+): Promise<string> => {
+  const feature = wallet.features["sui:signPersonalMessage"] as {
+    signPersonalMessage: (input: {
+      account: StandardAccount;
+      message: Uint8Array;
+    }) => Promise<{ signature: string }>;
+  };
+  const { signature } = await feature.signPersonalMessage({
+    account,
+    message: new TextEncoder().encode(message),
+  });
+  if (typeof signature !== "string" || !signature) {
+    throw new Error("sui:signPersonalMessage returned no signature");
   }
+  return signature;
 };
 
-const handleMockSvmSign = async () => {
-  $("#mockSvmError").textContent = "";
-  try {
-    const account = mockSvmAccount;
-    if (!account) {
-      throw new Error("connect Mock (Solana) before signing");
-    }
-    const wallet = await getMockSolana();
-    const feature = wallet.features["solana:signMessage"] as {
-      signMessage: (input: {
-        account: StandardAccount;
-        message: Uint8Array;
-      }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
-    };
-    const [output] = await feature.signMessage({
-      account,
-      message: new TextEncoder().encode("Hello walletwright Mock Solana"),
-    });
-    if (!output?.signature) {
-      throw new Error("solana:signMessage returned no signature");
-    }
-    $("#mockSvmSignature").textContent = toHex(output.signature);
-  } catch (error) {
-    showError(error, "#mockSvmError");
-  }
-};
+const wireStandardSection = ({ ids, label, match, sign }: StandardSection): void => {
+  const getWallet = () => waitFor(() => findStandardWallet(match));
+  let connected: StandardAccount | undefined;
 
-// --- Slush / Sui (Wallet Standard, sui:* features) ---
-const getSuiWallet = () =>
-  waitFor(() =>
-    findStandardWallet((wallet) => wallet.chains.some((chain) => chain.startsWith("sui:"))),
-  );
-
-let suiAccount: StandardAccount | undefined;
-
-const handleSuiConnect = async () => {
-  $("#suiError").textContent = "";
-  try {
-    const wallet = await getSuiWallet();
-    suiAccount = await connectStandard(wallet);
-    $("#suiAccount").textContent = suiAccount.address;
-    $<HTMLButtonElement>("#suiSign").disabled = false;
-  } catch (error) {
-    showError(error, "#suiError");
-  }
-};
-
-const handleSuiSign = async () => {
-  $("#suiError").textContent = "";
-  try {
-    const account = suiAccount;
-    if (!account) {
-      throw new Error("connect Slush (Sui) before signing");
+  const handleSectionConnect = async () => {
+    $(ids.error).textContent = "";
+    try {
+      connected = await connectStandard(await getWallet());
+      $(ids.account).textContent = connected.address;
+      $<HTMLButtonElement>(ids.sign).disabled = false;
+    } catch (error) {
+      showError(error, ids.error);
     }
-    const wallet = await getSuiWallet();
-    const feature = wallet.features["sui:signPersonalMessage"] as {
-      signPersonalMessage: (input: {
-        account: StandardAccount;
-        message: Uint8Array;
-      }) => Promise<{ signature: string }>;
-    };
-    const { signature } = await feature.signPersonalMessage({
-      account,
-      message: new TextEncoder().encode("Hello walletwright Sui"),
-    });
-    if (typeof signature !== "string" || !signature) {
-      throw new Error("sui:signPersonalMessage returned no signature");
+  };
+
+  const handleSectionSign = async () => {
+    $(ids.error).textContent = "";
+    try {
+      const account = connected;
+      if (!account) {
+        throw new Error(`connect ${label} before signing`);
+      }
+      $(ids.signature).textContent = await sign(await getWallet(), account);
+    } catch (error) {
+      showError(error, ids.error);
     }
-    $("#suiSignature").textContent = signature;
-  } catch (error) {
-    showError(error, "#suiError");
-  }
+  };
+
+  $(ids.connect).addEventListener("click", handleSectionConnect);
+  $(ids.sign).addEventListener("click", handleSectionSign);
 };
 
 $("#connectButton").addEventListener("click", handleConnect);
 $("#signButton").addEventListener("click", handleSign);
-const handleSendTx = async () => {
-  $("#error").textContent = "";
-  try {
-    const hash = (await (
-      await getEthereum()
-    ).request({
-      method: "eth_sendTransaction",
-      params: [
-        {
-          from: mmAccount,
-          // 0.001 ETH to the second anvil test account.
-          to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-          value: "0x38d7ea4c68000",
-        },
-      ],
-    })) as string;
-    $("#txHash").textContent = hash;
-  } catch (error) {
-    showError(error);
-  }
-};
-
 $("#switchChainButton").addEventListener("click", handleSwitchChain);
 $("#sendTxButton").addEventListener("click", handleSendTx);
 $("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
 $("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
 $("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
 $("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
-$("#mmSvmConnect").addEventListener("click", handleMmSvmConnect);
-$("#mmSvmSign").addEventListener("click", handleMmSvmSign);
-$("#mockSvmConnect").addEventListener("click", handleMockSvmConnect);
-$("#mockSvmSign").addEventListener("click", handleMockSvmSign);
-$("#suiConnect").addEventListener("click", handleSuiConnect);
-$("#suiSign").addEventListener("click", handleSuiSign);
+
+wireStandardSection({
+  ids: {
+    account: "#mmSvmAccount",
+    connect: "#mmSvmConnect",
+    error: "#mmSvmError",
+    sign: "#mmSvmSign",
+    signature: "#mmSvmSignature",
+  },
+  label: "MetaMask (Solana)",
+  match: (wallet) =>
+    wallet.name === "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
+  sign: (wallet, account) => signSolanaMessage(wallet, account, "Hello walletwright Solana"),
+});
+
+wireStandardSection({
+  ids: {
+    account: "#mockSvmAccount",
+    connect: "#mockSvmConnect",
+    error: "#mockSvmError",
+    sign: "#mockSvmSign",
+    signature: "#mockSvmSignature",
+  },
+  label: "Mock (Solana)",
+  // Any non-MetaMask Wallet-Standard Solana wallet, so walletwright/mock-standard drives this
+  // section without impersonating a named extension.
+  match: (wallet) =>
+    wallet.name !== "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
+  sign: (wallet, account) => signSolanaMessage(wallet, account, "Hello walletwright Mock Solana"),
+});
+
+wireStandardSection({
+  ids: {
+    account: "#suiAccount",
+    connect: "#suiConnect",
+    error: "#suiError",
+    sign: "#suiSign",
+    signature: "#suiSignature",
+  },
+  label: "Slush (Sui)",
+  match: (wallet) => wallet.chains.some((chain) => chain.startsWith("sui:")),
+  sign: (wallet, account) => signSuiMessage(wallet, account, "Hello walletwright Sui"),
+});

@@ -6,10 +6,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { WalletSetup } from "../types";
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+import { waitUntil } from "./wait";
 
 export const DEFAULT_CACHE_DIR = ".walletwright";
 
@@ -68,16 +65,18 @@ export const isApprovalPopup = (page: Page, extensionId: string, match: string):
   page.url().includes(match) &&
   !page.isClosed();
 
-export const findNotificationPopup = async (
+export const findNotificationPopup = (
   context: BrowserContext,
   extensionId: string,
   match = DEFAULT_NOTIFICATION_MATCH,
   timeoutMs = 10_000,
-): Promise<Page | undefined> => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const popup = context.pages().find((page) => isApprovalPopup(page, extensionId, match));
-    if (popup) {
+): Promise<Page | undefined> =>
+  waitUntil(
+    async () => {
+      const popup = context.pages().find((page) => isApprovalPopup(page, extensionId, match));
+      if (!popup) {
+        return undefined;
+      }
       await popup.waitForLoadState("domcontentloaded").catch(() => {});
       // The window opens before the approval renders (bare URL, zero buttons) and routes later,
       // sometimes tens of seconds later under a busy MV3 worker. "Found" must mean "usable", so
@@ -87,14 +86,14 @@ export const findNotificationPopup = async (
         .first()
         .isVisible()
         .catch(() => false);
-      if (usable) {
-        return popup;
-      }
-    }
-    await sleep(200);
-  }
-  return undefined;
-};
+      return usable ? popup : undefined;
+    },
+    { timeoutMs },
+  );
+
+/** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
+export const extensionStateDir = (profileDir: string, extensionId: string): string =>
+  path.join(profileDir, "Default", "Local Extension Settings", extensionId);
 
 export const hasNotificationPopup = (
   context: BrowserContext,

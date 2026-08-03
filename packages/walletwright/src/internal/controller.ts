@@ -2,12 +2,10 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
-import {
-  DEFAULT_NOTIFICATION_MATCH,
-  findNotificationPopup,
-  hasNotificationPopup,
-  sleep,
-} from "./utils";
+import { DEFAULT_NOTIFICATION_MATCH, findNotificationPopup, hasNotificationPopup } from "./utils";
+import { formatTimeout, waitUntil } from "./wait";
+
+const POPUP_CLOSE_TIMEOUT_MS = 15_000;
 
 type ResolveOptions = { optional?: boolean };
 
@@ -64,13 +62,12 @@ export const createWallet = ({
     }
 
     // Wait for the popup to close so the next approval doesn't grab a stale page.
-    const deadline = Date.now() + 15_000;
-    while (hasNotificationPopup(context, extensionId, match) && Date.now() < deadline) {
-      await sleep(200);
-    }
-    if (!optional && hasNotificationPopup(context, extensionId, match)) {
+    const closed = await waitUntil(() => !hasNotificationPopup(context, extensionId, match), {
+      timeoutMs: POPUP_CLOSE_TIMEOUT_MS,
+    });
+    if (!optional && closed === undefined) {
       throw new Error(
-        "[walletwright] approval popup did not close after 15s (the approval may not have registered)",
+        `[walletwright] approval popup did not close after ${formatTimeout(POPUP_CLOSE_TIMEOUT_MS)} (the approval may not have registered)`,
       );
     }
   };

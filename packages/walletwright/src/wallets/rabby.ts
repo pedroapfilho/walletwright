@@ -1,8 +1,13 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { prepareWebStoreExtension } from "../internal/download";
-import { sleep } from "../internal/utils";
+import { createUnlockScreen } from "../internal/unlock-screen";
+import { sleep, waitUntil, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
+
+const ROUTE_TIMEOUT_MS = 30_000;
+const SEED_PASTE_TIMEOUT_MS = 3000;
+const APPROVAL_TIMEOUT_MS = 30_000;
 
 // Rabby, by DeBank. Pulled from the Chrome Web Store. No manifest `key`, so its id is path-derived.
 const RABBY_EXTENSION_ID = "acmacodkjbdgmoleebolmdjonilkdbch";
@@ -11,6 +16,8 @@ const RABBY_EXTENSION_ID = "acmacodkjbdgmoleebolmdjonilkdbch";
 // profile must enter at the new-user guide; plain index.html lands on a marketing carousel whose
 // "Get Started" leads to the add-address menu, which reopens this route in a second tab.
 const ONBOARDING_ROUTE = "index.html#/new-user/guide";
+
+const { reachUnlockScreen, unlock } = createUnlockScreen({ entry: "index.html", wallet: "Rabby" });
 
 const clickText = async (page: Page, text: string, timeoutMs = 30_000): Promise<void> => {
   const target = page.getByText(text, { exact: true }).first();
@@ -23,15 +30,15 @@ const clickText = async (page: Page, text: string, timeoutMs = 30_000): Promise<
  * event). Poll the URL instead. Anchoring each onboarding step on its route matters because several
  * screens share the same `input[type="password"]` selector.
  */
-const waitForRoute = async (page: Page, fragment: string, timeoutMs = 30_000): Promise<void> => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (page.url().includes(fragment)) {
-      return;
-    }
-    await sleep(200);
-  }
-  throw new Error(`[walletwright] Rabby never reached ${fragment}`);
+const waitForRoute = async (
+  page: Page,
+  fragment: string,
+  timeoutMs = ROUTE_TIMEOUT_MS,
+): Promise<void> => {
+  await waitUntilOrThrow(() => page.url().includes(fragment), {
+    message: `Rabby never reached ${fragment}`,
+    timeoutMs,
+  });
 };
 
 const importWallet = async (page: Page, seedPhrase: string, password: string): Promise<void> => {
@@ -60,12 +67,10 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
   await words.first().click();
   await page.evaluate((phrase) => navigator.clipboard.writeText(phrase), seedPhrase.trim());
   await page.keyboard.press("ControlOrMeta+v");
-  for (let attempt = 0; attempt < 15 && !(await lastFilled()); attempt++) {
-    await sleep(200);
-  }
+  const pasted = await waitUntil(lastFilled, { timeoutMs: SEED_PASTE_TIMEOUT_MS });
   // Clipboard access can be denied outright depending on how the profile was launched; typing each
   // box is slower but always works, so fall back rather than submitting a half-filled phrase.
-  if (!(await lastFilled())) {
+  if (pasted === undefined) {
     for (let index = 0; index < list.length; index++) {
       const box = words.nth(index);
       await box.click();
@@ -93,43 +98,6 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
   await sleep(1000);
 };
 
-const reachUnlockScreen = async (context: BrowserContext, extensionId: string): Promise<Page> => {
-  const page = await context.newPage();
-  const password = page.locator('input[type="password"]');
-  await page.goto(`chrome-extension://${extensionId}/index.html`).catch(() => {});
-  // Like MetaMask, the MV3 worker needs a few seconds to restore the vault; reload rather than
-  // re-goto, which would reset the page before the worker answers.
-  let ready = await password
-    .waitFor({ state: "visible", timeout: 20_000 })
-    .then(() => true)
-    .catch(() => false);
-  for (let attempt = 0; attempt < 5 && !ready; attempt++) {
-    await page.reload().catch(() => {});
-    ready = await password
-      .waitFor({ state: "visible", timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
-  }
-  if (!ready) {
-    throw new Error("[walletwright] Rabby unlock screen never appeared");
-  }
-  return page;
-};
-
-const unlock = async (page: Page, password: string): Promise<void> => {
-  const input = page.locator('input[type="password"]');
-  await input.fill(password);
-  await input.press("Enter");
-  const cleared = await page
-    .locator('input[type="password"]')
-    .waitFor({ state: "hidden", timeout: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!cleared) {
-    throw new Error("[walletwright] Rabby unlock failed (password screen still visible after 15s)");
-  }
-};
-
 const CONFIRM_LABELS = ["Connect", "Sign", "Confirm"];
 const CANCEL_LABELS = ["Cancel", "Reject"];
 
@@ -149,34 +117,36 @@ const clickApprovalButton = async (
   popup: Page,
   labels: ReadonlyArray<string>,
 ): Promise<boolean> => {
-  const deadline = Date.now() + 30_000;
   let lastClicked = "";
-  while (Date.now() < deadline) {
-    // The popup closing is the only real signal the request was answered.
-    if (popup.isClosed()) {
-      return true;
-    }
-    // Click each distinct label once: re-clicking a still-open "Connect" re-issues the request and
-    // the dapp ends up with nothing, while "Sign" legitimately needs a follow-up "Confirm".
-    const clicked = await popup
-      .evaluate(
-        (arg) => {
-          const target = [...document.querySelectorAll("button")].find((button) => {
-            const text = (button.textContent ?? "").trim();
-            return arg.names.includes(text) && !button.disabled && text !== arg.skip;
-          });
-          target?.click();
-          return target ? (target.textContent ?? "").trim() : "";
-        },
-        { names: [...labels], skip: lastClicked },
-      )
-      .catch(() => "");
-    if (clicked) {
-      lastClicked = clicked;
-    }
-    await sleep(300);
-  }
-  return popup.isClosed();
+  const answered = await waitUntil(
+    async () => {
+      // The popup closing is the only real signal the request was answered.
+      if (popup.isClosed()) {
+        return true;
+      }
+      // Click each distinct label once: re-clicking a still-open "Connect" re-issues the request and
+      // the dapp ends up with nothing, while "Sign" legitimately needs a follow-up "Confirm".
+      const clicked = await popup
+        .evaluate(
+          (arg) => {
+            const target = [...document.querySelectorAll("button")].find((button) => {
+              const text = (button.textContent ?? "").trim();
+              return arg.names.includes(text) && !button.disabled && text !== arg.skip;
+            });
+            target?.click();
+            return target ? (target.textContent ?? "").trim() : "";
+          },
+          { names: [...labels], skip: lastClicked },
+        )
+        .catch(() => "");
+      if (clicked) {
+        lastClicked = clicked;
+      }
+      return undefined;
+    },
+    { intervalMs: 300, timeoutMs: APPROVAL_TIMEOUT_MS },
+  );
+  return answered === true || popup.isClosed();
 };
 
 export const rabby: WalletDefinition = {

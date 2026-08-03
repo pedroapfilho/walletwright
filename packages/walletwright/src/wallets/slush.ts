@@ -1,7 +1,8 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { prepareWebStoreExtension } from "../internal/download";
-import { sleep } from "../internal/utils";
+import { createUnlockScreen } from "../internal/unlock-screen";
+import { sleep, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
 // Slush (formerly Sui Wallet), by Mysten Labs. Pulled from the Chrome Web Store.
@@ -9,6 +10,11 @@ const SLUSH_EXTENSION_ID = "opcgpfmipidbgpenhmajoajpbobppdil";
 
 // Slush is a single-page app: popup, onboarding, unlock, and approvals all live in index.html.
 const HOME_ROUTE = "#/tokens";
+
+const IMPORT_HOME_TIMEOUT_MS = 30_000;
+
+const atHome = async (page: Page): Promise<boolean> =>
+  (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
 
 const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boolean> => {
   const target = page.getByText(text, { exact: true }).first();
@@ -27,6 +33,19 @@ const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boo
   await target.click({ force: true, timeout: timeoutMs });
   return true;
 };
+
+const { reachUnlockScreen, unlock } = createUnlockScreen({
+  entry: "index.html",
+  // Slush's single-page UI mounts a few seconds after the navigation resolves and settles into one
+  // of two states: the password screen (cold launch, locked) or the home route (warm launch, already
+  // unlocked). Anything else is a page that never mounted, and driving it would only fail later, at
+  // the first approval.
+  isUnlocked: atHome,
+  submit: async (page) => {
+    await fclick(page, "Unlock");
+  },
+  wallet: "Slush",
+});
 
 export const slush: WalletDefinition = {
   // Connect confirms with "Approve"; signing confirms with "Sign" and then re-prompts for the
@@ -71,18 +90,17 @@ export const slush: WalletDefinition = {
     await page.getByRole("button", { name: "Next" }).click();
     await sleep(2000);
 
-    // "OnboardingSecurity" info screen → Next → "CreateWallet" spinner → home.
+    // "OnboardingSecurity" info screen → Next → "CreateWallet" spinner → home. The spinner must
+    // finish or the wallet never persists, so reaching home is the only proof the import took.
     await page
       .getByRole("button", { name: "Next" })
       .click()
       .catch(() => {});
-    for (let i = 0; i < 30; i++) {
-      const route = await page.evaluate(() => globalThis.location.hash).catch(() => "");
-      if (route === HOME_ROUTE) {
-        break;
-      }
-      await sleep(1000);
-    }
+    await waitUntilOrThrow(() => atHome(page), {
+      intervalMs: 1000,
+      message: `Slush import never reached the wallet home (${HOME_ROUTE})`,
+      timeoutMs: IMPORT_HOME_TIMEOUT_MS,
+    });
   },
 
   // Approvals open as index.html popups marked with `isPopup=1` (no separate notification.html).
@@ -98,35 +116,7 @@ export const slush: WalletDefinition = {
       name: "slush-chrome-latest",
     }),
 
-  reachUnlockScreen: async (context: BrowserContext, extensionId) => {
-    const page = await context.newPage();
-    const url = `chrome-extension://${extensionId}/index.html`;
-    for (let attempt = 0; attempt < 15; attempt++) {
-      const ok = await page
-        .goto(url, { waitUntil: "domcontentloaded" })
-        .then(() => true)
-        .catch(() => false);
-      if (ok) {
-        break;
-      }
-      await sleep(1000);
-    }
-    // Slush's single-page UI mounts a few seconds after the navigation resolves and settles into one
-    // of two states: the password screen (cold launch, locked) or the home route (warm launch,
-    // already unlocked). Poll for whichever appears instead of blind-sleeping and returning a
-    // not-yet-ready page whose failure would only surface later at the first approval.
-    const password = page.locator('input[type="password"]');
-    for (let attempt = 0; attempt < 30; attempt++) {
-      const atHome =
-        (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
-      const locked = await password.isVisible().catch(() => false);
-      if (atHome || locked) {
-        return page;
-      }
-      await sleep(500);
-    }
-    throw new Error("[walletwright] Slush unlock screen never appeared");
-  },
+  reachUnlockScreen,
 
   // Both the connect and sign popups cancel via a text "Reject" button. Like approve, the popup
   // reports the button visible before its React handlers wire up, so settle first or the click
@@ -138,13 +128,5 @@ export const slush: WalletDefinition = {
     }
   },
 
-  unlock: async (page, password) => {
-    // Slush typically reopens unlocked; only fill if it shows the password screen.
-    const input = page.locator('input[type="password"]');
-    if (await input.isVisible().catch(() => false)) {
-      await input.fill(password);
-      await fclick(page, "Unlock");
-      await sleep(1500);
-    }
-  },
+  unlock,
 };
