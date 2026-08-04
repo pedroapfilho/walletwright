@@ -33,15 +33,22 @@ export type WalletActionContext = {
   password: string;
 };
 
+/**
+ * The wallet-side counterpart of one dapp-facing capability: the same arguments, with the action
+ * context threaded in front.
+ */
+type WalletAction<Method> = Method extends (...args: infer Args) => Promise<void>
+  ? (ctx: WalletActionContext, ...args: Args) => Promise<void>
+  : never;
+
+/**
+ * The wallet-side half of a dapp-facing capability group, derived from that group's `*Api` type on
+ * `Wallet` so a capability's name and arguments are written exactly once.
+ */
+type WalletActionsFor<Api> = { [Name in keyof Api]?: WalletAction<Api[Name]> };
+
 /** Create, import, rename, and switch accounts from the wallet's own UI. */
-export type AccountActions = {
-  /** Derive the next HD account from the seed. */
-  add?: (ctx: WalletActionContext) => Promise<void>;
-  importPrivateKey?: (ctx: WalletActionContext, privateKey: string) => Promise<void>;
-  rename?: (ctx: WalletActionContext, options: { index: number; name: string }) => Promise<void>;
-  /** Make the account at `index` (order shown in the wallet's account list) the active one. */
-  switch?: (ctx: WalletActionContext, index: number) => Promise<void>;
-};
+export type AccountActions = WalletActionsFor<AccountsApi>;
 
 /** A custom EVM network, as the wallet's add-network form expects it. */
 export type NetworkConfig = {
@@ -52,16 +59,10 @@ export type NetworkConfig = {
 };
 
 /** Add a custom network and switch the active one, from the wallet's own UI. */
-export type NetworkActions = {
-  add?: (ctx: WalletActionContext, config: NetworkConfig) => Promise<void>;
-  switch?: (ctx: WalletActionContext, chainId: number) => Promise<void>;
-};
+export type NetworkActions = WalletActionsFor<NetworkApi>;
 
 /** Lock and unlock the wallet itself, from its own UI. */
-export type SettingsActions = {
-  lock?: (ctx: WalletActionContext) => Promise<void>;
-  unlock?: (ctx: WalletActionContext) => Promise<void>;
-};
+export type SettingsActions = WalletActionsFor<SettingsApi>;
 
 /**
  * Optional, per-wallet capabilities beyond the universal connect/sign flow. A wallet declares only
@@ -143,9 +144,11 @@ export type NetworkApi = {
 
 /** Manage accounts from the wallet's own UI. Throws if the wallet doesn't declare support. */
 export type AccountsApi = {
+  /** Derive the next HD account from the seed. */
   add: () => Promise<void>;
   importPrivateKey: (privateKey: string) => Promise<void>;
   rename: (options: { index: number; name: string }) => Promise<void>;
+  /** Make the account at `index` (order shown in the wallet's account list) the active one. */
   switch: (index: number) => Promise<void>;
 };
 

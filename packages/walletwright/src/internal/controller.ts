@@ -115,9 +115,9 @@ export const createWallet = ({
       await dapp?.bringToFront().catch(() => {});
     };
 
-  // Capability contract: each method is declared in three places that must stay in sync, its
-  // optional fn in WalletActions (types.ts), its runtime signature in the *Api types on Wallet, and
-  // its binding below. capability-wiring.test.ts guards the binding-to-fn half.
+  // A capability is declared once, on the *Api types in types.ts: WalletActions derives from those,
+  // so a new method makes this object fail to compile until it is bound. Only the fn-to-slot pairing
+  // below can still be wrong, and capability-wiring.test.ts guards that.
   return {
     accounts: {
       add: action(definition.actions?.accounts?.add, "accounts.add"),
@@ -129,8 +129,8 @@ export const createWallet = ({
       switch: action(definition.actions?.accounts?.switch, "accounts.switch"),
     },
     approve,
-    confirmSignature: () => approve({ optional: false }),
-    confirmTransaction: () => approve({ optional: false }),
+    confirmSignature: () => approve(),
+    confirmTransaction: () => approve(),
     // Connect may auto-approve on some wallets, so a missing popup is not an error here.
     connectToDapp: () => approve({ optional: true }),
     extensionId,
@@ -140,9 +140,9 @@ export const createWallet = ({
       switch: action(definition.actions?.network?.switch, "network.switch"),
     },
     reject,
-    rejectConnection: () => reject({ optional: false }),
-    rejectSignature: () => reject({ optional: false }),
-    rejectTransaction: () => reject({ optional: false }),
+    rejectConnection: () => reject(),
+    rejectSignature: () => reject(),
+    rejectTransaction: () => reject(),
     settings: {
       lock: action(definition.actions?.settings?.lock, "settings.lock"),
       unlock: action(definition.actions?.settings?.unlock, "settings.unlock"),
