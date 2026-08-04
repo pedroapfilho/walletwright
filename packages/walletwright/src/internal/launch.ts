@@ -46,9 +46,9 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
 /**
  * Launch a fresh persistent context from the onboarded cache and return an unlocked wallet
  * controller. Runs headed, extension approval popups don't open in headless Chromium (use a
- * virtual display such as xvfb on CI).
+ * virtual display such as xvfb on CI). Outside Playwright fixtures, `context.close()` is yours.
  */
-export const launchWalletContext = async (setup: WalletSetup): Promise<LaunchedWallet> => {
+export const launchWallet = async (setup: WalletSetup): Promise<LaunchedWallet> => {
   const definition = wallets[setup.wallet];
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
   const profileDir = path.join(cacheDir, profileKey(setup));
@@ -93,6 +93,3 @@ export const launchWalletContext = async (setup: WalletSetup): Promise<LaunchedW
     throw error;
   }
 };
-
-/** Standalone launcher (outside Playwright fixtures). Remember to `context.close()` when done. */
-export const launchWallet = launchWalletContext;

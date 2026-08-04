@@ -56,6 +56,16 @@ export default defineConfig({
         "react-hooks/rules-of-hooks": "off",
       },
     },
+    // Playwright reads a fixture's dependencies off its first parameter and rejects anything that is
+    // not an object-destructuring pattern, so a fixture depending on nothing must be written
+    // `async ({}, use)`. Naming a dependency just to satisfy the rule would launch a browser the
+    // wallet fixtures never use.
+    {
+      files: ["packages/walletwright/src/fixtures.ts"],
+      rules: {
+        "no-empty-pattern": "off",
+      },
+    },
     // The mock providers' bodies are serialized into the page by `addInitScript`, so reaching the
     // injected binding or `window.ethereum` means asserting onto a window TypeScript can't see.
     {

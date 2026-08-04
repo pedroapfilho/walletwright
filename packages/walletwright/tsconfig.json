@@ -1,7 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "@repo/typescript-config/library.json",
+  "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    // The wallet drivers pass browser code to page.evaluate/addInitScript, so those bodies are
+    // checked against DOM globals even though the package itself runs on Node.
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "types": ["node"]
   },
   "include": ["src/**/*"],

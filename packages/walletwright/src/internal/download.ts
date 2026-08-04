@@ -18,7 +18,11 @@ export const downloadAndExtractExtension = async (options: {
   cacheDir: string;
   kind: "zip" | "crx";
   name: string;
-  sha256?: string;
+  /**
+   * Expected sha256 of the downloaded bytes. Required, and `undefined` only where the bytes genuinely
+   * cannot be pinned, so adding a download site forces a decision instead of quietly trusting it.
+   */
+  sha256: string | undefined;
   url: string;
 }): Promise<string> => {
   const { cacheDir, kind, name, sha256, url } = options;
@@ -44,7 +48,7 @@ export const downloadAndExtractExtension = async (options: {
   }
   const bytes = Buffer.from(await response.arrayBuffer());
 
-  if (sha256 !== undefined && sha256 !== "") {
+  if (sha256 !== undefined) {
     const actual = createHash("sha256").update(bytes).digest("hex");
     if (actual !== sha256.toLowerCase()) {
       throw new Error(
@@ -94,5 +98,8 @@ export const prepareWebStoreExtension = (options: {
     cacheDir: options.cacheDir,
     kind: "crx",
     name: options.name,
+    // Unpinnable by construction: the Web Store endpoint always serves the current version, so its
+    // bytes change under us. Only versioned release URLs (MetaMask's) can carry a hash.
+    sha256: undefined,
     url: chromeWebStoreCrxUrl(options.extensionId),
   });

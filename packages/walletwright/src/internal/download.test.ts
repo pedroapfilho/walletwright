@@ -57,6 +57,7 @@ describe("downloadAndExtractExtension", () => {
       cacheDir,
       kind: "zip",
       name: "fake-extension",
+      sha256: undefined,
       url,
     });
 
@@ -71,7 +72,13 @@ describe("downloadAndExtractExtension", () => {
 
     const cacheDir = await makeCacheDir();
     await expect(
-      downloadAndExtractExtension({ cacheDir, kind: "zip", name: "../escape", url }),
+      downloadAndExtractExtension({
+        cacheDir,
+        kind: "zip",
+        name: "../escape",
+        sha256: undefined,
+        url,
+      }),
     ).rejects.toThrow(/invalid extension name/v);
   });
 
@@ -82,6 +89,7 @@ describe("downloadAndExtractExtension", () => {
         cacheDir,
         kind: "zip",
         name: ".",
+        sha256: undefined,
         url: "http://127.0.0.1:1/unused.zip",
       }),
     ).rejects.toThrow(/invalid extension name/v);
@@ -101,7 +109,13 @@ describe("downloadAndExtractExtension", () => {
 
     const cacheDir = await makeCacheDir();
     await expect(
-      downloadAndExtractExtension({ cacheDir, kind: "zip", name: "evil-extension", url }),
+      downloadAndExtractExtension({
+        cacheDir,
+        kind: "zip",
+        name: "evil-extension",
+        sha256: undefined,
+        url,
+      }),
     ).rejects.toThrow(/escapes/v);
   });
 
@@ -142,7 +156,7 @@ describe("downloadAndExtractExtension", () => {
     ).rejects.toThrow(/failed integrity check/v);
   });
 
-  it("extracts when no sha256 is given (unchanged behavior)", async () => {
+  it("extracts when the download is explicitly unpinned", async () => {
     const zip = new AdmZip();
     zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
     const { close, url } = await serve(zip.toBuffer());
@@ -153,6 +167,7 @@ describe("downloadAndExtractExtension", () => {
       cacheDir,
       kind: "zip",
       name: "no-hash-extension",
+      sha256: undefined,
       url,
     });
 

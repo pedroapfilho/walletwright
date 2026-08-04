@@ -15,9 +15,6 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
-    "format:check": {
-      "cache": false
-    },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
@@ -30,11 +27,6 @@
     "test": {
       "dependsOn": ["^build"],
       "cache": false
-    },
-    "test:watch": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "persistent": true
     },
     "test:coverage": {
       "dependsOn": ["^build"],

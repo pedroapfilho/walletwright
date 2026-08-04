@@ -1,9 +1,33 @@
 import { prepareWebStoreExtension } from "../internal/download";
-import { sleep } from "../internal/utils";
+import { createUnlockScreen } from "../internal/unlock-screen";
+import { sleep } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
 // Phantom's old crx-backup host is dead; pull from the Chrome Web Store (stable extension id).
 const PHANTOM_EXTENSION_ID = "bfnaelmomeimhlpmgjnjophhpkkoljpa";
+
+const { reachUnlockScreen, unlock } = createUnlockScreen({
+  entry: "popup.html",
+  // Phantom reopens either locked (password screen) or straight onto the account home, which
+  // carries no stable test id of its own. Actionable UI with no password field is that home; what
+  // the probe rules out is the third state, a popup that rendered nothing, which used to pass as
+  // "unlocked" and only surfaced later as an approval that never arrived.
+  isUnlocked: async (page) => {
+    const rendered = await page
+      .locator("button")
+      .first()
+      .isVisible()
+      .catch(() => false);
+    return rendered;
+  },
+  submit: async (page, field) => {
+    const unlockButton = page.getByRole("button", { name: /unlock/iv });
+    await ((await unlockButton.isVisible().catch(() => false))
+      ? unlockButton.click()
+      : field.press("Enter"));
+  },
+  wallet: "Phantom",
+});
 
 export const phantom: WalletDefinition = {
   ecosystems: ["evm", "svm"],
@@ -50,32 +74,9 @@ export const phantom: WalletDefinition = {
       name: "phantom-chrome-latest",
     }),
 
-  reachUnlockScreen: async (context, extensionId) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
-    const password = page.locator('input[type="password"]');
-    // Either the unlock screen appears (locked) or the wallet is already unlocked, both are fine.
-    for (let attempt = 0; attempt < 6; attempt++) {
-      if (await password.isVisible().catch(() => false)) {
-        break;
-      }
-      await sleep(1000);
-    }
-    return page;
-  },
+  reachUnlockScreen,
 
-  unlock: async (page, password) => {
-    const input = page.locator('input[type="password"]');
-    if (!(await input.isVisible().catch(() => false))) {
-      return; // already unlocked
-    }
-    await input.fill(password);
-    const unlockButton = page.getByRole("button", { name: /unlock/iv });
-    await ((await unlockButton.isVisible().catch(() => false))
-      ? unlockButton.click()
-      : input.press("Enter"));
-    await sleep(1500);
-  },
+  unlock,
 
   // Connect and signature popups both confirm with `primary-button` (reject = `secondary-button`).
   approve: async (popup) => {

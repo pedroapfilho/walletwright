@@ -1,21 +1,15 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
-/** Fill the password field on an already-open unlock screen and wait for it to go away. */
-export const unlock = async (page: Page, password: string): Promise<void> => {
-  const input = page.locator('input[type="password"]');
-  await input.fill(password);
-  await input.press("Enter");
-  const cleared = await page
-    .locator('input[type="password"]')
-    .waitFor({ state: "hidden", timeout: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!cleared) {
-    throw new Error(
-      "[walletwright] MetaMask unlock failed (password screen still visible after 15s)",
-    );
-  }
-};
+import { createUnlockScreen } from "../../internal/unlock-screen";
+import { waitUntil } from "../../internal/wait";
+
+const SRP_RETYPE_TIMEOUT_MS = 40_000;
+const SRP_CONFIRM_TIMEOUT_MS = 5000;
+
+const { reachUnlockScreen, unlock } = createUnlockScreen({
+  entry: "home.html",
+  wallet: "MetaMask",
+});
 
 export const importWallet = async (
   page: Page,
@@ -26,20 +20,23 @@ export const importWallet = async (
   await page.getByTestId("onboarding-import-with-srp-button").click();
 
   // The SRP field only enables the confirm button after its change handler parses a valid phrase.
-  // `fill` doesn't fire those events; typing can drop keystrokes, so type, then retry until enabled.
+  // `fill` doesn't fire those events; typing can drop keystrokes, so retype until it enables. The
+  // budget bounds the retries rather than a count: one retype is ~5s of keystrokes plus the wait.
   const srpField = page.getByTestId("srp-input-import__srp-note");
   const confirmEnabled = page.locator('[data-testid="import-srp-confirm"]:not([disabled])');
-  let accepted = false;
-  for (let attempt = 0; attempt < 3 && !accepted; attempt++) {
-    await srpField.click();
-    await srpField.fill("");
-    await srpField.pressSequentially(seedPhrase, { delay: 50 });
-    accepted = await confirmEnabled
-      .waitFor({ state: "visible", timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
-  }
-  if (!accepted) {
+  const accepted = await waitUntil(
+    async () => {
+      await srpField.click();
+      await srpField.fill("");
+      await srpField.pressSequentially(seedPhrase, { delay: 50 });
+      return confirmEnabled
+        .waitFor({ state: "visible", timeout: SRP_CONFIRM_TIMEOUT_MS })
+        .then(() => true)
+        .catch(() => undefined);
+    },
+    { intervalMs: 0, timeoutMs: SRP_RETYPE_TIMEOUT_MS },
+  );
+  if (accepted === undefined) {
     throw new Error("[walletwright] MetaMask rejected the seed phrase (confirm stayed disabled)");
   }
   await confirmEnabled.click();
@@ -61,28 +58,4 @@ export const importWallet = async (
     .catch(() => {});
 };
 
-export const reachUnlockScreen = async (
-  context: BrowserContext,
-  extensionId: string,
-): Promise<Page> => {
-  const page = await context.newPage();
-  const password = page.locator('input[type="password"]');
-  await page.goto(`chrome-extension://${extensionId}/home.html`);
-  // The MV3 service worker needs a few seconds to restore the vault; be patient, then reload
-  // (re-goto resets the page before the worker responds).
-  let ready = await password
-    .waitFor({ state: "visible", timeout: 20_000 })
-    .then(() => true)
-    .catch(() => false);
-  for (let attempt = 0; attempt < 5 && !ready; attempt++) {
-    await page.reload().catch(() => {});
-    ready = await password
-      .waitFor({ state: "visible", timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
-  }
-  if (!ready) {
-    throw new Error("[walletwright] MetaMask unlock screen never appeared");
-  }
-  return page;
-};
+export { reachUnlockScreen, unlock };

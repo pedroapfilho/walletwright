@@ -9,7 +9,7 @@ this file.
 **Phantom (EVM + Solana)**, **Rabby (EVM)**, **Solflare (Solana)**, and **Slush (Sui)**. It onboards a wallet from a seed, caches the profile, then
 unlocks and drives the extension's connect/sign approval popups against a dapp under test.
 
-walletwright takes the approach that works — onboard once, cache the profile, drive the popups — and
+walletwright takes the approach that works (onboard once, cache the profile, drive the popups) and
 rebuilds it clean: plain `@playwright/test`, current wallet and Chromium versions, no fork and no
 patched dependencies.
 
@@ -50,7 +50,7 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
 
 - `buildCache(setup)` (`internal/cache.ts`) launches with the extension, navigates to onboarding,
   runs `importWallet`, closes, then runs `finalizeCache` while the browser is closed.
-- `launchWalletContext(setup)` (`internal/launch.ts`) copies the cache to a throwaway profile,
+- `launchWallet(setup)` (`internal/launch.ts`) copies the cache to a throwaway profile,
   launches headed with the extension, resolves the id, runs `reachUnlockScreen` then `unlock`, and
   returns a `Wallet`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
@@ -169,7 +169,7 @@ Each item below cost real debugging time. Don't "simplify" them away.
 
 1. **Run headed.** Extension connect/sign approval popups do not open in headless Chromium. CI needs a
    virtual display (`xvfb-run`). `buildCache` may run headless, since onboarding has no popups, but
-   `launchWalletContext` and the tests must be headed.
+   `launchWallet` and the tests must be headed.
 2. **Derive the extension id; don't query it.** `chrome://extensions` is blocked headless and the MV3
    service worker starts lazily, so `getExtensionId` would race. Compute it instead
    (`internal/utils.ts`, `extensionIdFromPath`): sha256 of the manifest's public `key` if present

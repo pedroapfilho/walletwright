@@ -1,10 +1,16 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { prepareWebStoreExtension } from "../internal/download";
+import { createUnlockScreen } from "../internal/unlock-screen";
 import type { WalletDefinition } from "../types";
 
 // Solflare. Pulled from the Chrome Web Store. No manifest `key`, so its id is path-derived.
 const SOLFLARE_EXTENSION_ID = "bhhhlbepdkbapadjdnnojkbgioiodbic";
+
+const { reachUnlockScreen, unlock } = createUnlockScreen({
+  entry: "wallet.html",
+  wallet: "Solflare",
+});
 
 const importWallet = async (page: Page, seedPhrase: string, password: string): Promise<void> => {
   await page.getByTestId("btn-import-existing-wallet").click({ timeout: 30_000 });
@@ -28,42 +34,6 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
 
   // "You're All Set!" - accepting here is what leaves onboarding in a completed state.
   await page.getByTestId("btn-explore").click({ timeout: 60_000 });
-};
-
-const reachUnlockScreen = async (context: BrowserContext, extensionId: string): Promise<Page> => {
-  const page = await context.newPage();
-  const password = page.locator('input[type="password"]');
-  await page.goto(`chrome-extension://${extensionId}/wallet.html`).catch(() => {});
-  let ready = await password
-    .waitFor({ state: "visible", timeout: 20_000 })
-    .then(() => true)
-    .catch(() => false);
-  for (let attempt = 0; attempt < 5 && !ready; attempt++) {
-    await page.reload().catch(() => {});
-    ready = await password
-      .waitFor({ state: "visible", timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
-  }
-  if (!ready) {
-    throw new Error("[walletwright] Solflare unlock screen never appeared");
-  }
-  return page;
-};
-
-const unlock = async (page: Page, password: string): Promise<void> => {
-  const input = page.locator('input[type="password"]');
-  await input.fill(password);
-  await input.press("Enter");
-  const cleared = await input
-    .waitFor({ state: "hidden", timeout: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!cleared) {
-    throw new Error(
-      "[walletwright] Solflare unlock failed (password screen still visible after 15s)",
-    );
-  }
 };
 
 export const solflare: WalletDefinition = {

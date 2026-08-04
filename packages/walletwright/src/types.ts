@@ -108,7 +108,11 @@ export type WalletDefinition = {
   onboardingPage: string;
   /** Download + extract the unpacked extension into `cacheDir`; returns its absolute path. */
   prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
-  /** Navigate to the home/unlock page and return true once the password screen is rendered. */
+  /**
+   * Open the wallet's home/unlock page and return it once it has settled into a known state (its
+   * password screen, or an already-unlocked wallet for the wallets that can reopen that way). Throws
+   * rather than returning a page that never rendered. The returned page stays open as `Wallet.home`.
+   */
   reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
   /**
    * Click the cancel/reject button in an approval popup, the counterpart of `approve`. Optional:
