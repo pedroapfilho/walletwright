@@ -301,7 +301,7 @@ wireStandardSection({
     signature: "#mockSvmSignature",
   },
   label: "Mock (Solana)",
-  // Any non-MetaMask Wallet-Standard Solana wallet, so walletwright/mock-standard drives this
+  // Any non-MetaMask Wallet-Standard Solana wallet, so @walletwright/core/mock-standard drives this
   // section without impersonating a named extension.
   match: (wallet) =>
     wallet.name !== "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),

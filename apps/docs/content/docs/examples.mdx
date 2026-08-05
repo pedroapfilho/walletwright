@@ -314,7 +314,7 @@ test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
 
 Network and transaction tests need a chain the wallet can actually reach: MetaMask validates a
 custom network's RPC before saving it, and reads balance and nonce off the chain to render its
-popups. `walletwright/chain` boots a local node (Foundry's `anvil` via `prool`) whose default
+popups. `@walletwright/core/chain` boots a local node (Foundry's `anvil` via `prool`) whose default
 mnemonic pre-funds the same account the MetaMask setup imports.
 
 ```ts
@@ -439,8 +439,8 @@ test("rejecting a transaction surfaces an error", async ({ page, wallet }) => {
 ## Asserting on-chain state with viem
 
 Approving a popup proves the wallet signed, not that the transaction landed. Pair
-`walletwright/chain` with [viem](https://viem.sh) to read the chain directly and assert the receipt.
-Putting the chain in a fixture starts it with the suite and stops it after.
+`@walletwright/core/chain` with [viem](https://viem.sh) to read the chain directly and assert the
+receipt. Putting the chain in a fixture starts it with the suite and stops it after.
 
 ```ts
 // tests/onchain.spec.ts
@@ -485,9 +485,9 @@ test("the transfer is mined", async ({ page, wallet, chain }) => {
 ## Without an extension: the mock wallet
 
 Not every dapp test needs a real extension. When you're testing your dapp's connect-and-sign wiring,
-not the wallet, `walletwright/mock` injects a headless EIP-1193 provider (announced over EIP-6963)
-that signs with a real key. These specs use plain `@playwright/test`, run headless, and finish in a
-second or two.
+not the wallet, `@walletwright/core/mock` injects a headless EIP-1193 provider (announced over
+EIP-6963) that signs with a real key. These specs use plain `@playwright/test`, run headless, and
+finish in a second or two.
 
 ```ts
 import { test, expect } from "@playwright/test";
@@ -523,9 +523,9 @@ const address = await installMockWallet(page.context(), {
 
 ### The same, for a Solana dapp
 
-For a Wallet-Standard Solana dapp, `walletwright/mock-standard` registers a headless wallet that
-answers `standard:connect` and `solana:signMessage`, signing with a real ed25519 key. It needs no
-extra dependency and returns the announced account so a spec can verify the signature.
+For a Wallet-Standard Solana dapp, `@walletwright/core/mock-standard` registers a headless wallet
+that answers `standard:connect` and `solana:signMessage`, signing with a real ed25519 key. It needs
+no extra dependency and returns the announced account so a spec can verify the signature.
 
 ```ts
 import { test, expect } from "@playwright/test";

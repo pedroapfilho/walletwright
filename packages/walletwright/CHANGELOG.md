@@ -31,12 +31,13 @@ A wallet is only registered once it has been driven for real.
 
 ### Subpath exports
 
-- `walletwright/chain` spins up a local anvil chain through `prool` for transaction tests.
-- `walletwright/mock` and `walletwright/mock-standard` provide headless provider mocks (EIP-1193 and
-  the Solana Wallet Standard) for tests that do not need a real extension.
+- `@walletwright/core/chain` spins up a local anvil chain through `prool` for transaction tests.
+- `@walletwright/core/mock` and `@walletwright/core/mock-standard` provide headless provider mocks
+  (EIP-1193 and the Solana Wallet Standard) for tests that do not need a real extension.
 
 ### Notes
 
 - Approval popups only open in **headed** Chromium. On CI, use a virtual display such as `xvfb-run`.
-- `prool` and `viem` are optional peer dependencies. `walletwright/chain` needs both;
-  `walletwright/mock` needs `viem`. The main entry and `walletwright/mock-standard` need neither.
+- `prool` and `viem` are optional peer dependencies. `@walletwright/core/chain` needs both;
+  `@walletwright/core/mock` needs `viem`. The main entry and `@walletwright/core/mock-standard` need
+  neither.

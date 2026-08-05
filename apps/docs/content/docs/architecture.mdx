@@ -6,8 +6,8 @@ description: How walletwright is built. The layered engine, the cache/launch/dri
 walletwright is a small wallet-agnostic engine wrapped around one plug-in per wallet. The engine
 knows how to build a cache, launch a browser from it, and drive approval popups. It knows nothing
 about MetaMask, Phantom, or Slush specifically: every wallet-specific selector and flow lives behind
-a single `WalletDefinition` interface. Everything you import from `walletwright` is a thin surface
-over that engine.
+a single `WalletDefinition` interface. Everything you import from `@walletwright/core` is a thin
+surface over that engine.
 
 This page is the map. If you only want to write tests, [Getting started](/getting-started) and
 [Examples](/examples) are enough. Read this when you want to add a wallet, add a capability, or
@@ -30,7 +30,7 @@ wallet definitions    src/wallets/{metamask,phantom,slush}.ts  (+ src/wallets/me
    ▼
 real extension        MetaMask / Phantom / Slush, loaded unpacked into Chromium
 
-optional subpackages  walletwright/chain (local EVM node), walletwright/mock (headless provider)
+optional subpackages  @walletwright/core/chain (local EVM node), @walletwright/core/mock (headless provider)
 ```
 
 The engine is generic. Each wallet definition fills in the wallet-specific parts (how to import a
@@ -45,8 +45,8 @@ packages/walletwright/src/
   cli.ts              `walletwright cache` command
   fixtures.ts         createWalletFixtures(), the Playwright test fixtures
   types.ts            WalletSetup, WalletDefinition, Wallet, the capability types
-  chain.ts            walletwright/chain entry point (local EVM node)
-  mock.ts             walletwright/mock entry point (headless provider)
+  chain.ts            @walletwright/core/chain entry point (local EVM node)
+  mock.ts             @walletwright/core/mock entry point (headless provider)
   internal/
     cache.ts          buildCache(): onboard once, persist a profile
     launch.ts         launchWallet(): copy the profile, launch, unlock
@@ -339,7 +339,7 @@ Two capabilities are shipped as separate entry points so the core connect/sign f
 on them. Both declare their heavy dependency as an optional peer, so a plain
 `pnpm add -D @walletwright/core` pulls in neither.
 
-### `walletwright/chain`
+### `@walletwright/core/chain`
 
 A local EVM node for network and transaction tests. `createLocalChain()` starts Foundry's `anvil`
 through `prool` and returns `{ chainId, rpcUrl, stop }`. Transaction tests need a real chain: MetaMask
@@ -349,7 +349,7 @@ tests assert against a funded account with no extra step.
 
 Needs the `prool` package and the `anvil` binary on `PATH`.
 
-### `walletwright/mock`
+### `@walletwright/core/mock`
 
 A headless injected-wallet fake for dapp tests that do not need a real extension.
 `installMockWallet(context)` injects an EIP-1193 provider, announces it over EIP-6963, and answers
@@ -358,7 +358,7 @@ lives in the page but signs in Node, bridged by a Playwright `exposeFunction`. I
 even headless, Chromium in a second or two.
 
 It is a connect/sign stand-in, not an EVM: it does not execute transactions. For anything real, drive
-an actual extension against `walletwright/chain`.
+an actual extension against `@walletwright/core/chain`.
 
 Needs the `viem` package.
 

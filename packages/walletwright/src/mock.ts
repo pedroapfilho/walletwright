@@ -5,8 +5,8 @@ import { privateKeyToAccount } from "viem/accounts";
 /**
  * A headless injected-wallet fake for dapp tests that don't need a real extension. It announces
  * itself over EIP-6963 and answers the EIP-1193 requests a connect/sign flow makes, signing with a
- * real key so signatures verify. `walletwright/mock` is a separate entry point that needs `viem`
- * (optional peer); the extension-driving core doesn't.
+ * real key so signatures verify. `@walletwright/core/mock` is a separate entry point that needs
+ * `viem` (optional peer); the extension-driving core doesn't.
  */
 export type MockWalletOptions = {
   chainId?: number;
