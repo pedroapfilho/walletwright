@@ -7,7 +7,8 @@ for (const [key, value] of Object.entries(loadEnv("", import.meta.dirname, "VITE
   process.env[key] ??= value;
 }
 
-// Wallet approval popups only open headed; on CI run under a virtual display (e.g. xvfb-run).
+// Headless (Playwright's default) for the wallets whose headless approval flow is verified; the
+// Slush and Solflare specs opt themselves back into headed with `test.use({ headless: false })`.
 export default defineConfig({
   expect: { timeout: 30_000 },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

@@ -56,6 +56,9 @@ export const solflare: WalletDefinition = {
   // Approvals open in their own confirm_popup.html window.
   notificationMatch: "confirm_popup.html",
 
+  // No `notificationPage`: Solflare rejects a connection outright when the browser runs headless
+  // (the dapp gets "Connection rejected" within ~2s, before any approval UI exists and whether or
+  // not the engine opens confirm_popup.html), so its specs have to run headed.
   onboardingPage: "wallet.html",
 
   // Latest from the Web Store, so `version` is ignored.

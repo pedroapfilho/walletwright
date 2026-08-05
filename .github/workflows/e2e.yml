@@ -1,0 +1,37 @@
+name: E2E
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Dispatched by release.yml for the changeset-release/main PR, whose
+  # pull_request runs are parked unexecuted behind an approval gate.
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wallets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+      - run: pnpm build --filter="./packages/*"
+      # The extensions are the slow part of a cold run; the onboarded profiles are rebuilt each time.
+      - uses: actions/cache@v4
+        with:
+          path: apps/demo/.walletwright
+          key: walletwright-${{ runner.os }}-${{ hashFiles('apps/demo/wallet-setup.ts') }}
+      # `channel: "chromium"` needs the full browser, not the headless shell that ships by default.
+      - run: pnpm --filter demo exec playwright install --with-deps chromium
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: anvil --chain-id 31337 &
+      # Only the wallets this gate runs, so the excluded ones don't cost a download and an onboarding.
+      - run: |
+          for wallet in metamask phantom rabby; do
+            pnpm --filter demo exec tsx scripts/cache-one.ts "$wallet" --headless
+          done
+      # Headless covers MetaMask, Phantom, and Rabby. Solflare and Slush need a display; they are
+      # excluded rather than run under xvfb, to keep this gate a headless one.
+      - run: pnpm --filter demo exec playwright test --grep-invert "Solflare|Slush"

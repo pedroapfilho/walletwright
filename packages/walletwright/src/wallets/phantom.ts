@@ -65,6 +65,8 @@ export const phantom: WalletDefinition = {
     await sleep(1500);
   },
 
+  notificationPage: "notification.html",
+
   onboardingPage: "onboarding.html",
 
   prepareExtension: (cacheDir) =>

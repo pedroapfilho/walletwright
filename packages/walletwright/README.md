@@ -99,9 +99,9 @@ await context.close();
 
 ## Requirements and notes
 
-- **Run headed.** Extension approval popups do not open in headless Chromium. On CI, give it a virtual
-  display: `xvfb-run pnpm exec playwright test`. `buildCache` can run headless, since onboarding has
-  no popups.
+- **Headless works for MetaMask, Phantom, and Rabby**, and needs nothing beyond Playwright's default.
+  Solflare and Slush have no verified headless approval flow, so pin their specs with
+  `test.use({ headless: false })` and give CI a virtual display: `xvfb-run pnpm exec playwright test`.
 - MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom,
   Rabby, Solflare, and Slush always use the current Web Store build.
 - The cache lives in `.walletwright/` (override it with `WalletSetup.cacheDir`). Add that directory to

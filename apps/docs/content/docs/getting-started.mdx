@@ -95,9 +95,10 @@ test("connect wallet and sign a message", async ({ page, wallet }) => {
 });
 ```
 
-## Step 5: Configure Playwright (headed)
+## Step 5: Configure Playwright
 
-Approval popups do not open headless, so run headed and give wallet flows a couple of retries:
+MetaMask, Phantom, and Rabby run headless, so Playwright's defaults are fine. Give wallet flows a
+couple of retries and a single worker:
 
 ```ts
 // playwright.config.ts

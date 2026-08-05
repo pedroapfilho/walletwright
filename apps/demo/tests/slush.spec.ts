@@ -3,6 +3,9 @@ import { slushTest } from "./fixtures";
 const test = slushTest;
 const { expect } = test;
 
+// Slush declares no headless approval flow, so these run headed even when the suite doesn't.
+test.use({ headless: false });
+
 test("Slush: connect + sign on Sui", async ({ page, wallet }) => {
   await page.goto("/");
 

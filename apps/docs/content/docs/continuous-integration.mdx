@@ -1,21 +1,42 @@
 ---
 title: Continuous integration
-description: Run walletwright tests headed on CI with a virtual display, and cache the downloaded extensions between runs.
+description: Run walletwright tests on CI, headless where the wallet supports it, and cache the downloaded extensions between runs.
 ---
 
-Approval popups only open in headed Chromium. A headless run loads the extension but never shows the
-connect/sign popup, so the tests hang. On a headless CI machine, give the browser a virtual display.
+MetaMask, Phantom, and Rabby run headless, so a plain `playwright test` works on a headless CI
+machine. Solflare and Slush still need a real display; give those a virtual one.
+
+## Headless
+
+Nothing to configure: Playwright defaults to headless and the fixtures pass that through to the
+wallet. walletwright launches Playwright's bundled Chromium through the `chromium` channel, because
+the default headless build is the headless _shell_, which cannot load an extension at all.
+
+```bash
+pnpm exec playwright install chromium
+pnpm exec tsx scripts/build-cache.ts
+pnpm exec playwright test
+```
+
+A wallet with no verified headless approval flow throws at launch instead of hanging, so a mistake
+here is loud.
 
 ## Headed via a virtual display
 
-On Linux CI, wrap the test command in `xvfb-run`:
+Pin the specs that need a display, so the rest of the suite still runs headless:
+
+```ts
+// tests/solflare.spec.ts
+test.use({ headless: false });
+```
+
+Then wrap the run on Linux CI:
 
 ```bash
 xvfb-run --auto-servernum pnpm exec playwright test
 ```
 
-`buildCache()` itself can run headless, since onboarding has no popups, but the tests that connect and
-sign must be headed.
+`xvfb-run` is harmless for the headless specs, so one command covers a mixed suite.
 
 ## GitHub Actions
 
@@ -36,8 +57,10 @@ jobs:
       - run: pnpm install
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec tsx scripts/build-cache.ts
-      - run: xvfb-run --auto-servernum pnpm exec playwright test
+      - run: pnpm exec playwright test
 ```
+
+Put `xvfb-run --auto-servernum` in front of the last step if the suite includes Solflare or Slush.
 
 ## Caching between runs
 
@@ -60,10 +83,11 @@ with chain id `31337`: start Foundry's `anvil` directly, or via `createLocalChai
 `walletwright/chain` (which spawns the same binary and needs the optional `prool` peer). Without a
 chain these specs fail with slow timeouts rather than skipping, so either add an anvil step before
 the test run or exclude them, for example
-`xvfb-run --auto-servernum pnpm exec playwright test --grep-invert "network|transaction"`.
+`pnpm exec playwright test --grep-invert "network|transaction"`.
 
 ## Flakiness
 
 MV3 service workers can be timing-sensitive on cold launches. Set Playwright `retries` (2 is plenty)
-and keep `workers: 1` for wallet suites so several browsers don't contend for the display.
-walletwright already reloads patiently while it reaches the unlock screen.
+and keep `workers: 1` for wallet suites so several browsers don't contend for the machine.
+walletwright already reloads patiently while it reaches the unlock screen, and waits up to 30 seconds
+for an approval to render.

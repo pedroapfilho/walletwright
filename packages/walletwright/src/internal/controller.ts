@@ -2,14 +2,45 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
-import { DEFAULT_NOTIFICATION_MATCH, findNotificationPopup, hasNotificationPopup } from "./utils";
+import {
+  DEFAULT_NOTIFICATION_MATCH,
+  findNotificationPopup,
+  hasNotificationPopup,
+  openNotificationPage,
+} from "./utils";
 import { formatTimeout, waitUntil } from "./wait";
 
 const POPUP_CLOSE_TIMEOUT_MS = 15_000;
+/**
+ * How long to look for a wallet-spawned window before the engine opens the approval itself. Short
+ * because it is a probe, not the main wait: headless, Phantom does surface its approval window as a
+ * page while MetaMask never does, and a wallet of the first kind must be driven in the window it
+ * opened, or its request sits in a window nobody touched.
+ */
+const SPAWN_PROBE_TIMEOUT_MS = 5000;
+/**
+ * Floor on how long an engine-opened approval page may take to route to the pending request.
+ * Measured at up to 11s against MetaMask on a cold MV3 worker, so the optional budget (10s) is not
+ * enough even when an approval is definitely pending. An idle entry never routes at all, so the
+ * wait is only ever spent in full when there is genuinely nothing to approve.
+ */
+const APPROVAL_PAGE_MIN_TIMEOUT_MS = 30_000;
 
 type ResolveOptions = { optional?: boolean };
 
+/**
+ * A pending approval, and whether the engine opened it. A window the wallet spawned closes itself
+ * once the approval registers, and closing it any earlier can abort the request; a page the engine
+ * opened closes only if the engine closes it, and otherwise comes back as a stale approval.
+ */
+type Approval = { owned: boolean; page: Page };
+
 type CreateWalletOptions = {
+  /**
+   * Approval entry for the engine to open when it finds no window to drive, set headless, where a
+   * wallet's approval window may never surface as a page. Undefined means popups only.
+   */
+  approvalPage?: string;
   context: BrowserContext;
   definition: WalletDefinition;
   extensionId: string;
@@ -20,6 +51,7 @@ type CreateWalletOptions = {
 
 /** Build the runtime controller that drives an unlocked wallet against the dapp under test. */
 export const createWallet = ({
+  approvalPage,
   context,
   definition,
   extensionId,
@@ -29,6 +61,30 @@ export const createWallet = ({
   const match = definition.notificationMatch ?? DEFAULT_NOTIFICATION_MATCH;
   const ctx: WalletActionContext = { context, extensionId, home, password };
 
+  /** Reach the pending approval: the window the wallet spawned, or the page the engine opens. */
+  const findApproval = async (timeoutMs: number): Promise<Approval | undefined> => {
+    const spawned = await findNotificationPopup(
+      context,
+      extensionId,
+      match,
+      approvalPage === undefined ? timeoutMs : SPAWN_PROBE_TIMEOUT_MS,
+    );
+    if (spawned) {
+      return { owned: false, page: spawned };
+    }
+    if (approvalPage === undefined) {
+      return undefined;
+    }
+    const opened = await openNotificationPage({
+      context,
+      extensionId,
+      match,
+      notificationPage: approvalPage,
+      timeoutMs: Math.max(timeoutMs, APPROVAL_PAGE_MIN_TIMEOUT_MS),
+    });
+    return opened ? { owned: true, page: opened } : undefined;
+  };
+
   /** Drive the pending approval popup with `settle`, then wait for it to close. */
   const resolvePopup = async (
     settle: (popup: Page) => Promise<void>,
@@ -37,28 +93,33 @@ export const createWallet = ({
     // Required popups get 30s: the MV3 service worker spawns them slowly after the wallet's own UI
     // has been driven. Optional ones keep the short wait, since "no popup" is a normal outcome
     // there (e.g. Phantom auto-approving a trusted site) and the extra wait would just be latency.
-    const find = () =>
-      findNotificationPopup(context, extensionId, match, optional ? 10_000 : 30_000);
-    const popup = await find();
-    if (!popup) {
+    const find = () => findApproval(optional ? 10_000 : 30_000);
+    let approval = await find();
+    if (!approval) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
       }
       throw new Error("[walletwright] approval popup did not appear");
     }
     try {
-      await settle(popup);
+      await settle(approval.page);
     } catch (error) {
       // The finder can grab the previous popup in its final moments (the window closes right after
       // its own approval resolves). If ours died under us, one fresh find gets the real popup.
-      if (!popup.isClosed()) {
+      if (!approval.page.isClosed()) {
         throw error;
       }
       const fresh = await find();
       if (!fresh) {
         throw error;
       }
-      await settle(fresh);
+      // Only the latest needs closing: a retry happens because the previous page had already gone.
+      approval = fresh;
+      await settle(fresh.page);
+    } finally {
+      if (approval.owned) {
+        await approval.page.close().catch(() => {});
+      }
     }
 
     // Wait for the popup to close so the next approval doesn't grab a stale page.

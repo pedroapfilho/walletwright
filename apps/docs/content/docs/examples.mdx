@@ -631,7 +631,8 @@ test("connect and sign through the page object", async ({ page, wallet }) => {
 ## Build the cache in Playwright global setup
 
 Instead of a separate `walletwright cache` step, onboard every wallet from Playwright's `globalSetup`
-so a single `playwright test` does everything. Cache building can run headless; the tests stay headed.
+so a single `playwright test` does everything. Build the cache headless; it is faster and the tests
+pick their own mode.
 
 ```ts
 // playwright.config.ts
@@ -696,7 +697,7 @@ await context.close();
 ```
 
 <Callout type="warn">
-  `launchWallet` needs a cache already built for the same setup (via `buildCache` or the CLI), and
-  it launches headed, so run it on a machine with a display or under a virtual one such as
-  `xvfb-run`.
+  `launchWallet` needs a cache already built for the same setup (via `buildCache` or the CLI). It
+  launches headed unless you pass `{ headless: true }`, which MetaMask, Phantom, and Rabby support;
+  Solflare and Slush need a display, real or virtual (`xvfb-run`).
 </Callout>

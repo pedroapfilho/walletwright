@@ -162,6 +162,8 @@ export const rabby: WalletDefinition = {
 
   importWallet,
 
+  notificationPage: "notification.html",
+
   onboardingPage: ONBOARDING_ROUTE,
 
   // Latest from the Web Store, so `version` is ignored.

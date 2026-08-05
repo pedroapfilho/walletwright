@@ -44,7 +44,7 @@ reuses a previously downloaded extension but re-runs onboarding on each call.
 
 ```ts
 await buildCache(setup);
-await buildCache(setup, { headless: true }); // onboarding only; tests still run headed
+await buildCache(setup, { headless: true }); // faster; the tests pick their own mode
 ```
 
 | Argument           | Type          | Description                               |
@@ -144,17 +144,27 @@ and no longer has a wallet-side network selector, so switching is dapp-initiated
 `wallet.approve()` drives the popup. Avoid a bare EIP-3326 `wallet_switchEthereumChain` for custom
 chains; in MetaMask 13.x it hangs with no popup and no error. See the network recipe in Examples.
 
-## `launchWallet(setup)`
+## `launchWallet(setup, options?)`
 
 The standalone launcher, without Playwright fixtures. It returns `{ context, wallet }`; close the
 context yourself.
 
 ```ts
-const { context, wallet } = await launchWallet(setup);
+const { context, wallet } = await launchWallet(setup, { headless: true });
 const page = await context.newPage();
 // drive the page and the wallet here
 await context.close();
 ```
+
+| Argument           | Type          | Description                                         |
+| ------------------ | ------------- | --------------------------------------------------- |
+| `setup`            | `WalletSetup` | The wallet to launch. Its cache must already exist. |
+| `options.headless` | `boolean`     | Run headless. Default `false`.                      |
+
+Headless is supported for MetaMask, Phantom, and Rabby. Solflare and Slush throw at launch with a
+named error, because their approval flows have not been driven headless; run those headed.
+`createWalletFixtures` passes Playwright's own `headless` option through, so a fixture-based suite
+sets the mode in `playwright.config.ts` or with `--headed` rather than here.
 
 ## `walletwright/chain`
 

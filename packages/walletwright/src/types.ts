@@ -105,8 +105,21 @@ export type WalletDefinition = {
    * marks them with `isPopup=1`.
    */
   notificationMatch?: string;
+  /**
+   * Extension-relative URL that renders whatever approval is pending when opened in a tab. Required
+   * headless, where a wallet's approval *window* may be created without ever being exposed as a
+   * page (MetaMask), leaving the engine nothing to poll for; it opens this URL instead
+   * (`internal/utils.ts`, `openNotificationPage`). Omit for a wallet not driven headless.
+   */
+  notificationPage?: string;
   /** Extension-relative path of the first-run onboarding entry (e.g. `home.html`). */
   onboardingPage: string;
+  /**
+   * Applied to every context this wallet runs in, before anything navigates: `buildCache`'s and
+   * `launchWallet`'s alike. For wallets that need the browser itself adjusted (routing, permissions)
+   * rather than a page driven.
+   */
+  prepareContext?: (context: BrowserContext) => Promise<void>;
   /** Download + extract the unpacked extension into `cacheDir`; returns its absolute path. */
   prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
   /**

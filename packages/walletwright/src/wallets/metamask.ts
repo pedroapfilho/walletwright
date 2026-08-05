@@ -45,6 +45,7 @@ export const metamask: WalletDefinition = {
   finalizeCache: markMetaMaskOnboarded,
 
   importWallet,
+  notificationPage: "notification.html",
   onboardingPage: "home.html",
   reachUnlockScreen,
   reject,

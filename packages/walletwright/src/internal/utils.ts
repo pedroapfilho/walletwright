@@ -6,7 +6,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { WalletSetup } from "../types";
 
-import { waitUntil } from "./wait";
+import { gotoWithRetry, waitUntil } from "./wait";
 
 export const DEFAULT_CACHE_DIR = ".walletwright";
 
@@ -90,6 +90,60 @@ export const findNotificationPopup = (
     },
     { timeoutMs },
   );
+
+/**
+ * Open the wallet's approval entry in a tab and hand it back once it is showing a pending request.
+ * Headless Chromium creates the approval *window* (the request does reach the wallet) but never
+ * surfaces it as a page, so `findNotificationPopup` polls forever; opening the same URL ourselves
+ * reaches the very same pending approval.
+ *
+ * Readiness is "the wallet routed the page away from the entry URL", not "a button is visible": an
+ * idle entry renders buttons of its own (MetaMask's empty shell has one) and would otherwise pass.
+ * Returns `undefined`, dropping the tab, when nothing is pending, which is a normal outcome for an
+ * optional approval.
+ */
+export const openNotificationPage = async ({
+  context,
+  extensionId,
+  match = DEFAULT_NOTIFICATION_MATCH,
+  notificationPage,
+  timeoutMs = 10_000,
+}: {
+  context: BrowserContext;
+  extensionId: string;
+  match?: string;
+  /** Extension-relative approval entry, from `WalletDefinition.notificationPage`. */
+  notificationPage: string;
+  timeoutMs?: number;
+}): Promise<Page | undefined> => {
+  const entry = `chrome-extension://${extensionId}/${notificationPage}`;
+  const tab = await context.newPage();
+  try {
+    await gotoWithRetry(tab, entry, { label: "approval page", timeoutMs });
+  } catch (error) {
+    await tab.close().catch(() => {});
+    throw error;
+  }
+
+  const ready = await waitUntil(
+    async () => {
+      if (tab.url() === entry || !isApprovalPopup(tab, extensionId, match)) {
+        return undefined;
+      }
+      const usable = await tab
+        .locator("button")
+        .first()
+        .isVisible()
+        .catch(() => false);
+      return usable ? tab : undefined;
+    },
+    { timeoutMs },
+  );
+  if (!ready) {
+    await tab.close().catch(() => {});
+  }
+  return ready;
+};
 
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
 export const extensionStateDir = (profileDir: string, extensionId: string): string =>

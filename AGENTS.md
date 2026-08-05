@@ -113,6 +113,16 @@ debugging:
   late-mounting single-page UI it reads false and the click silently no-ops. That broke the cache
   build: the `More options` / `Import existing from passphrase` clicks were skipped and the flow never
   reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
+- **Its backend has to be stubbed, or nothing renders.** `api.slush.app` and `initialize.slush.app`
+  answer an automated browser with a Cloudflare 403 whose body is the Mysten Labs marketing page (a
+  plain `curl` gets the same, while Sui's own `fullnode.mainnet.sui.io` answers 200, so it is Slush's
+  edge, not the network). Slush's GraphQL client throws `NonGraphQLResponseError` on that HTML and
+  renders a "Reload App" screen instead of `#/Welcome`, which surfaces several screens later as a
+  `Word 1` input timeout and looks exactly like a stale selector. `slush.ts` answers every
+  `*.slush.app` request with `{"data":{}}` via `WalletDefinition.prepareContext`; onboarding,
+  unlock, connect, and sign need nothing else from the API. Drop it once the endpoint answers again.
+- **Headed only.** Opening `index.html?isPopup=1` in a tab (the trick that reaches approvals headless
+  elsewhere) drops the query and lands on `#/tokens`, so there is no approval to drive.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
   `tests/slush.spec.ts`).
 
@@ -131,6 +141,9 @@ window, which is what `notificationMatch` keys on. Worth knowing:
   (cancels are `btn-cancel` / `btn-reject`), so `approve` unions the pair.
 - Verified end-to-end via `apps/demo`, driving the name-agnostic Wallet-Standard Solana section
   (`#mockSvmConnect` / `#mockSvmSign`); the spec is `tests/solflare.spec.ts`.
+- **Headed only.** Headless, the dapp gets `Connection rejected` about two seconds after the connect
+  click, before any approval UI exists and whether or not the engine opens `confirm_popup.html`, so
+  the rejection is Solflare's own. The spec pins itself with `test.use({ headless: false })`.
 
 ### Rabby (EVM), verified
 
@@ -167,9 +180,27 @@ seed-or-key` → `#/new-user/import/seed-phrase/set-password` → `#/new-user/su
 
 Each item below cost real debugging time. Don't "simplify" them away.
 
-1. **Run headed.** Extension connect/sign approval popups do not open in headless Chromium. CI needs a
-   virtual display (`xvfb-run`). `buildCache` may run headless, since onboarding has no popups, but
-   `launchWallet` and the tests must be headed.
+1. **Headless needs the `chromium` channel and a `notificationPage`.** Two separate things. First,
+   Playwright's default headless build is the headless _shell_, which cannot load an extension at
+   all, so `launchPersistentContext` passes `channel: "chromium"` (the full browser) in both
+   `internal/launch.ts` and `internal/cache.ts`. Second, **whether a headless approval window
+   surfaces as a page is per-wallet, so probe before assuming**: MetaMask's is created (the request
+   does reach the wallet) but never exposed, so `findNotificationPopup` polls forever, while
+   Phantom's does surface. `findApproval` (`internal/controller.ts`) therefore probes for a spawned
+   window for 5s first and only then opens the wallet's `notificationPage` itself
+   (`openNotificationPage` in `internal/utils.ts`), which reaches the very same pending approval.
+   Skipping that probe on the theory that headless never spawns breaks Phantom: its request stays in
+   the window nobody drove, and the dapp hangs. The engine closes only the page it opened itself
+   (`Approval.owned`); closing a wallet-spawned window early can abort the request instead.
+   Readiness of an engine-opened page is "the wallet routed it away from the entry URL", not "a
+   button is visible": an idle `notification.html` renders a button of its own. Routing has been
+   measured at up to 11s on a cold MV3 worker, hence the 30s floor even for an optional approval.
+   Verified headless: MetaMask (all 12 demo specs), Phantom, Rabby. Headed-only: Solflare (it
+   answers a headless connect with "Connection rejected" in ~2s, before any approval UI exists, with
+   or without the engine's tab) and Slush (opening `index.html?isPopup=1` in a tab drops the query
+   and lands on `#/tokens`, the wallet home, so there is no approval to drive).
+   A wallet without a `notificationPage` fails fast at `launchWallet` rather than 30s later at the
+   first approval. `xvfb-run` is now the fallback for those two, not the documented default.
 2. **Derive the extension id; don't query it.** `chrome://extensions` is blocked headless and the MV3
    service worker starts lazily, so `getExtensionId` would race. Compute it instead
    (`internal/utils.ts`, `extensionIdFromPath`): sha256 of the manifest's public `key` if present
