@@ -12,7 +12,7 @@ once its connect and sign are verified end-to-end.
 ## MetaMask (EVM + Solana)
 
 ```ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",
@@ -33,7 +33,7 @@ export const metamask: WalletSetup = {
 ## Phantom (EVM + Solana)
 
 ```ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const phantom: WalletSetup = {
   wallet: "phantom",
@@ -86,7 +86,7 @@ test("phantom EVM + Solana", async ({ page, wallet }) => {
 ## Rabby (EVM)
 
 ```ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const rabby: WalletSetup = {
   wallet: "rabby",
@@ -109,7 +109,7 @@ export const rabby: WalletSetup = {
 ## Solflare (Solana)
 
 ```ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const solflare: WalletSetup = {
   wallet: "solflare",
@@ -133,7 +133,7 @@ export const solflare: WalletSetup = {
 ## Slush (Sui)
 
 ```ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const slush: WalletSetup = {
   wallet: "slush",

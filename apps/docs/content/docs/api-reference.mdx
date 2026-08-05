@@ -17,7 +17,7 @@ import {
   type WalletSetup,
   type WalletKind,
   type WalletDefinition,
-} from "walletwright";
+} from "@walletwright/core";
 ```
 
 ## `WalletSetup`
@@ -163,7 +163,7 @@ connect/sign flow doesn't depend on it. It needs the `prool` package (optional p
 `anvil` binary on `PATH`.
 
 ```ts
-import { createLocalChain } from "walletwright/chain";
+import { createLocalChain } from "@walletwright/core/chain";
 
 const chain = await createLocalChain(); // { chainId: 31337, rpcUrl: "http://127.0.0.1:8545" }
 // … run tests against it …
@@ -189,7 +189,7 @@ EIP-1193 requests a connect/sign flow makes, and signs with a real key so signat
 
 ```ts
 import { test, expect } from "@playwright/test";
-import { installMockWallet } from "walletwright/mock";
+import { installMockWallet } from "@walletwright/core/mock";
 
 test("connect and sign, no extension", async ({ page }) => {
   const address = await installMockWallet(page.context());
@@ -221,7 +221,7 @@ context or a single page.
 
 ```ts
 import { test, expect } from "@playwright/test";
-import { installMockStandardWallet } from "walletwright/mock-standard";
+import { installMockStandardWallet } from "@walletwright/core/mock-standard";
 
 test("connect and sign a Solana dapp, no extension", async ({ page }) => {
   const { address } = await installMockStandardWallet(page, { ecosystem: "svm" });

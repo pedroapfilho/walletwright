@@ -49,7 +49,7 @@ Connect and sign against MetaMask.
 
 ```ts
 // walletwright
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "./wallet-setup";
 
 const test = createWalletFixtures(metamask);
@@ -97,7 +97,7 @@ construct the wallet page object per test.
 
 ```ts
 // walletwright: wallet-setup.ts, a plain data object
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",

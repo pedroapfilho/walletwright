@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { parseFlags, resolveSetup } from "./cli";
+import { isEntryPoint, parseFlags, resolveSetup } from "./cli";
 
 const tempDirs: Array<string> = [];
 
@@ -14,9 +15,53 @@ afterAll(() => {
   }
 });
 
+// Resolved through symlinks so the paths compare equal to a file URL: macOS `tmpdir()` is itself
+// a symlink (/var to /private/var).
+const makeTempDir = (): string => {
+  const prefix = path.join(tmpdir(), "walletwright-cli-");
+  const dir = realpathSync(mkdtempSync(prefix));
+  tempDirs.push(dir);
+  return dir;
+};
+
+describe("isEntryPoint", () => {
+  it("recognises the entry when it is reached through a symlink", () => {
+    const dir = makeTempDir();
+    const real = path.join(dir, "cli.mjs");
+    const link = path.join(dir, "link.mjs");
+    writeFileSync(real, "");
+    symlinkSync(real, link);
+
+    expect(isEntryPoint(pathToFileURL(real).href, link)).toBe(true);
+  });
+
+  it("rejects an entry that is a different file", () => {
+    const dir = makeTempDir();
+    const real = path.join(dir, "cli.mjs");
+    const other = path.join(dir, "other.mjs");
+    writeFileSync(real, "");
+    writeFileSync(other, "");
+
+    expect(isEntryPoint(pathToFileURL(real).href, other)).toBe(false);
+  });
+
+  it("rejects a missing entry path", () => {
+    expect(isEntryPoint(import.meta.url, undefined)).toBe(false);
+  });
+});
+
 describe("parseFlags", () => {
   it("reads a flag's value from the following token", () => {
     expect(parseFlags(["--wallet", "metamask"])).toEqual({ wallet: "metamask" });
+  });
+
+  it("reads a help flag that leads the argv, where no command precedes it", () => {
+    expect(parseFlags(["--help"])).toEqual({ help: true });
+    expect(parseFlags(["-h"])).toEqual({ h: true });
+  });
+
+  it("skips a leading command token", () => {
+    expect(parseFlags(["cache", "--wallet", "metamask"])).toEqual({ wallet: "metamask" });
   });
 
   it("coerces a value-less flag to boolean true", () => {
@@ -51,9 +96,7 @@ describe("resolveSetup", () => {
   });
 
   it("applies --cache-dir on the --setup branch", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "walletwright-cli-"));
-    tempDirs.push(dir);
-    const fixture = path.join(dir, "setup.mjs");
+    const fixture = path.join(makeTempDir(), "setup.mjs");
     writeFileSync(
       fixture,
       'export default { password: "pw", seedPhrase: "a b c", wallet: "metamask" };\n',

@@ -1,5 +1,5 @@
 ---
-"walletwright": patch
+"@walletwright/core": patch
 ---
 
 Drop the `prepare` script. It rebuilt the package after every `pnpm install`, outside turbo's cache

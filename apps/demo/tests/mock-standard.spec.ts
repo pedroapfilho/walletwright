@@ -1,7 +1,7 @@
 import { createPublicKey, verify } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
-import { installMockStandardWallet } from "walletwright/mock-standard";
+import { installMockStandardWallet } from "@walletwright/core/mock-standard";
 
 // The mock needs no extension, so this is a plain @playwright/test spec, not a wallet fixture. It
 // registers over the Wallet Standard and the demo's name-agnostic Mock SVM section drives it.

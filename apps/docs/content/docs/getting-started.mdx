@@ -9,7 +9,7 @@ steps work for Phantom, Rabby, Solflare, and Slush; see [Wallets](/wallets) for 
 ## Step 1: Install
 
 ```bash
-pnpm add -D walletwright @playwright/test
+pnpm add -D @walletwright/core @playwright/test
 pnpm exec playwright install chromium
 ```
 
@@ -23,7 +23,7 @@ build and your tests import the same object.
 
 ```ts
 // wallet-setup.ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",
@@ -44,7 +44,7 @@ script that imports your setup module, which also works as a Playwright global s
 
 ```ts
 // scripts/build-cache.ts
-import { buildCache } from "walletwright";
+import { buildCache } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 await buildCache(metamask);
@@ -76,7 +76,7 @@ wallet loaded and unlocked, plus a `wallet` fixture to approve popups.
 
 ```ts
 // tests/connect.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 const test = createWalletFixtures(metamask);

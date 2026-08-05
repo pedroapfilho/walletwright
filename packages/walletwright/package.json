@@ -1,5 +1,5 @@
 {
-  "name": "walletwright",
+  "name": "@walletwright/core",
   "version": "0.1.0",
   "description": "Playwright wallet automation for MetaMask, Phantom, Rabby, Solflare, and Slush across EVM, Solana, and Sui. Connect and sign in real browser extensions.",
   "keywords": [

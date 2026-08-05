@@ -1,4 +1,4 @@
-# walletwright
+# @walletwright/core
 
 ## 0.1.0
 

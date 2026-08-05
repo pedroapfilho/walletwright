@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { installMockWallet } from "@walletwright/core/mock";
 import { verifyMessage } from "viem";
-import { installMockWallet } from "walletwright/mock";
 
 // The mock needs no extension, so this is a plain @playwright/test spec, not a wallet fixture.
 const ACCOUNT = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";

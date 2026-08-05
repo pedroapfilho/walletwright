@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -100,8 +101,9 @@ const resolveSetup = async (flags: Record<string, string | boolean>): Promise<Wa
 };
 
 const main = async (): Promise<void> => {
-  const [command, ...rest] = process.argv.slice(2);
-  const flags = parseFlags(rest);
+  const argv = process.argv.slice(2);
+  const [command] = argv;
+  const flags = parseFlags(argv);
 
   if (!command || command === "help" || flags.help !== undefined || flags.h !== undefined) {
     process.stdout.write(HELP);
@@ -118,10 +120,16 @@ const main = async (): Promise<void> => {
   process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
 };
 
-const invokedAsCli =
-  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+/**
+ * Node resolves `import.meta.url` through symlinks but leaves `process.argv[1]` as the caller
+ * typed it, so comparing the two directly is false whenever the CLI is reached through a symlink,
+ * which is every pnpm install: `node_modules/.bin/walletwright` execs the package through an
+ * `.pnpm` symlink. The command then exits 0 having printed and done nothing.
+ */
+const isEntryPoint = (moduleUrl: string, entryPath: string | undefined): boolean =>
+  entryPath !== undefined && moduleUrl === pathToFileURL(realpathSync(entryPath)).href;
 
-if (invokedAsCli) {
+if (isEntryPoint(import.meta.url, process.argv[1])) {
   try {
     await main();
   } catch (error: unknown) {
@@ -130,4 +138,4 @@ if (invokedAsCli) {
   }
 }
 
-export { parseFlags, resolveSetup };
+export { isEntryPoint, parseFlags, resolveSetup };

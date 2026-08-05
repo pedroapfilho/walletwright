@@ -1,5 +1,5 @@
 ---
-"walletwright": patch
+"@walletwright/core": patch
 ---
 
 Verify the pinned MetaMask download against a recorded sha256. The integrity option existed but no

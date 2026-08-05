@@ -1,4 +1,4 @@
-import { buildCache } from "walletwright";
+import { buildCache } from "@walletwright/core";
 
 import {
   metamaskSetup,

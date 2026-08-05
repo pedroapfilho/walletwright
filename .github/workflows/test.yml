@@ -19,4 +19,4 @@ jobs:
           cache: true
       # Unit tests only. The demo wallet E2E needs a headed browser (see apps/demo);
       # run it locally or under a virtual display, not on this gate.
-      - run: pnpm turbo run test --filter=walletwright
+      - run: pnpm turbo run test --filter=@walletwright/core

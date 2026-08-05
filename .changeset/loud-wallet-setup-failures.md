@@ -1,5 +1,5 @@
 ---
-"walletwright": patch
+"@walletwright/core": patch
 ---
 
 Fail loudly when a wallet is not actually ready, instead of handing back a broken one.

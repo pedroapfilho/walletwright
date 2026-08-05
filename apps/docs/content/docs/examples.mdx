@@ -16,7 +16,7 @@ change to `wallet`, `seedPhrase`, `password`, or `version` produces a distinct c
 
 ```ts
 // wallet-setup.ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",
@@ -46,7 +46,7 @@ connection popup; `confirmSignature()` clears the signature popup.
 
 ```ts
 // tests/metamask.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 const test = createWalletFixtures(metamask);
@@ -77,7 +77,7 @@ discovery finds it like any user's wallet.
 
 ```ts
 // tests/rainbowkit.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 const test = createWalletFixtures(metamask);
@@ -109,7 +109,7 @@ each chain, so a single spec can connect and sign on EVM and then on Solana.
 
 ```ts
 // tests/phantom.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { phantom } from "../wallet-setup";
 
 const test = createWalletFixtures(phantom);
@@ -146,7 +146,7 @@ Solana dapps too. Your dapp connects through `standard:connect` and signs throug
 
 ```ts
 // tests/metamask-solana.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 const test = createWalletFixtures(metamask);
@@ -175,7 +175,7 @@ handles the re-auth, so the test is still just connect then sign.
 
 ```ts
 // tests/slush.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { slush } from "../wallet-setup";
 
 const test = createWalletFixtures(slush);
@@ -219,7 +219,7 @@ the login isn't complete until both are approved.
 
 ```ts
 // tests/privy.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 const test = createWalletFixtures(metamask);
@@ -319,7 +319,7 @@ mnemonic pre-funds the same account the MetaMask setup imports.
 
 ```ts
 // global-setup.ts
-import { createLocalChain } from "walletwright/chain";
+import { createLocalChain } from "@walletwright/core/chain";
 
 const chain = await createLocalChain(); // http://127.0.0.1:8545, chain id 31337
 ```
@@ -444,8 +444,8 @@ Putting the chain in a fixture starts it with the suite and stops it after.
 
 ```ts
 // tests/onchain.spec.ts
-import { createWalletFixtures } from "walletwright";
-import { createLocalChain, type LocalChain } from "walletwright/chain";
+import { createWalletFixtures } from "@walletwright/core";
+import { createLocalChain, type LocalChain } from "@walletwright/core/chain";
 import { createPublicClient, http } from "viem";
 import { metamask } from "../wallet-setup";
 
@@ -491,7 +491,7 @@ second or two.
 
 ```ts
 import { test, expect } from "@playwright/test";
-import { installMockWallet } from "walletwright/mock";
+import { installMockWallet } from "@walletwright/core/mock";
 import { verifyMessage } from "viem";
 
 test("connect and sign, no extension", async ({ page }) => {
@@ -529,7 +529,7 @@ extra dependency and returns the announced account so a spec can verify the sign
 
 ```ts
 import { test, expect } from "@playwright/test";
-import { installMockStandardWallet } from "walletwright/mock-standard";
+import { installMockStandardWallet } from "@walletwright/core/mock-standard";
 
 test("connect and sign a Solana dapp, no extension", async ({ page }) => {
   const { address, publicKeyHex } = await installMockStandardWallet(page, { ecosystem: "svm" });
@@ -552,7 +552,7 @@ fixtures. Here a `connected` fixture connects the wallet once so each test start
 
 ```ts
 // tests/fixtures.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 export const test = createWalletFixtures(metamask).extend<{ connected: void }>({
@@ -588,7 +588,7 @@ level of abstraction. The `wallet` fixture is just an object you can pass into a
 ```ts
 // tests/dapp.page.ts
 import type { Page } from "@playwright/test";
-import type { Wallet } from "walletwright";
+import type { Wallet } from "@walletwright/core";
 
 export class DappPage {
   constructor(
@@ -613,7 +613,7 @@ export class DappPage {
 
 ```ts
 // tests/dapp.spec.ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 import { DappPage } from "./dapp.page";
 
@@ -649,7 +649,7 @@ export default defineConfig({
 
 ```ts
 // global-setup.ts
-import { buildCache } from "walletwright";
+import { buildCache } from "@walletwright/core";
 import { metamask, phantom, slush } from "./wallet-setup";
 
 const globalSetup = async () => {
@@ -681,7 +681,7 @@ You open the pages and close the context yourself.
 
 ```ts
 // scripts/manual-check.ts
-import { launchWallet } from "walletwright";
+import { launchWallet } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
 const { context, wallet } = await launchWallet(metamask);
