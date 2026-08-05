@@ -69,7 +69,7 @@
     "classic-level": "^1.4.1"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.0",
+    "@playwright/test": "1.62.1",
     "@repo/config-vitest": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/adm-zip": "^0.5.7",
