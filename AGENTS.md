@@ -113,6 +113,16 @@ debugging:
   late-mounting single-page UI it reads false and the click silently no-ops. That broke the cache
   build: the `More options` / `Import existing from passphrase` clicks were skipped and the flow never
   reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
+- **Its backend has to be stubbed, or nothing renders.** `api.slush.app` and `initialize.slush.app`
+  answer an automated browser with a Cloudflare 403 whose body is the Mysten Labs marketing page (a
+  plain `curl` gets the same, while Sui's own `fullnode.mainnet.sui.io` answers 200, so it is Slush's
+  edge, not the network). Slush's GraphQL client throws `NonGraphQLResponseError` on that HTML and
+  renders a "Reload App" screen instead of `#/Welcome`, which surfaces several screens later as a
+  `Word 1` input timeout and looks exactly like a stale selector. `slush.ts` answers every
+  `*.slush.app` request with `{"data":{}}` via `WalletDefinition.prepareContext`; onboarding,
+  unlock, connect, and sign need nothing else from the API. Drop it once the endpoint answers again.
+- **Headed only.** Opening `index.html?isPopup=1` in a tab (the trick that reaches approvals headless
+  elsewhere) drops the query and lands on `#/tokens`, so there is no approval to drive.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
   `tests/slush.spec.ts`).
 
@@ -131,6 +141,9 @@ window, which is what `notificationMatch` keys on. Worth knowing:
   (cancels are `btn-cancel` / `btn-reject`), so `approve` unions the pair.
 - Verified end-to-end via `apps/demo`, driving the name-agnostic Wallet-Standard Solana section
   (`#mockSvmConnect` / `#mockSvmSign`); the spec is `tests/solflare.spec.ts`.
+- **Headed only.** Headless, the dapp gets `Connection rejected` about two seconds after the connect
+  click, before any approval UI exists and whether or not the engine opens `confirm_popup.html`, so
+  the rejection is Solflare's own. The spec pins itself with `test.use({ headless: false })`.
 
 ### Rabby (EVM), verified
 
@@ -167,9 +180,30 @@ seed-or-key` → `#/new-user/import/seed-phrase/set-password` → `#/new-user/su
 
 Each item below cost real debugging time. Don't "simplify" them away.
 
-1. **Run headed.** Extension connect/sign approval popups do not open in headless Chromium. CI needs a
-   virtual display (`xvfb-run`). `buildCache` may run headless, since onboarding has no popups, but
-   `launchWallet` and the tests must be headed.
+1. **Headless is per-wallet, and the engine never opens an approval itself.** Two things. First,
+   Playwright's default headless build is the headless _shell_, which cannot load an extension at
+   all, so `launchPersistentContext` passes `channel: "chromium"` (the full browser) in both
+   `internal/launch.ts` and `internal/cache.ts`. Second, **whether a wallet's approval window
+   surfaces as a page headless is a property of that wallet**: Phantom's and Rabby's do, MetaMask's
+   is created but never exposed. So a wallet declares `headlessApprovals: true` once verified, and
+   `launchWallet` refuses headless for the rest rather than hanging at the first approval.
+   An earlier version had the engine open the wallet's approval URL in a tab when no window
+   surfaced, which did work for MetaMask on a developer machine. It is gone, and the reason is worth
+   keeping: on a CI runner that same URL renders MetaMask's **home screen**, buttons and all, so the
+   engine drove the wrong page and stopped waiting for the right one. Synpress never opens that URL
+   either; it waits for the window the wallet opens. An approval you did not ask the wallet to open
+   is not an approval.
+   **Two things do have to be defended.** `WalletDefinition.approvalControls` says which controls
+   mean "a request is on screen", because MetaMask's popup can render home; a wallet without it
+   falls back to "any button is visible", which is enough for a window that only ever opens for a
+   request (Phantom's popup sits on the bare entry URL, so no URL-based test works for it).
+   And `placeApprovalWindow` pins the popup to 360x592 and moves it to (50,50) over CDP, because a
+   window that opens partly off a small or virtual display renders fine but cannot be clicked, which
+   reads as a button timeout rather than a layout problem. Synpress carries the same workaround.
+   **CI runs under `xvfb`, for both the cache build and the run.** MetaMask has a documented
+   headless-on-GitHub-Actions bug, and a profile onboarded headless there stays broken: a later
+   headed run from it still lands on home. Give the display a real size (`-screen 0 1920x1080x24`)
+   and the suite a Playwright `timeout` of 300s.
 2. **Derive the extension id; don't query it.** `chrome://extensions` is blocked headless and the MV3
    service worker starts lazily, so `getExtensionId` would race. Compute it instead
    (`internal/utils.ts`, `extensionIdFromPath`): sha256 of the manifest's public `key` if present
@@ -243,6 +277,23 @@ Each item below cost real debugging time. Don't "simplify" them away.
     (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
     required popups wait 30s, and `findNotificationPopup` returns a popup only once a button is
     visible, since the window opens as a bare shell and routes later.
+21. **MetaMask's Solana connect does not bind to its popup on a GitHub runner.** The window opens and
+    renders the wallet home with a **disabled** `confirm-btn`, so the snap-routed request has nothing
+    to confirm. It passes locally every time, its reject sibling passes on CI, and every other
+    MetaMask spec passes on CI, so it is excluded from the E2E gate as a MetaMask-on-CI problem. A
+    missing Solana account is ruled out: the failure snapshot lists Solana in the token list with a
+    balance. What is still unknown is whether the popup routed to the request and rendered the wrong
+    thing, or never routed at all, which needs the popup's URL captured next to the snapshot.
+22. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
+    account names keyed to the seed, and the public test seed is used by thousands, so on a network
+    where that sync lands the wallet reports names like `dev1` and `personal` in place of
+    `Account 2` and of whatever `accounts.rename` just set, on an account holding a real balance. It
+    shows up as a naming assertion that passes locally and fails on CI, not as an error. `metamask.ts`
+    therefore aborts `user-storage.api.cx.metamask.io` via `prepareContext`, which is what MetaMask's
+    own e2e suite does to its external services. Just that host: cutting the auth stack around it
+    (`authentication`, `oidc`) reaches further than intended, since other features authenticate
+    through it and a wallet that cannot authenticate can leave a confirm button disabled with
+    nothing on screen to explain it.
 
 ## Conventions
 

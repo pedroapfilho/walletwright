@@ -108,6 +108,22 @@ export const slush: WalletDefinition = {
 
   onboardingPage: "index.html",
 
+  // Slush's own backend (api.slush.app, initialize.slush.app) answers every request from an
+  // automated browser with a Cloudflare 403 whose body is the Mysten Labs marketing page. Slush's
+  // GraphQL client throws `NonGraphQLResponseError` on that HTML and renders a "Reload App" error
+  // screen instead of the wallet, so onboarding never reaches its first screen. A well-formed empty
+  // response is all it needs to boot; onboarding, unlock, connect, and sign need nothing from the
+  // API. Drop this once the endpoint answers automated requests again.
+  prepareContext: async (context) => {
+    await context.route("**://*.slush.app/**", (route) =>
+      route.fulfill({
+        body: JSON.stringify({ data: {} }),
+        contentType: "application/json",
+        status: 200,
+      }),
+    );
+  },
+
   // Latest from the Web Store, so `version` is ignored.
   prepareExtension: (cacheDir) =>
     prepareWebStoreExtension({

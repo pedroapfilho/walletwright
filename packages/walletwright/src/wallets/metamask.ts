@@ -4,7 +4,7 @@ import type { WalletDefinition } from "../types";
 import { accounts } from "./metamask/actions/accounts";
 import { network } from "./metamask/actions/network";
 import { settings } from "./metamask/actions/settings";
-import { approve, reject } from "./metamask/approve";
+import { approvalControls, approve, reject } from "./metamask/approve";
 import { importWallet, reachUnlockScreen, unlock } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
 
@@ -32,17 +32,40 @@ export const metamaskDownload = (cacheDir: string, version: string) => ({
   url: `https://github.com/MetaMask/metamask-extension/releases/download/v${version}/metamask-chrome-${version}.zip`,
 });
 
+/**
+ * MetaMask's backup-and-sync restores account names for whichever SRP a profile holds, and test
+ * seeds are shared (the public `test test … junk` one by thousands), so a synced profile reports a
+ * stranger's account names in place of the ones a test just set: CI runs showed accounts called
+ * `dev1` and `personal`, holding a real balance, where `Account 2` was expected. It only happens
+ * where the sync actually lands, which makes it look like a flake. MetaMask's own e2e suite mocks
+ * its external services for the same reason.
+ *
+ * Just the one host that stores the names. Cutting the auth stack around it (`authentication`,
+ * `oidc`) reaches further than intended: other features authenticate through it too, and a wallet
+ * that cannot authenticate can leave a request's confirm button disabled with nothing to explain it.
+ */
+const ACCOUNT_SYNC_HOST = "user-storage.api.cx.metamask.io";
+
 export const metamask: WalletDefinition = {
   actions: { accounts, network, settings },
+  approvalControls,
   approve,
   ecosystems: ["evm", "svm"],
   extensionName: "MetaMask",
+
+  prepareContext: async (context) => {
+    await context.route(`**://${ACCOUNT_SYNC_HOST}/**`, (route) => route.abort());
+  },
 
   prepareExtension: (cacheDir, version = DEFAULT_VERSION) =>
     downloadAndExtractExtension(metamaskDownload(cacheDir, version)),
 
   // Fresh install of home.html redirects to the onboarding welcome screen.
   finalizeCache: markMetaMaskOnboarded,
+
+  // No `headlessApprovals`: MetaMask creates its approval window headless but never exposes it as a
+  // page, so there is nothing for the engine to find, and it renders its home screen rather than the
+  // request when reached any other way.
 
   importWallet,
   onboardingPage: "home.html",

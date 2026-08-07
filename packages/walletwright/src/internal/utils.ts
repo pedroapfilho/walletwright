@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 import type { WalletSetup } from "../types";
 
@@ -65,12 +65,31 @@ export const isApprovalPopup = (page: Page, extensionId: string, match: string):
   page.url().includes(match) &&
   !page.isClosed();
 
-export const findNotificationPopup = (
-  context: BrowserContext,
-  extensionId: string,
+const isVisible = async (locator: Locator): Promise<boolean> => {
+  try {
+    return await locator.isVisible();
+  } catch {
+    return false; // the page can go while we ask
+  }
+};
+
+const hasVisibleButton = (page: Page): Promise<boolean> =>
+  isVisible(page.locator("button").first());
+
+export const findNotificationPopup = ({
+  approvalControls,
+  context,
+  extensionId,
   match = DEFAULT_NOTIFICATION_MATCH,
   timeoutMs = 10_000,
-): Promise<Page | undefined> =>
+}: {
+  /** From `WalletDefinition.approvalControls`, for a wallet that can render its popup requestless. */
+  approvalControls?: (page: Page) => Locator;
+  context: BrowserContext;
+  extensionId: string;
+  match?: string;
+  timeoutMs?: number;
+}): Promise<Page | undefined> =>
   waitUntil(
     async () => {
       const popup = context.pages().find((page) => isApprovalPopup(page, extensionId, match));
@@ -80,16 +99,48 @@ export const findNotificationPopup = (
       await popup.waitForLoadState("domcontentloaded").catch(() => {});
       // The window opens before the approval renders (bare URL, zero buttons) and routes later,
       // sometimes tens of seconds later under a busy MV3 worker. "Found" must mean "usable", so
-      // keep polling the same shell until a button shows up rather than handing back a blank page.
-      const usable = await popup
-        .locator("button")
-        .first()
-        .isVisible()
-        .catch(() => false);
-      return usable ? popup : undefined;
+      // keep polling the same shell rather than handing back a page that cannot be settled. A
+      // rendered button is the weakest form of that: MetaMask's popup can also render its home
+      // screen, buttons and all, so it says which controls mean "a request is on screen".
+      const ready =
+        approvalControls === undefined
+          ? await hasVisibleButton(popup)
+          : await isVisible(approvalControls(popup).first());
+      return ready ? popup : undefined;
     },
     { timeoutMs },
   );
+
+/** MetaMask's own popup dimensions, which its layout is built for. */
+const APPROVAL_WINDOW = { height: 592, width: 360 };
+/** Far enough from the edge that a popup this size lands fully on any usable display. */
+const APPROVAL_WINDOW_OFFSET = 50;
+
+/**
+ * Put a wallet-spawned approval window somewhere it can be clicked. It can open partly off-screen
+ * on a small or virtual display, and Playwright will not click what is out of view, so a confirm
+ * button that is rendered and enabled still times out. Synpress carries the same workaround.
+ *
+ * Best-effort throughout: headless has no window to move, and nothing here is required for a window
+ * that already sits on screen.
+ */
+export const placeApprovalWindow = async (page: Page): Promise<void> => {
+  await page.setViewportSize(APPROVAL_WINDOW).catch(() => {});
+  try {
+    const session = await page.context().newCDPSession(page);
+    const { targetInfo } = await session.send("Target.getTargetInfo");
+    const { windowId } = await session.send("Browser.getWindowForTarget", {
+      targetId: targetInfo.targetId,
+    });
+    await session.send("Browser.setWindowBounds", {
+      bounds: { left: APPROVAL_WINDOW_OFFSET, top: APPROVAL_WINDOW_OFFSET },
+      windowId,
+    });
+    await session.detach();
+  } catch {
+    // no window to place (headless), or the page refused a CDP session
+  }
+};
 
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
 export const extensionStateDir = (profileDir: string, extensionId: string): string =>

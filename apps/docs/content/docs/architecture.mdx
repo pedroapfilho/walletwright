@@ -70,14 +70,14 @@ Three phases, each owned by one engine module. A test touches only the first (on
 ```
 buildCache(setup)                       once, ahead of the tests (headless ok)
   prepareExtension  ─ download + extract the extension into .walletwright/
-  launchPersistentContext(profileDir)   headed by default; --headless=new when asked
+  launchPersistentContext(profileDir)   channel: "chromium"; headed by default
   goto onboarding, retry until registered
   importWallet(seed, password)          the wallet's own onboarding flow
   close, then finalizeCache             e.g. MetaMask's LevelDB completedOnboarding
         │
         ▼   .walletwright/<profileKey>  a ready-to-unlock profile on disk
         │
-launchWallet(setup)              per test worker, always headed
+launchWallet(setup, { headless }) per test worker
   copy profileDir ─▶ os.tmpdir()/walletwright-XXXX   throwaway, cache stays pristine
   launchPersistentContext(runDir)
   extensionIdFromPath                   derive the id, do not query the browser
@@ -98,9 +98,11 @@ parallel workers never share a profile and the cache is never mutated. The copy 
 context closes.
 
 <Callout type="info">
-  `buildCache` may run headless (onboarding raises no approval popups). `launchWallet` and every
-  test must run headed, because approval popups do not open in headless Chromium. See [Continuous
-  integration](/continuous-integration) for the `xvfb` setup.
+  Both phases launch the `chromium` channel, because Playwright's default headless build is the
+  headless shell, which cannot load an extension. `buildCache` takes `{headless}` and works that way
+  for every wallet; `launchWallet` takes it too, and the fixtures pass Playwright's own `headless`
+  option through, so `--headed` and `use: {headless}` reach the wallet. Only Phantom and Rabby can
+  run headless. See [Continuous integration](/continuous-integration).
 </Callout>
 
 ## The WalletDefinition extension point
@@ -114,6 +116,7 @@ type WalletDefinition = {
   extensionName: string; // used in error messages, e.g. "MetaMask"
   prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
   onboardingPage: string; // extension-relative entry, e.g. "home.html"
+  prepareContext?: (context: BrowserContext) => Promise<void>; // adjust the browser before it navigates
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
   reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
@@ -121,21 +124,26 @@ type WalletDefinition = {
   approve: (popup: Page, password: string) => Promise<void>;
   reject?: (popup: Page) => Promise<void>;
   notificationMatch?: string; // popup URL token; defaults to "notification.html"
+  headlessApprovals?: boolean; // its approval window surfaces as a page headless
+  approvalControls?: (popup: Page) => Locator; // what "a request is on screen" looks like
   actions?: WalletActions; // optional capabilities beyond connect/sign
 };
 ```
 
-| Member               | When the engine calls it                                               |
-| -------------------- | ---------------------------------------------------------------------- |
-| `prepareExtension`   | in `buildCache`, to fetch and extract the extension into the cache dir |
-| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                   |
-| `importWallet`       | in `buildCache`, to run the import-from-seed flow                      |
-| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)       |
-| `reachUnlockScreen`  | in `launchWallet`, to open and return the wallet's home page           |
-| `unlock`             | in `launchWallet`, to type the password                                |
-| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup       |
-| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL |
-| `actions`            | in the controller, to expose optional capabilities on the `Wallet`     |
+| Member               | When the engine calls it                                                          |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `prepareExtension`   | in `buildCache`, to fetch and extract the extension into the cache dir            |
+| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                              |
+| `prepareContext`     | in both, right after the browser starts and before anything navigates             |
+| `importWallet`       | in `buildCache`, to run the import-from-seed flow                                 |
+| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)                  |
+| `reachUnlockScreen`  | in `launchWallet`, to open and return the wallet's home page                      |
+| `unlock`             | in `launchWallet`, to type the password                                           |
+| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup                  |
+| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL            |
+| `headlessApprovals`  | in `launchWallet`, to refuse headless for a wallet that cannot be driven that way |
+| `approvalControls`   | in the popup poller, to tell a pending request from the wallet's idle UI          |
+| `actions`            | in the controller, to expose optional capabilities on the `Wallet`                |
 
 ### Adding a wallet
 
@@ -299,7 +307,8 @@ load-bearing:
 - **"Found" means "usable".** The window opens before it renders (a bare URL with no buttons) and
   routes to the request later, sometimes tens of seconds later under a busy MV3 service worker. The
   poller only returns a popup once a button is visible, so the caller never clicks a blank shell.
-- **Required vs optional.** `confirmSignature` waits up to 30 seconds and throws if no popup appears.
+- **Required vs optional.** `confirmSignature` waits up to 30 seconds for a wallet-spawned popup (60
+  when walletwright has to open the approval page itself) and throws if none appears.
   `connectToDapp` and `approve({ optional: true })` tolerate no popup, because a wallet may
   auto-approve a site it already trusts.
 - **Re-front the dapp after a wallet-UI action.** While an extension page is the active tab, MetaMask
@@ -307,6 +316,15 @@ load-bearing:
   controller brings the dapp page back to the front when an action finishes.
 - **Retry a popup that closed under us.** The poller can grab the previous popup in its final moments
   (a window closes right after its own approval resolves), so a failed settle re-finds once.
+- **Headless support is per-wallet.** MetaMask's approval window is created without ever being
+  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `headlessApprovals` can
+  run headless, and `launchWallet` refuses the rest by name. walletwright never opens an approval
+  URL itself: a page the wallet did not open for a request shows its home screen, not the request.
+- **"Found" means settleable, not merely rendered.** A wallet can declare `approvalControls`, the
+  controls that exist only while a request is on screen, and the poller waits for those instead of
+  for any button. MetaMask needs this because its popup can render home.
+- **Approval windows get placed.** A popup that opens partly off a small or virtual display renders
+  fine but cannot be clicked, so the controller pins it to 360x592 and moves it on screen over CDP.
 
 ### Action binding
 

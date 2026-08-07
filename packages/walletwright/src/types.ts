@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 /** Blockchain ecosystem a wallet operates in. A wallet may span several (e.g. Phantom = EVM + SVM). */
 export type Ecosystem = "evm" | "svm" | "sui" | "dot" | "btc";
@@ -84,6 +84,13 @@ export type WalletDefinition = {
   /** Optional capabilities beyond connect/sign. Omit a group the wallet can't (or doesn't) drive. */
   actions?: WalletActions;
   /**
+   * Controls that only exist while a request is on screen, used to tell a real approval from the
+   * wallet's idle UI: MetaMask's approval window can render its home screen, buttons and all. A
+   * wallet that doesn't declare this falls back to "any button is visible", which is enough for a
+   * window that only ever opens for a request.
+   */
+  approvalControls?: (popup: Page) => Locator;
+  /**
    * Click the approve/confirm button in an approval popup (connect or sign). `password` is provided
    * because some wallets (e.g. Slush) re-prompt for it to authorize a signature.
    */
@@ -97,6 +104,13 @@ export type WalletDefinition = {
    * holding the DB), e.g. forcing `completedOnboarding=true` in MetaMask's leveldb.
    */
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
+  /**
+   * Whether this wallet's approval window surfaces as a page when the browser runs headless, so the
+   * engine can find and drive it. Declared only once verified against the real extension: MetaMask's
+   * window is created but never exposed, and `launchWallet` refuses headless without this rather
+   * than hanging at the first approval.
+   */
+  headlessApprovals?: boolean;
   /** Run the import-from-seed onboarding flow. */
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
   /**
@@ -107,6 +121,12 @@ export type WalletDefinition = {
   notificationMatch?: string;
   /** Extension-relative path of the first-run onboarding entry (e.g. `home.html`). */
   onboardingPage: string;
+  /**
+   * Applied to every context this wallet runs in, before anything navigates: `buildCache`'s and
+   * `launchWallet`'s alike. For wallets that need the browser itself adjusted (routing, permissions)
+   * rather than a page driven.
+   */
+  prepareContext?: (context: BrowserContext) => Promise<void>;
   /** Download + extract the unpacked extension into `cacheDir`; returns its absolute path. */
   prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
   /**
