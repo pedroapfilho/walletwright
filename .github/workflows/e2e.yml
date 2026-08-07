@@ -28,18 +28,17 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y xvfb
       - uses: foundry-rs/foundry-toolchain@v1
       - run: anvil --chain-id 31337 &
-      # Cache building is headless for every wallet, including the two whose specs need a display.
+      # Onboard under the virtual display too, not headless. MetaMask has documented compatibility
+      # problems running headless on GitHub Actions, and a profile onboarded that way stays broken:
+      # a run from a headless-built cache reached MetaMask's home screen at `notification.html`
+      # instead of the pending request, even when the specs themselves ran headed.
       - run: |
           for wallet in metamask phantom rabby solflare slush; do
-            pnpm --filter demo exec tsx scripts/cache-one.ts "$wallet" --headless
+            xvfb-run --auto-servernum pnpm --filter demo exec tsx scripts/cache-one.ts "$wallet"
           done
-      # Headed under a virtual display, which covers all five wallets in one gate.
-      #
-      # Headless works, and Phantom and Rabby pass that way here, but MetaMask's approvals never
-      # materialise on a GitHub runner: no notification window surfaces, and the page walletwright
-      # opens itself renders the wallet home rather than the request, so every MetaMask spec hangs.
-      # It is verified headless on a developer machine, so this is a runner-specific gap, tracked in
-      # plans/031 rather than papered over by weakening the gate.
+      # Headed under a virtual display, which covers all five wallets in one gate. Headless works on
+      # a developer machine (and Phantom and Rabby pass headless here), but MetaMask's approvals do
+      # not materialise on this hardware, which is a MetaMask issue rather than a walletwright one.
       #
       # "add, rename, and switch accounts" is excluded for an unrelated reason: MetaMask restores
       # account names for this SRP from its own backup-and-sync (the run below talks to

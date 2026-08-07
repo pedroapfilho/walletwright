@@ -24,9 +24,10 @@ A wallet with no verified headless approval flow throws at launch instead of han
 here is loud.
 
 <Callout type="warn">
-  MetaMask headless is verified on a developer machine, not on a GitHub-hosted runner. There, no
-  approval window surfaces and the page walletwright opens itself renders the wallet home instead of
-  the request, so every MetaMask approval times out. Run MetaMask specs headed on that hardware.
+  MetaMask headless is verified on a developer machine, not on a GitHub-hosted runner. MetaMask has
+  documented compatibility problems running headless on GitHub Actions, and there its
+  `notification.html` renders the wallet home instead of the pending request, so every approval
+  times out. On that hardware run MetaMask headed, and onboard it headed too.
 </Callout>
 
 ## Headed via a virtual display
@@ -68,11 +69,13 @@ jobs:
       - run: pnpm install
       - run: pnpm exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y xvfb
-      - run: pnpm exec tsx scripts/build-cache.ts
+      - run: xvfb-run --auto-servernum pnpm exec tsx scripts/build-cache.ts
       - run: xvfb-run --auto-servernum pnpm exec playwright test --headed
 ```
 
-Cache building stays headless, which is faster; only the specs need the display.
+Onboard under the display too, not headless. MetaMask has documented compatibility problems running
+headless on GitHub Actions, and a profile onboarded that way stays broken: its `notification.html`
+then renders the wallet home instead of the pending request, even for specs that run headed.
 
 Put `xvfb-run --auto-servernum` in front of the last step if the suite includes Solflare or Slush.
 

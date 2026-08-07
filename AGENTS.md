@@ -204,9 +204,12 @@ Each item below cost real debugging time. Don't "simplify" them away.
    missed every single approval. Give a wallet suite a Playwright `timeout` of 300s to match.
    **Verified headless on a developer machine: MetaMask (all 12 demo specs), Phantom, Rabby. On a
    GitHub-hosted runner only Phantom and Rabby hold up**: MetaMask surfaces no approval window there
-   and the page the engine opens renders the wallet home instead of the request, so every approval
-   times out. Raising budgets does not help, and was tried twice. This repo's own E2E gate therefore
-   runs headed under `xvfb`, which covers all five wallets. Headed-only everywhere: Solflare (it
+   and `notification.html` renders the wallet home instead of the request, so every approval times
+   out. Raising budgets does not help, and was tried twice. This is MetaMask's own documented
+   headless-on-GitHub-Actions bug (Synpress hits it too), and the documented answer is `xvfb`, for
+   **both the cache build and the run**: a profile onboarded headless on that runner stays broken,
+   and a later headed run from it still lands on home. This repo's E2E gate does both under `xvfb`,
+   which covers all five wallets. Headed-only everywhere: Solflare (it
    answers a headless connect with "Connection rejected" in ~2s, before any approval UI exists, with
    or without the engine's tab) and Slush (opening `index.html?isPopup=1` in a tab drops the query
    and lands on `#/tokens`, the wallet home, so there is no approval to drive).

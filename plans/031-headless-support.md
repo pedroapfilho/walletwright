@@ -102,12 +102,20 @@ What cost the most time here was iterating against a 40-minute feedback loop on 
 reproduce. Two cheaper moves, in order: upload the artifacts _first_, and prefer the known-good
 fallback (`xvfb`) over a third round of budget guessing.
 
+## MetaMask on GitHub Actions
+
+This is a known MetaMask issue, not a walletwright one. Synpress documents it: MetaMask "has known
+compatibility issues with running in headless mode on certain CI providers, including GitHub
+Actions", attributed to "a bug within MetaMask itself", and its recommended CI recipe wraps **both**
+the cache build and the test run in `xvfb-run`.
+
+That second half is the part worth writing down, because it is not obvious and cost a CI round: the
+onboarding matters as much as the run. A profile onboarded headless on that runner stays broken, and
+a later headed run from it reaches `notification.html` showing the wallet home rather than the
+pending request. The gate therefore onboards under `xvfb` too.
+
 ## Follow-ups
 
-- **MetaMask headless on a GitHub runner.** No approval window surfaces and the engine's page routes
-  to the wallet home, so nothing is there to drive. Unknown whether the request reaches the wallet at
-  all. Next probe: on the runner, dump the dapp's provider state and MetaMask's pending-approval
-  count at the moment of the request, rather than inferring from what the page shows.
 - **MetaMask renames the accounts of a shared SRP.** On CI, `add, rename, and switch accounts` sees
   names like `dev1` and `personal` where it set its own, because MetaMask's backup-and-sync restores
   names keyed to the seed and the public test seed is used by thousands. Confirmed by watching the
