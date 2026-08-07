@@ -35,3 +35,11 @@ jobs:
       # Headless covers MetaMask, Phantom, and Rabby. Solflare and Slush need a display; they are
       # excluded rather than run under xvfb, to keep this gate a headless one.
       - run: pnpm --filter demo exec playwright test --grep-invert "Solflare|Slush"
+      # Playwright writes a page snapshot per failure. Without it a red run here can only be read
+      # through the log, which says what timed out but not what the wallet was showing at the time.
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures
+          path: apps/demo/test-results
+          retention-days: 7

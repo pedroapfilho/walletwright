@@ -3,37 +3,31 @@ import type { BrowserContext, Page } from "@playwright/test";
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
 import {
+  type Approval,
+  awaitApproval,
   DEFAULT_NOTIFICATION_MATCH,
   findNotificationPopup,
   hasNotificationPopup,
-  openNotificationPage,
 } from "./utils";
 import { formatTimeout, waitUntil } from "./wait";
 
 const POPUP_CLOSE_TIMEOUT_MS = 15_000;
+/** Optional approvals keep a short wait: "no popup" is a normal outcome, and the wait is latency. */
+const OPTIONAL_POPUP_TIMEOUT_MS = 10_000;
+/** The MV3 service worker spawns a popup slowly once the wallet's own UI has been driven. */
+const REQUIRED_POPUP_TIMEOUT_MS = 30_000;
 /**
- * How long to look for a wallet-spawned window before the engine opens the approval itself. Short
- * because it is a probe, not the main wait: headless, Phantom does surface its approval window as a
- * page while MetaMask never does, and a wallet of the first kind must be driven in the window it
- * opened, or its request sits in a window nobody touched.
+ * Budget for a wallet whose approval the engine has to open itself. Far longer than the popup
+ * waits, and used even for an optional approval, because the wallet has to route the page to the
+ * request after it opens: measured at up to 11s on a developer machine and several times that on a
+ * loaded CI runner. Nothing pending means nothing ever routes, so the full wait is only spent when
+ * there is genuinely nothing to approve.
  */
-const SPAWN_PROBE_TIMEOUT_MS = 5000;
-/**
- * Floor on how long an engine-opened approval page may take to route to the pending request.
- * Measured at up to 11s against MetaMask on a cold MV3 worker, so the optional budget (10s) is not
- * enough even when an approval is definitely pending. An idle entry never routes at all, so the
- * wait is only ever spent in full when there is genuinely nothing to approve.
- */
-const APPROVAL_PAGE_MIN_TIMEOUT_MS = 30_000;
+const APPROVAL_PAGE_TIMEOUT_MS = 60_000;
+/** Grace for the wallet's own window to surface before the engine opens the approval entry. */
+const OPEN_APPROVAL_AFTER_MS = 5000;
 
 type ResolveOptions = { optional?: boolean };
-
-/**
- * A pending approval, and whether the engine opened it. A window the wallet spawned closes itself
- * once the approval registers, and closing it any earlier can abort the request; a page the engine
- * opened closes only if the engine closes it, and otherwise comes back as a stale approval.
- */
-type Approval = { owned: boolean; page: Page };
 
 type CreateWalletOptions = {
   /**
@@ -62,27 +56,20 @@ export const createWallet = ({
   const ctx: WalletActionContext = { context, extensionId, home, password };
 
   /** Reach the pending approval: the window the wallet spawned, or the page the engine opens. */
-  const findApproval = async (timeoutMs: number): Promise<Approval | undefined> => {
-    const spawned = await findNotificationPopup(
-      context,
-      extensionId,
-      match,
-      approvalPage === undefined ? timeoutMs : SPAWN_PROBE_TIMEOUT_MS,
-    );
-    if (spawned) {
-      return { owned: false, page: spawned };
-    }
+  const findApproval = async (optional: boolean): Promise<Approval | undefined> => {
     if (approvalPage === undefined) {
-      return undefined;
+      const timeoutMs = optional ? OPTIONAL_POPUP_TIMEOUT_MS : REQUIRED_POPUP_TIMEOUT_MS;
+      const spawned = await findNotificationPopup(context, extensionId, match, timeoutMs);
+      return spawned ? { owned: false, page: spawned } : undefined;
     }
-    const opened = await openNotificationPage({
+    return awaitApproval({
       context,
       extensionId,
       match,
       notificationPage: approvalPage,
-      timeoutMs: Math.max(timeoutMs, APPROVAL_PAGE_MIN_TIMEOUT_MS),
+      openAfterMs: OPEN_APPROVAL_AFTER_MS,
+      timeoutMs: APPROVAL_PAGE_TIMEOUT_MS,
     });
-    return opened ? { owned: true, page: opened } : undefined;
   };
 
   /** Drive the pending approval popup with `settle`, then wait for it to close. */
@@ -90,16 +77,18 @@ export const createWallet = ({
     settle: (popup: Page) => Promise<void>,
     { optional = false }: ResolveOptions,
   ): Promise<void> => {
-    // Required popups get 30s: the MV3 service worker spawns them slowly after the wallet's own UI
-    // has been driven. Optional ones keep the short wait, since "no popup" is a normal outcome
-    // there (e.g. Phantom auto-approving a trusted site) and the extra wait would just be latency.
-    const find = () => findApproval(optional ? 10_000 : 30_000);
+    const find = () => findApproval(optional);
     let approval = await find();
     if (!approval) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
       }
-      throw new Error("[walletwright] approval popup did not appear");
+      // Which pages exist says why: an approval entry still sitting at its bare URL means the
+      // request never reached the wallet, while no approval page at all means it never opened one.
+      const open = context.pages().map((page) => page.url());
+      throw new Error(
+        `[walletwright] approval popup did not appear. Open pages: ${open.join(" | ") || "none"}`,
+      );
     }
     try {
       await settle(approval.page);

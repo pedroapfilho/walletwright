@@ -194,7 +194,10 @@ Each item below cost real debugging time. Don't "simplify" them away.
    (`Approval.owned`); closing a wallet-spawned window early can abort the request instead.
    Readiness of an engine-opened page is "the wallet routed it away from the entry URL", not "a
    button is visible": an idle `notification.html` renders a button of its own. Routing has been
-   measured at up to 11s on a cold MV3 worker, hence the 30s floor even for an optional approval.
+   measured at up to 11s on a cold MV3 worker locally and far slower on a loaded CI runner, hence
+   the 60s budget for that path even when the approval is optional. Both routes are watched by one
+   poll rather than one-then-the-other, because a window that surfaces late (or a page that routes
+   late) otherwise falls outside its own slice of the budget and the dapp hangs with no approval.
    Verified headless: MetaMask (all 12 demo specs), Phantom, Rabby. Headed-only: Solflare (it
    answers a headless connect with "Connection rejected" in ~2s, before any approval UI exists, with
    or without the engine's tab) and Slush (opening `index.html?isPopup=1` in a tab drops the query

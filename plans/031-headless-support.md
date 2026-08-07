@@ -37,9 +37,12 @@ Measurements worth keeping:
   registers, and closing it earlier can read as a dismissal.
 - Readiness of an engine-opened page is **"the URL left the entry"**, not "a button is visible": an
   idle `notification.html` renders a button of its own and would pass the naive check forever.
-- The page took **up to 11s** to route on a cold MV3 worker, which is why its budget has a 30s floor
-  (`APPROVAL_PAGE_MIN_TIMEOUT_MS`). The first attempt used the 10s optional budget and produced a
-  hang that only passed on Playwright's retry.
+- The page took **up to 11s** to route on a cold MV3 worker locally, and far longer on a GitHub
+  runner, where every MetaMask approval missed a 30s budget and the whole suite ran 4x slower. Its
+  budget is now 60s (`APPROVAL_PAGE_TIMEOUT_MS`), and the demo's Playwright `timeout` is 240s so a
+  test that waits out two approvals is not cut short.
+- **Watch both routes in one poll.** The first version probed for a spawned window, then opened the
+  page, each with its own slice of the budget; whichever arrived outside its slice was missed.
 - `page.evaluate` is still off-limits inside MetaMask (LavaMoat scuttling); `locator.isVisible()` is
   fine, `locator.allTextContents()` is not.
 

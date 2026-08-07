@@ -65,6 +65,14 @@ export const isApprovalPopup = (page: Page, extensionId: string, match: string):
   page.url().includes(match) &&
   !page.isClosed();
 
+const hasVisibleButton = async (page: Page): Promise<boolean> => {
+  try {
+    return await page.locator("button").first().isVisible();
+  } catch {
+    return false; // the page can go while we ask
+  }
+};
+
 export const findNotificationPopup = (
   context: BrowserContext,
   extensionId: string,
@@ -81,68 +89,90 @@ export const findNotificationPopup = (
       // The window opens before the approval renders (bare URL, zero buttons) and routes later,
       // sometimes tens of seconds later under a busy MV3 worker. "Found" must mean "usable", so
       // keep polling the same shell until a button shows up rather than handing back a blank page.
-      const usable = await popup
-        .locator("button")
-        .first()
-        .isVisible()
-        .catch(() => false);
-      return usable ? popup : undefined;
+      return (await hasVisibleButton(popup)) ? popup : undefined;
     },
     { timeoutMs },
   );
 
+/** A pending approval, and whether the engine opened the page it is on (and so must close it). */
+export type Approval = { owned: boolean; page: Page };
+
+const APPROVAL_POLL_INTERVAL_MS = 250;
+const APPROVAL_ENTRY_LOAD_TIMEOUT_MS = 10_000;
+
 /**
- * Open the wallet's approval entry in a tab and hand it back once it is showing a pending request.
- * Headless Chromium creates the approval *window* (the request does reach the wallet) but never
- * surfaces it as a page, so `findNotificationPopup` polls forever; opening the same URL ourselves
- * reaches the very same pending approval.
+ * Wait for whichever approval page the wallet routes first: the window it spawned, or the approval
+ * entry opened here after `openAfterMs`.
  *
- * Readiness is "the wallet routed the page away from the entry URL", not "a button is visible": an
- * idle entry renders buttons of its own (MetaMask's empty shell has one) and would otherwise pass.
- * Returns `undefined`, dropping the tab, when nothing is pending, which is a normal outcome for an
- * optional approval.
+ * Both have to be watched throughout, because neither is guaranteed. Whether a headless approval
+ * window surfaces as a page is per-wallet (Phantom's does, MetaMask's does not), and how long the
+ * wallet takes to route either one varies by an order of magnitude with machine load, so a
+ * one-then-the-other search misses whichever arrives outside its own slice of the budget.
+ *
+ * Returns `undefined`, leaving no page behind, when nothing is pending: a normal outcome for an
+ * optional approval that the wallet auto-approved.
  */
-export const openNotificationPage = async ({
+export const awaitApproval = async ({
   context,
   extensionId,
   match = DEFAULT_NOTIFICATION_MATCH,
   notificationPage,
-  timeoutMs = 10_000,
+  openAfterMs,
+  timeoutMs,
 }: {
   context: BrowserContext;
   extensionId: string;
   match?: string;
   /** Extension-relative approval entry, from `WalletDefinition.notificationPage`. */
   notificationPage: string;
-  timeoutMs?: number;
-}): Promise<Page | undefined> => {
+  /** Grace given to the wallet's own window before the engine opens the entry itself. */
+  openAfterMs: number;
+  timeoutMs: number;
+}): Promise<Approval | undefined> => {
   const entry = `chrome-extension://${extensionId}/${notificationPage}`;
-  const tab = await context.newPage();
-  try {
-    await gotoWithRetry(tab, entry, { label: "approval page", timeoutMs });
-  } catch (error) {
-    await tab.close().catch(() => {});
-    throw error;
-  }
+  const startedAt = Date.now();
+  let own: Page | undefined;
 
-  const ready = await waitUntil(
+  const found = await waitUntil(
     async () => {
-      if (tab.url() === entry || !isApprovalPopup(tab, extensionId, match)) {
+      for (const page of context.pages()) {
+        if (!isApprovalPopup(page, extensionId, match)) {
+          continue;
+        }
+        // A window the wallet spawned exists *because* a request is pending, so a rendered button
+        // is enough. The page opened here exists either way, and renders buttons of its own while
+        // idle (MetaMask's empty `notification.html` has one), so it only counts once the wallet
+        // has routed it off the entry URL. Phantom's spawned popup sits on that same URL, which is
+        // why the stricter rule cannot be applied to every approval page.
+        if (page === own && page.url() === entry) {
+          continue;
+        }
+        if (await hasVisibleButton(page)) {
+          return page;
+        }
+      }
+      if (own !== undefined || Date.now() - startedAt < openAfterMs) {
         return undefined;
       }
-      const usable = await tab
-        .locator("button")
-        .first()
-        .isVisible()
-        .catch(() => false);
-      return usable ? tab : undefined;
+      const page = await context.newPage();
+      try {
+        await gotoWithRetry(page, entry, {
+          label: "approval page",
+          timeoutMs: APPROVAL_ENTRY_LOAD_TIMEOUT_MS,
+        });
+        own = page;
+      } catch {
+        await page.close().catch(() => {}); // try again on the next tick rather than give up
+      }
+      return undefined;
     },
-    { timeoutMs },
+    { intervalMs: APPROVAL_POLL_INTERVAL_MS, timeoutMs },
   );
-  if (!ready) {
-    await tab.close().catch(() => {});
+
+  if (own !== undefined && found !== own) {
+    await own.close().catch(() => {}); // the wallet's own window won the race, or nothing did
   }
-  return ready;
+  return found ? { owned: found === own, page: found } : undefined;
 };
 
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */

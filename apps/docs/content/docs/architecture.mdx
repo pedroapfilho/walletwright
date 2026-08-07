@@ -305,7 +305,8 @@ load-bearing:
 - **"Found" means "usable".** The window opens before it renders (a bare URL with no buttons) and
   routes to the request later, sometimes tens of seconds later under a busy MV3 service worker. The
   poller only returns a popup once a button is visible, so the caller never clicks a blank shell.
-- **Required vs optional.** `confirmSignature` waits up to 30 seconds and throws if no popup appears.
+- **Required vs optional.** `confirmSignature` waits up to 30 seconds for a wallet-spawned popup (60
+  when walletwright has to open the approval page itself) and throws if none appears.
   `connectToDapp` and `approve({ optional: true })` tolerate no popup, because a wallet may
   auto-approve a site it already trusts.
 - **Re-front the dapp after a wallet-UI action.** While an extension page is the active tab, MetaMask
