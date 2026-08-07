@@ -306,8 +306,8 @@ test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
 <Callout type="info">
   Capabilities are per-wallet. A wallet declares an action only once it has been driven against the
   real extension, so calling one it hasn't declared throws (`[walletwright] Slush does not support
-  reject()`) instead of quietly doing nothing. `reject` is verified on MetaMask and Phantom;
-  `settings` on MetaMask.
+  settings.lock()`) instead of quietly doing nothing. Every wallet declares `reject`; `settings`,
+  `network.add`, and `accounts` are MetaMask-only today.
 </Callout>
 
 ## Networks and a local chain

@@ -1,7 +1,7 @@
 # walletwright
 
 A monorepo for [`walletwright`](./packages/walletwright), Playwright wallet automation for MetaMask
-(EVM + Solana), Phantom (EVM + Solana), and Slush (Sui).
+(EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), Solflare (Solana), and Slush (Sui).
 
 ## Packages
 

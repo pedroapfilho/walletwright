@@ -9,6 +9,10 @@ its `ecosystems` (`evm`, `svm`, `sui`, `dot`, `btc`), and `walletKindsByEcosyste
 wallets that drive a chain. The roadmap is the top 3 wallets per ecosystem, and a wallet ships only
 once its connect and sign are verified end-to-end.
 
+Whether a wallet runs headless is also per wallet, noted in each section below and covered in
+[Continuous integration](/continuous-integration). `launchWallet` throws by name for a wallet that
+has not declared it, rather than hanging at the first approval.
+
 ## MetaMask (EVM + Solana)
 
 ```ts
@@ -29,6 +33,8 @@ export const metamask: WalletSetup = {
   `version` (for example `version: "13.35.1"`).
 - The public `test … junk` seed is fine here. Its first account is the well-known `0xf39F…2266`
   Hardhat address.
+- Headed only. MetaMask creates its approval window headless but never exposes it as a page, so
+  there is nothing to drive.
 
 ## Phantom (EVM + Solana)
 
@@ -46,6 +52,7 @@ export const phantom: WalletSetup = {
 - Drives both `window.phantom.ethereum` (EVM) and `window.phantom.solana` (Solana). The same
   `connectToDapp()` and `confirmSignature()` calls handle both chains.
 - Always uses the current Chrome Web Store build, so `version` is ignored for Phantom.
+- Runs headless: its approval window surfaces as a page, verified on Linux CI and macOS.
 
 <Callout type="warn">
   Don't use the famous public test seed with Phantom. Phantom flags `test test … junk` as "might be
@@ -99,6 +106,7 @@ export const rabby: WalletSetup = {
   `confirmSignature()` calls as MetaMask.
 - Downloaded from the Chrome Web Store (latest), so `version` is ignored.
 - The public `test … junk` seed is fine here, giving the usual `0xf39F…2266` first account.
+- Runs headless: its approval window surfaces as a page, verified on Linux CI and macOS.
 
 <Callout type="info">
   Rabby confirms a signature in two steps ("Sign", then "Confirm") and its approval window tears
@@ -124,6 +132,8 @@ export const solflare: WalletSetup = {
 - Downloaded from the Chrome Web Store (latest), so `version` is ignored.
 - Approvals open in Solflare's own `confirm_popup.html` window; `connectToDapp()` and
   `confirmSignature()` drive it unchanged.
+- Headed only. Solflare rejects a headless connection outright, in about two seconds, before any
+  approval UI exists.
 
 <Callout type="info">
   An unfunded seed derives no "active" (SOL-holding) accounts, so Solflare's import asks how to pick
@@ -147,6 +157,7 @@ export const slush: WalletSetup = {
   `@mysten/wallet-standard` or `@wallet-standard/app` and signs with the `sui:signPersonalMessage`
   feature.
 - Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+- Headed only: its headless approval flow has not been verified, so it is not declared.
 
 <Callout type="info">
   Slush re-prompts for the password when signing. walletwright handles that inside the `wallet`

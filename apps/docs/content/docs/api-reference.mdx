@@ -26,7 +26,7 @@ The wallet to import and the credentials to unlock it.
 
 ```ts
 type Ecosystem = "evm" | "svm" | "sui" | "dot" | "btc";
-type WalletKind = "metamask" | "phantom" | "slush";
+type WalletKind = "metamask" | "phantom" | "rabby" | "slush" | "solflare";
 
 type WalletSetup = {
   wallet: WalletKind;
@@ -134,9 +134,9 @@ declared throws rather than silently doing nothing:
 [walletwright] Slush does not support settings.lock()
 ```
 
-Today `reject` is verified on MetaMask, Phantom, and Slush, and `settings`, `network.add`, and
-`accounts` on MetaMask. Slush drives connect, sign, and reject end to end but declares none of the
-other optional capabilities yet, so calling those on Slush throws.
+Every wallet declares `reject`. `settings`, `network.add`, and `accounts` are MetaMask-only today:
+Phantom, Rabby, Solflare, and Slush drive connect, sign, and reject end to end but declare none of
+the other optional capabilities yet, so calling those on them throws.
 
 `network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
 and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls
@@ -255,14 +255,15 @@ connect/sign stand-in, not a chain; drive a real extension for anything that tou
 ## `wallets`
 
 The registry of built-in `WalletDefinition`s, keyed by `WalletKind` (`"metamask"`, `"phantom"`,
-`"slush"`). Useful for inspection or extension.
+`"rabby"`, `"slush"`, `"solflare"`). Useful for inspection or extension.
 
 ## `walletKindsByEcosystem(ecosystem)`
 
 The wallet kinds that can drive a given `Ecosystem`.
 
 ```ts
-walletKindsByEcosystem("evm"); // ["metamask", "phantom"]
+walletKindsByEcosystem("evm"); // ["metamask", "phantom", "rabby"]
+walletKindsByEcosystem("svm"); // ["metamask", "phantom", "solflare"]
 walletKindsByEcosystem("sui"); // ["slush"]
 ```
 
@@ -273,12 +274,12 @@ walletwright cache --setup ./wallet-setup.ts
 walletwright cache --wallet metamask --seed "YOUR_SEED_HERE" --password "YOUR_PASSWORD_HERE"
 ```
 
-| Flag                | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `--setup <file>`    | A module whose default export is a `WalletSetup`. |
-| `--wallet <kind>`   | `metamask`, `phantom`, or `slush`.                |
-| `--seed <phrase>`   | Seed phrase to import.                            |
-| `--password <pw>`   | Wallet password.                                  |
-| `--version <v>`     | Pin an extension version.                         |
-| `--cache-dir <dir>` | Cache directory (default `.walletwright`).        |
-| `--headless`        | Build the cache headless.                         |
+| Flag                | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `--setup <file>`    | A module whose default export is a `WalletSetup`.       |
+| `--wallet <kind>`   | `metamask`, `phantom`, `rabby`, `solflare`, or `slush`. |
+| `--seed <phrase>`   | Seed phrase to import.                                  |
+| `--password <pw>`   | Wallet password.                                        |
+| `--version <v>`     | Pin an extension version.                               |
+| `--cache-dir <dir>` | Cache directory (default `.walletwright`).              |
+| `--headless`        | Build the cache headless.                               |

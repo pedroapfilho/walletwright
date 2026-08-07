@@ -25,10 +25,10 @@ public API            src/index.ts, src/fixtures.ts, src/cli.ts
 engine                src/internal/{cache,launch,controller,utils,download,onboarding-patch}.ts
    │  drives, per wallet, via one interface
    ▼
-wallet definitions    src/wallets/{metamask,phantom,slush}.ts  (+ src/wallets/metamask/*)
+wallet definitions    src/wallets/{metamask,phantom,rabby,solflare,slush}.ts  (+ src/wallets/metamask/*)
    │
    ▼
-real extension        MetaMask / Phantom / Slush, loaded unpacked into Chromium
+real extension        MetaMask / Phantom / Rabby / Solflare / Slush, loaded unpacked into Chromium
 
 optional subpackages  @walletwright/core/chain (local EVM node), @walletwright/core/mock (headless provider)
 ```

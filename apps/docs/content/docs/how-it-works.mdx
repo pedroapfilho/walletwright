@@ -66,6 +66,8 @@ Each of these is load-bearing. Drop one and the wallet either drives the dapp or
   browser closes.
 - **Confirm-button selectors per wallet.** MetaMask: connect `confirm-btn`, sign
   `confirm-footer-button` (with the legacy `page-container-footer-next` as a fallback). Phantom:
-  `primary-button`. Slush: the text "Approve" or "Sign", then "Unlock" for the sign re-auth.
+  `primary-button`. Rabby: the text "Connect", "Sign", then "Confirm", since signing takes two steps.
+  Solflare: `btn-connect` to connect, `btn-approve` to sign. Slush: the text "Approve" or "Sign",
+  then "Unlock" for the sign re-auth.
 - **Extraction.** Extensions are unzipped with `adm-zip`, after stripping the CRX binary header at the
   ZIP signature.
