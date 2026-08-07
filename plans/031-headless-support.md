@@ -109,13 +109,11 @@ pending request. The gate therefore onboards under `xvfb` too.
 
 ## Follow-ups
 
-- **MetaMask's backup-and-sync is cut off** (`prepareContext` aborts `user-storage`,
-  `authentication` and `oidc` under `api.cx.metamask.io`), because it restores account names for
-  whichever SRP the profile holds and the public test seed is shared: CI saw `dev1` and `personal`
-  on an account with a real balance. Confirmed by watching a fresh profile's traffic locally.
-  MetaMask's own e2e suite mocks its external services for the same reason. Watch whether this also
-  settles the MetaMask approval flakiness on the runner, where every failure snapshot showed that
-  synced account.
+- **MetaMask's account sync is cut off** (`prepareContext` aborts `user-storage.api.cx.metamask.io`),
+  because it restores account names for whichever SRP the profile holds and the public test seed is
+  shared: CI saw `dev1` and `personal` on an account with a real balance. It worked, and the run that
+  followed showed `Account 1` again and went from 5 failures in 26m to 1 in 7.4m. Cutting the auth
+  stack around it as well (`authentication`, `oidc`) was too broad and has been narrowed back.
 - Drop Slush's `prepareContext` stub once `api.slush.app` answers automated requests again.
 - Solflare headless would need to be understood from Solflare's side (why the immediate rejection);
   nothing in the engine changes the outcome.

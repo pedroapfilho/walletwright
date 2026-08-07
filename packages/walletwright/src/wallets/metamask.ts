@@ -33,20 +33,18 @@ export const metamaskDownload = (cacheDir: string, version: string) => ({
 });
 
 /**
- * MetaMask's backup-and-sync restores account names, and whatever else it has stored, for whichever
- * SRP a profile holds. Test seeds are shared (the public `test test … junk` one by thousands), so a
- * synced profile reports a stranger's account names in place of the ones a test just set: CI runs
- * showed accounts called `dev1` and `personal`, holding a real balance, where `Account 2` was
- * expected. It only happens where the sync actually lands, which makes it look like a flake.
+ * MetaMask's backup-and-sync restores account names for whichever SRP a profile holds, and test
+ * seeds are shared (the public `test test … junk` one by thousands), so a synced profile reports a
+ * stranger's account names in place of the ones a test just set: CI runs showed accounts called
+ * `dev1` and `personal`, holding a real balance, where `Account 2` was expected. It only happens
+ * where the sync actually lands, which makes it look like a flake. MetaMask's own e2e suite mocks
+ * its external services for the same reason.
  *
- * Only the identity stack is cut, so RPC, token, price and security APIs behave normally. MetaMask's
- * own e2e suite mocks its external services for the same reason.
+ * Just the one host that stores the names. Cutting the auth stack around it (`authentication`,
+ * `oidc`) reaches further than intended: other features authenticate through it too, and a wallet
+ * that cannot authenticate can leave a request's confirm button disabled with nothing to explain it.
  */
-const SYNC_HOSTS = [
-  "user-storage.api.cx.metamask.io",
-  "authentication.api.cx.metamask.io",
-  "oidc.api.cx.metamask.io",
-];
+const ACCOUNT_SYNC_HOST = "user-storage.api.cx.metamask.io";
 
 export const metamask: WalletDefinition = {
   actions: { accounts, network, settings },
@@ -56,9 +54,7 @@ export const metamask: WalletDefinition = {
   extensionName: "MetaMask",
 
   prepareContext: async (context) => {
-    for (const host of SYNC_HOSTS) {
-      await context.route(`**://${host}/**`, (route) => route.abort());
-    }
+    await context.route(`**://${ACCOUNT_SYNC_HOST}/**`, (route) => route.abort());
   },
 
   prepareExtension: (cacheDir, version = DEFAULT_VERSION) =>

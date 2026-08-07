@@ -282,10 +282,11 @@ Each item below cost real debugging time. Don't "simplify" them away.
     where that sync lands the wallet reports names like `dev1` and `personal` in place of
     `Account 2` and of whatever `accounts.rename` just set, on an account holding a real balance. It
     shows up as a naming assertion that passes locally and fails on CI, not as an error. `metamask.ts`
-    therefore aborts requests to `user-storage`, `authentication` and `oidc` under
-    `api.cx.metamask.io` via `prepareContext`, which is what MetaMask's own e2e suite does to its
-    external services. Only the identity stack is cut: RPC, token, price and security APIs are left
-    alone, so blocking more broadly is not the intent.
+    therefore aborts `user-storage.api.cx.metamask.io` via `prepareContext`, which is what MetaMask's
+    own e2e suite does to its external services. Just that host: cutting the auth stack around it
+    (`authentication`, `oidc`) reaches further than intended, since other features authenticate
+    through it and a wallet that cannot authenticate can leave a confirm button disabled with
+    nothing on screen to explain it.
 
 ## Conventions
 
