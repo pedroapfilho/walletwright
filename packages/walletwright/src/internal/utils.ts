@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 import type { WalletSetup } from "../types";
 
@@ -65,13 +65,16 @@ export const isApprovalPopup = (page: Page, extensionId: string, match: string):
   page.url().includes(match) &&
   !page.isClosed();
 
-const hasVisibleButton = async (page: Page): Promise<boolean> => {
+const isVisible = async (locator: Locator): Promise<boolean> => {
   try {
-    return await page.locator("button").first().isVisible();
+    return await locator.isVisible();
   } catch {
     return false; // the page can go while we ask
   }
 };
+
+const hasVisibleButton = (page: Page): Promise<boolean> =>
+  isVisible(page.locator("button").first());
 
 export const findNotificationPopup = (
   context: BrowserContext,
@@ -113,6 +116,7 @@ const APPROVAL_ENTRY_LOAD_TIMEOUT_MS = 10_000;
  * optional approval that the wallet auto-approved.
  */
 export const awaitApproval = async ({
+  approvalControls,
   context,
   extensionId,
   match = DEFAULT_NOTIFICATION_MATCH,
@@ -120,6 +124,8 @@ export const awaitApproval = async ({
   openAfterMs,
   timeoutMs,
 }: {
+  /** From `WalletDefinition.approvalControls`; tells a request apart from the wallet's idle UI. */
+  approvalControls?: (page: Page) => Locator;
   context: BrowserContext;
   extensionId: string;
   match?: string;
@@ -133,6 +139,18 @@ export const awaitApproval = async ({
   const startedAt = Date.now();
   let own: Page | undefined;
 
+  /**
+   * The page opened here exists whether or not anything is pending, and an idle one is not blank:
+   * MetaMask's `notification.html` renders its whole home screen. So it counts only once the wallet
+   * declares a request on it, and failing that, once it has at least left the entry URL.
+   */
+  const showsRequest = async (page: Page): Promise<boolean> => {
+    if (approvalControls !== undefined) {
+      return isVisible(approvalControls(page).first());
+    }
+    return page.url() !== entry && (await hasVisibleButton(page));
+  };
+
   const found = await waitUntil(
     async () => {
       for (const page of context.pages()) {
@@ -140,14 +158,10 @@ export const awaitApproval = async ({
           continue;
         }
         // A window the wallet spawned exists *because* a request is pending, so a rendered button
-        // is enough. The page opened here exists either way, and renders buttons of its own while
-        // idle (MetaMask's empty `notification.html` has one), so it only counts once the wallet
-        // has routed it off the entry URL. Phantom's spawned popup sits on that same URL, which is
-        // why the stricter rule cannot be applied to every approval page.
-        if (page === own && page.url() === entry) {
-          continue;
-        }
-        if (await hasVisibleButton(page)) {
+        // is enough, and it has to be: Phantom's popup sits on the same URL as the entry and would
+        // fail the stricter test below.
+        const ready = page === own ? await showsRequest(page) : await hasVisibleButton(page);
+        if (ready) {
           return page;
         }
       }

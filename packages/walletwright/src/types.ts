@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 /** Blockchain ecosystem a wallet operates in. A wallet may span several (e.g. Phantom = EVM + SVM). */
 export type Ecosystem = "evm" | "svm" | "sui" | "dot" | "btc";
@@ -83,6 +83,13 @@ export type WalletActions = {
 export type WalletDefinition = {
   /** Optional capabilities beyond connect/sign. Omit a group the wallet can't (or doesn't) drive. */
   actions?: WalletActions;
+  /**
+   * Controls that only exist while a request is on screen, used to tell a real approval from the
+   * wallet's idle UI. Only consulted for the page walletwright opens itself (`notificationPage`),
+   * which renders the wallet's home screen when nothing is pending, so "a button is visible" would
+   * accept it. A wallet that doesn't declare this falls back to that weaker check.
+   */
+  approvalControls?: (popup: Page) => Locator;
   /**
    * Click the approve/confirm button in an approval popup (connect or sign). `password` is provided
    * because some wallets (e.g. Slush) re-prompt for it to authorize a signature.

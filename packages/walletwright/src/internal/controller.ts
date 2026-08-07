@@ -63,6 +63,7 @@ export const createWallet = ({
       return spawned ? { owned: false, page: spawned } : undefined;
     }
     return awaitApproval({
+      approvalControls: definition.approvalControls,
       context,
       extensionId,
       match,

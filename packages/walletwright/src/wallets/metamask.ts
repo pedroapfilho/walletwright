@@ -4,7 +4,7 @@ import type { WalletDefinition } from "../types";
 import { accounts } from "./metamask/actions/accounts";
 import { network } from "./metamask/actions/network";
 import { settings } from "./metamask/actions/settings";
-import { approve, reject } from "./metamask/approve";
+import { approvalControls, approve, reject } from "./metamask/approve";
 import { importWallet, reachUnlockScreen, unlock } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
 
@@ -34,6 +34,7 @@ export const metamaskDownload = (cacheDir: string, version: string) => ({
 
 export const metamask: WalletDefinition = {
   actions: { accounts, network, settings },
+  approvalControls,
   approve,
   ecosystems: ["evm", "svm"],
   extensionName: "MetaMask",
