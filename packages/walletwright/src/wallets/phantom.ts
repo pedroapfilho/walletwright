@@ -33,6 +33,9 @@ export const phantom: WalletDefinition = {
   ecosystems: ["evm", "svm"],
   extensionName: "Phantom",
 
+  // Its approval window surfaces as a page headless, verified end to end on Linux CI and macOS.
+  headlessApprovals: true,
+
   // Phantom only publishes "latest" via the Web Store, so `version` is ignored.
   importWallet: async (page, seedPhrase, password) => {
     const testId = (id: string) => page.locator(`[data-testid="${id}"]`);
@@ -64,8 +67,6 @@ export const phantom: WalletDefinition = {
     }
     await sleep(1500);
   },
-
-  notificationPage: "notification.html",
 
   onboardingPage: "onboarding.html",
 

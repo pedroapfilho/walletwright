@@ -37,15 +37,14 @@ jobs:
             xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
               pnpm --filter demo exec tsx scripts/cache-one.ts "$wallet"
           done
-      # Headed under a virtual display, which covers all five wallets in one gate. Headless works on
-      # a developer machine (and Phantom and Rabby pass headless here), but MetaMask's approvals do
-      # not materialise on this hardware, which is a MetaMask issue rather than a walletwright one.
+      # Under a virtual display, since most of these wallets need a real window for their approvals.
+      # The Phantom and Rabby specs still run headless, pinned in the specs themselves.
       # A roomy screen on purpose: a wallet popup that opens partly off a small virtual display
       # renders fine but cannot be clicked, which reads as a button timeout rather than a layout
       # problem. walletwright also repositions the window, and the two together are belt and braces.
       - run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
-            pnpm --filter demo exec playwright test --headed
+            pnpm --filter demo exec playwright test
       # Playwright writes a page snapshot per failure. Without it a red run here can only be read
       # through the log, which says what timed out but not what the wallet was showing at the time.
       - if: failure()

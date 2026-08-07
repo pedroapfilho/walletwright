@@ -40,18 +40,18 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
 
 /**
  * Launch a fresh persistent context from the onboarded cache and return an unlocked wallet
- * controller. Headed by default; `headless` needs the wallet to declare a `notificationPage`, since
- * a headless approval window may never surface as a page for the engine to drive. Outside Playwright
- * fixtures, `context.close()` is yours.
+ * controller. Headed by default; `headless` needs the wallet to declare `headlessApprovals`, since
+ * some wallets create an approval window headless that is never exposed as a page. Outside
+ * Playwright fixtures, `context.close()` is yours.
  */
 export const launchWallet = async (
   setup: WalletSetup,
   { headless = false }: { headless?: boolean } = {},
 ): Promise<LaunchedWallet> => {
   const definition = wallets[setup.wallet];
-  // Without a `notificationPage` a headless run reaches no approval at all, and would fail 30s
-  // later at the first connect with nothing pointing back at the mode as the cause.
-  if (headless && definition.notificationPage === undefined) {
+  // A wallet whose approval window never surfaces headless reaches no approval at all, and would
+  // fail 30s later at the first connect with nothing pointing back at the mode as the cause.
+  if (headless && definition.headlessApprovals !== true) {
     throw new Error(
       `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
     );
@@ -93,9 +93,6 @@ export const launchWallet = async (
     return {
       context,
       wallet: createWallet({
-        // Headless, a wallet's approval window may be created without ever surfacing as a page
-        // (MetaMask), so the controller opens this entry itself when it finds no window to drive.
-        approvalPage: headless ? definition.notificationPage : undefined,
         context,
         definition,
         extensionId,

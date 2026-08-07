@@ -180,41 +180,30 @@ seed-or-key` → `#/new-user/import/seed-phrase/set-password` → `#/new-user/su
 
 Each item below cost real debugging time. Don't "simplify" them away.
 
-1. **Headless needs the `chromium` channel and a `notificationPage`.** Two separate things. First,
+1. **Headless is per-wallet, and the engine never opens an approval itself.** Two things. First,
    Playwright's default headless build is the headless _shell_, which cannot load an extension at
    all, so `launchPersistentContext` passes `channel: "chromium"` (the full browser) in both
-   `internal/launch.ts` and `internal/cache.ts`. Second, **whether a headless approval window
-   surfaces as a page is per-wallet, so probe before assuming**: MetaMask's is created (the request
-   does reach the wallet) but never exposed, so `findNotificationPopup` polls forever, while
-   Phantom's does surface. `awaitApproval` (`internal/utils.ts`) therefore watches both in one poll:
-   the wallet's window, and the `notificationPage` it opens itself after a 5s grace, which reaches
-   the very same pending approval. Searching one _then_ the other, each with its own slice of the
-   budget, is what broke the first CI run: whichever route arrived outside its slice was missed and
-   the dapp hung. Skipping the wallet's window entirely breaks Phantom the same way, from the other
-   side. The engine closes only the page it opened itself (`Approval.owned`); closing a
-   wallet-spawned window early can abort the request instead.
-   **Readiness is per-route.** For the engine's own page it is "the wallet routed it away from the
-   entry URL", because an idle `notification.html` renders a button of its own; for a spawned window
-   a rendered button is enough, because the window only exists when a request is pending. Applying
-   the stricter rule to both breaks Phantom, whose popup sits on that same entry URL.
-   **Budgets are the CI story.** Routing was measured at up to 11s locally and far slower on a
-   GitHub runner (roughly 4x on everything), so that path gets 60s even when the approval is
-   optional, and MetaMask's confirm click gets 45s: the engine hands the popup over as soon as it
-   renders _a_ button, which on that runner is well before the footer exists, and a 15s click budget
-   missed every single approval. Give a wallet suite a Playwright `timeout` of 300s to match.
-   **Verified headless on a developer machine: MetaMask (all 12 demo specs), Phantom, Rabby. On a
-   GitHub-hosted runner only Phantom and Rabby hold up**: MetaMask surfaces no approval window there
-   and `notification.html` renders the wallet home instead of the request, so every approval times
-   out. Raising budgets does not help, and was tried twice. This is MetaMask's own documented
-   headless-on-GitHub-Actions bug (Synpress hits it too), and the documented answer is `xvfb`, for
-   **both the cache build and the run**: a profile onboarded headless on that runner stays broken,
-   and a later headed run from it still lands on home. This repo's E2E gate does both under `xvfb`,
-   which covers all five wallets. Headed-only everywhere: Solflare (it
-   answers a headless connect with "Connection rejected" in ~2s, before any approval UI exists, with
-   or without the engine's tab) and Slush (opening `index.html?isPopup=1` in a tab drops the query
-   and lands on `#/tokens`, the wallet home, so there is no approval to drive).
-   A wallet without a `notificationPage` fails fast at `launchWallet` rather than 30s later at the
-   first approval. `xvfb-run` is now the fallback for those two, not the documented default.
+   `internal/launch.ts` and `internal/cache.ts`. Second, **whether a wallet's approval window
+   surfaces as a page headless is a property of that wallet**: Phantom's and Rabby's do, MetaMask's
+   is created but never exposed. So a wallet declares `headlessApprovals: true` once verified, and
+   `launchWallet` refuses headless for the rest rather than hanging at the first approval.
+   An earlier version had the engine open the wallet's approval URL in a tab when no window
+   surfaced, which did work for MetaMask on a developer machine. It is gone, and the reason is worth
+   keeping: on a CI runner that same URL renders MetaMask's **home screen**, buttons and all, so the
+   engine drove the wrong page and stopped waiting for the right one. Synpress never opens that URL
+   either; it waits for the window the wallet opens. An approval you did not ask the wallet to open
+   is not an approval.
+   **Two things do have to be defended.** `WalletDefinition.approvalControls` says which controls
+   mean "a request is on screen", because MetaMask's popup can render home; a wallet without it
+   falls back to "any button is visible", which is enough for a window that only ever opens for a
+   request (Phantom's popup sits on the bare entry URL, so no URL-based test works for it).
+   And `placeApprovalWindow` pins the popup to 360x592 and moves it to (50,50) over CDP, because a
+   window that opens partly off a small or virtual display renders fine but cannot be clicked, which
+   reads as a button timeout rather than a layout problem. Synpress carries the same workaround.
+   **CI runs under `xvfb`, for both the cache build and the run.** MetaMask has a documented
+   headless-on-GitHub-Actions bug, and a profile onboarded headless there stays broken: a later
+   headed run from it still lands on home. Give the display a real size (`-screen 0 1920x1080x24`)
+   and the suite a Playwright `timeout` of 300s.
 2. **Derive the extension id; don't query it.** `chrome://extensions` is blocked headless and the MV3
    service worker starts lazily, so `getExtensionId` would race. Compute it instead
    (`internal/utils.ts`, `extensionIdFromPath`): sha256 of the manifest's public `key` if present

@@ -67,8 +67,11 @@ export const metamask: WalletDefinition = {
   // Fresh install of home.html redirects to the onboarding welcome screen.
   finalizeCache: markMetaMaskOnboarded,
 
+  // No `headlessApprovals`: MetaMask creates its approval window headless but never exposes it as a
+  // page, so there is nothing for the engine to find, and it renders its home screen rather than the
+  // request when reached any other way.
+
   importWallet,
-  notificationPage: "notification.html",
   onboardingPage: "home.html",
   reachUnlockScreen,
   reject,

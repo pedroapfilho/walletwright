@@ -7,8 +7,8 @@ for (const [key, value] of Object.entries(loadEnv("", import.meta.dirname, "VITE
   process.env[key] ??= value;
 }
 
-// Headless (Playwright's default) for the wallets whose headless approval flow is verified; the
-// Slush and Solflare specs opt themselves back into headed with `test.use({ headless: false })`.
+// Headed by default, because most of these wallets need a real window for their approvals; the
+// Phantom and Rabby specs opt back into headless, which is verified for them.
 export default defineConfig({
   expect: { timeout: 30_000 },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
@@ -18,7 +18,7 @@ export default defineConfig({
   // A single test can wait out two approvals, and on a loaded CI runner each one costs up to 60s to
   // reach plus 45s for MetaMask to render the button that settles it.
   timeout: 300_000,
-  use: { baseURL: "http://localhost:3000", trace: "off" },
+  use: { baseURL: "http://localhost:3000", headless: false, trace: "off" },
   webServer: {
     command: "pnpm dev",
     reuseExistingServer: !process.env.CI,

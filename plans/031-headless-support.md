@@ -18,47 +18,40 @@ headless, which could not load extensions at all, and is no longer true.
 
 ## What is actually going on
 
-Two separate obstacles, discovered by spike rather than by reading:
-
 1. **Playwright's default headless build is the headless shell**, which cannot load an extension.
    Fixed by passing `channel: "chromium"` (the full browser) in `internal/launch.ts` and
    `internal/cache.ts`. Headed behaviour is unchanged, since that is the same Chromium build.
-2. **MetaMask's approval window is created headless but never exposed as a page.** The request does
-   reach the wallet: opening `notification.html` in a tab lands on `#/connect/<id>`, the same pending
-   approval. So the engine opens the wallet's `notificationPage` when no window surfaces, and closes
-   that page afterwards, since it does not close itself the way a popup does.
+2. **Whether a wallet's approval window surfaces as a page headless is a property of that wallet.**
+   Phantom's and Rabby's do; MetaMask's is created but never exposed. A wallet declares
+   `headlessApprovals: true` once verified, and `launchWallet` refuses headless for the rest.
+
+### The fallback that was tried, and removed
+
+For a while the engine opened the wallet's approval URL itself when no window surfaced, which made
+MetaMask work headless on a developer machine. It is gone. On a CI runner that same URL renders
+MetaMask's **home screen**, buttons and all, so the engine drove the wrong page and stopped waiting
+for the right one. Synpress never opens that URL either; it waits for the window the wallet opens.
+
+The rule that came out of it: an approval you did not ask the wallet to open is not an approval.
+
+Two pieces of that work survive, and both earn their place:
+
+- `WalletDefinition.approvalControls` says which controls mean "a request is on screen", so a popup
+  rendering home is not mistaken for one. A wallet without it falls back to "any button is visible",
+  which is enough for a window that only ever opens for a request. The stricter test cannot be
+  universal: Phantom's popup sits on the bare entry URL.
+- `placeApprovalWindow` pins the popup to 360x592 and moves it to (50,50) over CDP. A window that
+  opens partly off a small or virtual display renders fine but cannot be clicked, which reads as a
+  button timeout rather than a layout problem. Synpress carries the same workaround, for the same
+  reason.
 
 Measurements worth keeping:
 
-- **Whether a headless approval window surfaces is per-wallet.** Phantom's does; MetaMask's does
-  not. Generalising from MetaMask and skipping the wallet's own window made Phantom's very first
-  connect hang, because its request stayed in a window nothing drove.
-- Close only the page the engine opened. A wallet-spawned window closes itself once the approval
-  registers, and closing it earlier can read as a dismissal.
-- Readiness of an engine-opened page is **"the wallet's own approval controls are on screen"**
-  (`WalletDefinition.approvalControls`). Neither weaker test survives contact with a real runner: an
-  idle `notification.html` renders buttons, and it does not stay on the entry URL either.
-- The page took **up to 11s** to route on a cold MV3 worker locally, and far longer on a GitHub
-  runner, where every MetaMask approval missed a 30s budget and the whole suite ran 4x slower. Its
-  budget is now 60s (`APPROVAL_PAGE_TIMEOUT_MS`), and the demo's Playwright `timeout` is 300s so a
-  test that waits out two approvals is not cut short.
-- **Watch both routes in one poll.** The first version probed for a spawned window, then opened the
-  page, each with its own slice of the budget; whichever arrived outside its slice was missed.
+- The engine-opened page took up to 11s to route locally, and far longer on a GitHub runner, which is
+  what drove several rounds of budget-raising before the page turned out to be the wrong one. Budgets
+  were never the problem.
 - `page.evaluate` is still off-limits inside MetaMask (LavaMoat scuttling); `locator.isVisible()` is
   fine, `locator.allTextContents()` is not.
-
-## Verified
-
-| Wallet   | Headless | Evidence                                                                                                    |
-| -------- | -------- | ----------------------------------------------------------------------------------------------------------- |
-| MetaMask | local    | all 12 demo specs on a developer machine; no approval ever appears on a GitHub runner                       |
-| Phantom  | yes      | `phantom.spec.ts`, `phantom-actions.spec.ts`                                                                |
-| Rabby    | yes      | `rabby.spec.ts`                                                                                             |
-| Solflare | no       | dapp gets `Connection rejected` ~2s after the click, with or without the engine's tab; Solflare's own doing |
-| Slush    | no       | `index.html?isPopup=1` in a tab drops the query and lands on `#/tokens`, so no approval to drive            |
-
-Solflare and Slush declare no `notificationPage`, so `launchWallet` throws a named error rather than
-hanging, and their specs pin `test.use({ headless: false })`.
 
 ## Slush's cache build, fixed in passing
 

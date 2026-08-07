@@ -160,9 +160,10 @@ export const rabby: WalletDefinition = {
 
   extensionName: "Rabby",
 
-  importWallet,
+  // Its approval window surfaces as a page headless, verified end to end on Linux CI and macOS.
+  headlessApprovals: true,
 
-  notificationPage: "notification.html",
+  importWallet,
 
   onboardingPage: ONBOARDING_ROUTE,
 

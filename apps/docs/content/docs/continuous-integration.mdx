@@ -3,10 +3,10 @@ title: Continuous integration
 description: Run walletwright tests on CI, headless where the wallet supports it, and cache the downloaded extensions between runs.
 ---
 
-Phantom and Rabby run headless anywhere, including on a GitHub-hosted runner. MetaMask runs headless
-on a developer machine but **not** on a GitHub runner, where its approvals never materialise, and
-Solflare and Slush need a display everywhere. So a mixed suite is simplest to run headed under a
-virtual display, which is what this project's own gate does.
+Phantom and Rabby run headless anywhere, including on a GitHub-hosted runner. MetaMask, Solflare and
+Slush need a real window for their approvals, so a mixed suite is simplest to run under a virtual
+display, which is what this project's own gate does. Cache building is headless for every wallet
+except on a GitHub runner, where MetaMask must be onboarded under the display too.
 
 ## Headless
 
@@ -24,31 +24,35 @@ A wallet with no verified headless approval flow throws at launch instead of han
 here is loud.
 
 <Callout type="warn">
-  MetaMask headless is verified on a developer machine, not on a GitHub-hosted runner. MetaMask has
-  documented compatibility problems running headless on GitHub Actions, and there its
-  `notification.html` renders the wallet home instead of the pending request, so every approval
-  times out. On that hardware run MetaMask headed, and onboard it headed too.
+  Only Phantom and Rabby declare headless support, because only their approval windows surface as a
+  page that way. `launchWallet` throws by name for the others rather than hanging. MetaMask also has
+  documented compatibility problems running headless on GitHub Actions, so onboard it under the
+  display there as well.
 </Callout>
 
 ## Headed via a virtual display
 
-The simplest thing that covers every wallet on Linux CI: install `xvfb` and run the whole suite
-headed.
+The simplest thing that covers every wallet on Linux CI: install `xvfb`, default the suite to
+headed, and give the display a real size, since a popup that opens partly off it cannot be clicked.
+
+```ts
+// playwright.config.ts
+use: {
+  headless: false;
+}
+```
 
 ```bash
 sudo apt-get install -y xvfb
-xvfb-run --auto-servernum pnpm exec playwright test --headed
+xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm exec playwright test
 ```
 
-To keep part of the suite headless instead, pin only the specs that need a display, and drop
-`--headed`:
+Specs for a wallet that supports headless can opt back in, and `xvfb-run` is harmless for them:
 
 ```ts
-// tests/solflare.spec.ts
-test.use({ headless: false });
+// tests/phantom.spec.ts
+test.use({ headless: true });
 ```
-
-`xvfb-run` is harmless for the headless specs either way, so one command covers a mixed suite.
 
 ## GitHub Actions
 
@@ -70,14 +74,14 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y xvfb
       - run: xvfb-run --auto-servernum pnpm exec tsx scripts/build-cache.ts
-      - run: xvfb-run --auto-servernum pnpm exec playwright test --headed
+      - run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            pnpm exec playwright test
 ```
 
 Onboard under the display too, not headless. MetaMask has documented compatibility problems running
 headless on GitHub Actions, and a profile onboarded that way stays broken: its `notification.html`
 then renders the wallet home instead of the pending request, even for specs that run headed.
-
-Put `xvfb-run --auto-servernum` in front of the last step if the suite includes Solflare or Slush.
 
 ## Caching between runs
 
@@ -106,7 +110,8 @@ the test run or exclude them, for example
 
 MV3 service workers can be timing-sensitive on cold launches. Set Playwright `retries` (2 is plenty)
 and keep `workers: 1` for wallet suites so several browsers don't contend for the machine.
-walletwright already reloads patiently while it reaches the unlock screen, and waits up to 60 seconds
-for an approval to render. A CI runner routes a wallet's approval page several times slower than a
-developer machine, so give a wallet suite a Playwright `timeout` of at least `300_000`: a single test
-can wait out two approvals, and a test timeout cuts the wait short mid-approval.
+walletwright already reloads patiently while it reaches the unlock screen, waits up to 30 seconds for
+a required approval to appear, and places that window on screen before clicking it. A CI runner is
+several times slower than a developer machine, so give a wallet suite a Playwright `timeout` of at
+least `300_000`: a single test can wait out two approvals, and a test timeout cuts the wait short
+mid-approval.

@@ -3,9 +3,6 @@ import { solflareTest } from "./fixtures";
 const test = solflareTest;
 const { expect } = test;
 
-// Solflare rejects connections outright when the browser is headless, so this spec runs headed.
-test.use({ headless: false });
-
 test("Solflare: connect + sign on Solana", async ({ page, wallet }) => {
   await page.goto("/");
 

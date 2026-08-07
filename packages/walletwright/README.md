@@ -99,9 +99,9 @@ await context.close();
 
 ## Requirements and notes
 
-- **Headless works for MetaMask, Phantom, and Rabby**, and needs nothing beyond Playwright's default.
-  Solflare and Slush have no verified headless approval flow, so pin their specs with
-  `test.use({ headless: false })` and give CI a virtual display: `xvfb-run pnpm exec playwright test`.
+- **Headless works for Phantom and Rabby**, whose approval windows surface as pages that way.
+  MetaMask, Solflare and Slush need a real window, so default those suites to headed and give CI a
+  virtual display: `xvfb-run --auto-servernum pnpm exec playwright test`.
 - MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom,
   Rabby, Solflare, and Slush always use the current Web Store build.
 - The cache lives in `.walletwright/` (override it with `WalletSetup.cacheDir`). Add that directory to

@@ -6,7 +6,7 @@ import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 import type { WalletSetup } from "../types";
 
-import { gotoWithRetry, waitUntil } from "./wait";
+import { waitUntil } from "./wait";
 
 export const DEFAULT_CACHE_DIR = ".walletwright";
 
@@ -76,12 +76,20 @@ const isVisible = async (locator: Locator): Promise<boolean> => {
 const hasVisibleButton = (page: Page): Promise<boolean> =>
   isVisible(page.locator("button").first());
 
-export const findNotificationPopup = (
-  context: BrowserContext,
-  extensionId: string,
+export const findNotificationPopup = ({
+  approvalControls,
+  context,
+  extensionId,
   match = DEFAULT_NOTIFICATION_MATCH,
   timeoutMs = 10_000,
-): Promise<Page | undefined> =>
+}: {
+  /** From `WalletDefinition.approvalControls`, for a wallet that can render its popup requestless. */
+  approvalControls?: (page: Page) => Locator;
+  context: BrowserContext;
+  extensionId: string;
+  match?: string;
+  timeoutMs?: number;
+}): Promise<Page | undefined> =>
   waitUntil(
     async () => {
       const popup = context.pages().find((page) => isApprovalPopup(page, extensionId, match));
@@ -91,14 +99,17 @@ export const findNotificationPopup = (
       await popup.waitForLoadState("domcontentloaded").catch(() => {});
       // The window opens before the approval renders (bare URL, zero buttons) and routes later,
       // sometimes tens of seconds later under a busy MV3 worker. "Found" must mean "usable", so
-      // keep polling the same shell until a button shows up rather than handing back a blank page.
-      return (await hasVisibleButton(popup)) ? popup : undefined;
+      // keep polling the same shell rather than handing back a page that cannot be settled. A
+      // rendered button is the weakest form of that: MetaMask's popup can also render its home
+      // screen, buttons and all, so it says which controls mean "a request is on screen".
+      const ready =
+        approvalControls === undefined
+          ? await hasVisibleButton(popup)
+          : await isVisible(approvalControls(popup).first());
+      return ready ? popup : undefined;
     },
     { timeoutMs },
   );
-
-/** A pending approval, and whether the engine opened the page it is on (and so must close it). */
-export type Approval = { owned: boolean; page: Page };
 
 /** MetaMask's own popup dimensions, which its layout is built for. */
 const APPROVAL_WINDOW = { height: 592, width: 360 };
@@ -129,95 +140,6 @@ export const placeApprovalWindow = async (page: Page): Promise<void> => {
   } catch {
     // no window to place (headless), or the page refused a CDP session
   }
-};
-
-const APPROVAL_POLL_INTERVAL_MS = 250;
-const APPROVAL_ENTRY_LOAD_TIMEOUT_MS = 10_000;
-
-/**
- * Wait for whichever approval page the wallet routes first: the window it spawned, or the approval
- * entry opened here after `openAfterMs`.
- *
- * Both have to be watched throughout, because neither is guaranteed. Whether a headless approval
- * window surfaces as a page is per-wallet (Phantom's does, MetaMask's does not), and how long the
- * wallet takes to route either one varies by an order of magnitude with machine load, so a
- * one-then-the-other search misses whichever arrives outside its own slice of the budget.
- *
- * Returns `undefined`, leaving no page behind, when nothing is pending: a normal outcome for an
- * optional approval that the wallet auto-approved.
- */
-export const awaitApproval = async ({
-  approvalControls,
-  context,
-  extensionId,
-  match = DEFAULT_NOTIFICATION_MATCH,
-  notificationPage,
-  openAfterMs,
-  timeoutMs,
-}: {
-  /** From `WalletDefinition.approvalControls`; tells a request apart from the wallet's idle UI. */
-  approvalControls?: (page: Page) => Locator;
-  context: BrowserContext;
-  extensionId: string;
-  match?: string;
-  /** Extension-relative approval entry, from `WalletDefinition.notificationPage`. */
-  notificationPage: string;
-  /** Grace given to the wallet's own window before the engine opens the entry itself. */
-  openAfterMs: number;
-  timeoutMs: number;
-}): Promise<Approval | undefined> => {
-  const entry = `chrome-extension://${extensionId}/${notificationPage}`;
-  const startedAt = Date.now();
-  let own: Page | undefined;
-
-  /**
-   * The page opened here exists whether or not anything is pending, and an idle one is not blank:
-   * MetaMask's `notification.html` renders its whole home screen. So it counts only once the wallet
-   * declares a request on it, and failing that, once it has at least left the entry URL.
-   */
-  const showsRequest = async (page: Page): Promise<boolean> => {
-    if (approvalControls !== undefined) {
-      return isVisible(approvalControls(page).first());
-    }
-    return page.url() !== entry && (await hasVisibleButton(page));
-  };
-
-  const found = await waitUntil(
-    async () => {
-      for (const page of context.pages()) {
-        if (!isApprovalPopup(page, extensionId, match)) {
-          continue;
-        }
-        // A window the wallet spawned exists *because* a request is pending, so a rendered button
-        // is enough, and it has to be: Phantom's popup sits on the same URL as the entry and would
-        // fail the stricter test below.
-        const ready = page === own ? await showsRequest(page) : await hasVisibleButton(page);
-        if (ready) {
-          return page;
-        }
-      }
-      if (own !== undefined || Date.now() - startedAt < openAfterMs) {
-        return undefined;
-      }
-      const page = await context.newPage();
-      try {
-        await gotoWithRetry(page, entry, {
-          label: "approval page",
-          timeoutMs: APPROVAL_ENTRY_LOAD_TIMEOUT_MS,
-        });
-        own = page;
-      } catch {
-        await page.close().catch(() => {}); // try again on the next tick rather than give up
-      }
-      return undefined;
-    },
-    { intervalMs: APPROVAL_POLL_INTERVAL_MS, timeoutMs },
-  );
-
-  if (own !== undefined && found !== own) {
-    await own.close().catch(() => {}); // the wallet's own window won the race, or nothing did
-  }
-  return found ? { owned: found === own, page: found } : undefined;
 };
 
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */

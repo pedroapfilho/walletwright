@@ -97,8 +97,8 @@ test("connect wallet and sign a message", async ({ page, wallet }) => {
 
 ## Step 5: Configure Playwright
 
-MetaMask, Phantom, and Rabby run headless on a developer machine (on CI hardware, see
-[Continuous integration](/continuous-integration)), so Playwright's defaults are fine. Give wallet flows a
+Phantom and Rabby run headless; MetaMask, Solflare and Slush need a real window, so default the suite
+to headed (see [Continuous integration](/continuous-integration)). Give wallet flows a
 couple of retries and a single worker:
 
 ```ts

@@ -161,8 +161,8 @@ await context.close();
 | `setup`            | `WalletSetup` | The wallet to launch. Its cache must already exist. |
 | `options.headless` | `boolean`     | Run headless. Default `false`.                      |
 
-Headless is supported for MetaMask, Phantom, and Rabby. Solflare and Slush throw at launch with a
-named error, because their approval flows have not been driven headless; run those headed.
+Headless is supported for Phantom and Rabby, whose approval windows surface as pages that way.
+MetaMask, Solflare and Slush throw at launch with a named error; run those headed.
 `createWalletFixtures` passes Playwright's own `headless` option through, so a fixture-based suite
 sets the mode in `playwright.config.ts` or with `--headed` rather than here.
 

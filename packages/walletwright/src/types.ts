@@ -85,9 +85,9 @@ export type WalletDefinition = {
   actions?: WalletActions;
   /**
    * Controls that only exist while a request is on screen, used to tell a real approval from the
-   * wallet's idle UI. Only consulted for the page walletwright opens itself (`notificationPage`),
-   * which renders the wallet's home screen when nothing is pending, so "a button is visible" would
-   * accept it. A wallet that doesn't declare this falls back to that weaker check.
+   * wallet's idle UI: MetaMask's approval window can render its home screen, buttons and all. A
+   * wallet that doesn't declare this falls back to "any button is visible", which is enough for a
+   * window that only ever opens for a request.
    */
   approvalControls?: (popup: Page) => Locator;
   /**
@@ -104,6 +104,13 @@ export type WalletDefinition = {
    * holding the DB), e.g. forcing `completedOnboarding=true` in MetaMask's leveldb.
    */
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
+  /**
+   * Whether this wallet's approval window surfaces as a page when the browser runs headless, so the
+   * engine can find and drive it. Declared only once verified against the real extension: MetaMask's
+   * window is created but never exposed, and `launchWallet` refuses headless without this rather
+   * than hanging at the first approval.
+   */
+  headlessApprovals?: boolean;
   /** Run the import-from-seed onboarding flow. */
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
   /**
@@ -112,13 +119,6 @@ export type WalletDefinition = {
    * marks them with `isPopup=1`.
    */
   notificationMatch?: string;
-  /**
-   * Extension-relative URL that renders whatever approval is pending when opened in a tab. Required
-   * headless, where a wallet's approval *window* may be created without ever being exposed as a
-   * page (MetaMask), leaving the engine nothing to poll for; it opens this URL instead
-   * (`internal/utils.ts`, `openNotificationPage`). Omit for a wallet not driven headless.
-   */
-  notificationPage?: string;
   /** Extension-relative path of the first-run onboarding entry (e.g. `home.html`). */
   onboardingPage: string;
   /**

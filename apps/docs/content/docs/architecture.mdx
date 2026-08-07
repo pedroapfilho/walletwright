@@ -99,10 +99,10 @@ context closes.
 
 <Callout type="info">
   Both phases launch the `chromium` channel, because Playwright's default headless build is the
-  headless shell, which cannot load an extension. `buildCache` takes `{headless}`; `launchWallet`
-  takes it too and the fixtures pass Playwright's own `headless` option through, so `--headed` and
-  `use: {headless}` reach the wallet. Solflare and Slush still need headed. See [Continuous
-  integration](/continuous-integration).
+  headless shell, which cannot load an extension. `buildCache` takes `{headless}` and works that way
+  for every wallet; `launchWallet` takes it too, and the fixtures pass Playwright's own `headless`
+  option through, so `--headed` and `use: {headless}` reach the wallet. Only Phantom and Rabby can
+  run headless. See [Continuous integration](/continuous-integration).
 </Callout>
 
 ## The WalletDefinition extension point
@@ -124,24 +124,26 @@ type WalletDefinition = {
   approve: (popup: Page, password: string) => Promise<void>;
   reject?: (popup: Page) => Promise<void>;
   notificationMatch?: string; // popup URL token; defaults to "notification.html"
-  notificationPage?: string; // approval entry to open in a tab when headless
+  headlessApprovals?: boolean; // its approval window surfaces as a page headless
+  approvalControls?: (popup: Page) => Locator; // what "a request is on screen" looks like
   actions?: WalletActions; // optional capabilities beyond connect/sign
 };
 ```
 
-| Member               | When the engine calls it                                               |
-| -------------------- | ---------------------------------------------------------------------- |
-| `prepareExtension`   | in `buildCache`, to fetch and extract the extension into the cache dir |
-| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                   |
-| `prepareContext`     | in both, right after the browser starts and before anything navigates  |
-| `importWallet`       | in `buildCache`, to run the import-from-seed flow                      |
-| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)       |
-| `reachUnlockScreen`  | in `launchWallet`, to open and return the wallet's home page           |
-| `unlock`             | in `launchWallet`, to type the password                                |
-| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup       |
-| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL |
-| `notificationPage`   | in the controller, to open the pending approval in a tab when headless |
-| `actions`            | in the controller, to expose optional capabilities on the `Wallet`     |
+| Member               | When the engine calls it                                                          |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `prepareExtension`   | in `buildCache`, to fetch and extract the extension into the cache dir            |
+| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                              |
+| `prepareContext`     | in both, right after the browser starts and before anything navigates             |
+| `importWallet`       | in `buildCache`, to run the import-from-seed flow                                 |
+| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)                  |
+| `reachUnlockScreen`  | in `launchWallet`, to open and return the wallet's home page                      |
+| `unlock`             | in `launchWallet`, to type the password                                           |
+| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup                  |
+| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL            |
+| `headlessApprovals`  | in `launchWallet`, to refuse headless for a wallet that cannot be driven that way |
+| `approvalControls`   | in the popup poller, to tell a pending request from the wallet's idle UI          |
+| `actions`            | in the controller, to expose optional capabilities on the `Wallet`                |
 
 ### Adding a wallet
 
@@ -314,13 +316,15 @@ load-bearing:
   controller brings the dapp page back to the front when an action finishes.
 - **Retry a popup that closed under us.** The poller can grab the previous popup in its final moments
   (a window closes right after its own approval resolves), so a failed settle re-finds once.
-- **Headless may have no popup to poll for, and that is per-wallet.** MetaMask's approval window is
-  created without ever being exposed as a page; Phantom's is exposed. So the controller probes for a
-  spawned window first and only then opens the wallet's `notificationPage` itself
-  (`openNotificationPage` in `utils.ts`), which reaches the same pending request. That page is ready
-  once the wallet routes it away from the entry URL, since an idle approval page renders buttons of
-  its own. The controller closes only the page it opened: a spawned window closes itself once the
-  approval registers, and closing it earlier can read as a dismissal.
+- **Headless support is per-wallet.** MetaMask's approval window is created without ever being
+  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `headlessApprovals` can
+  run headless, and `launchWallet` refuses the rest by name. walletwright never opens an approval
+  URL itself: a page the wallet did not open for a request shows its home screen, not the request.
+- **"Found" means settleable, not merely rendered.** A wallet can declare `approvalControls`, the
+  controls that exist only while a request is on screen, and the poller waits for those instead of
+  for any button. MetaMask needs this because its popup can render home.
+- **Approval windows get placed.** A popup that opens partly off a small or virtual display renders
+  fine but cannot be clicked, so the controller pins it to 360x592 and moves it on screen over CDP.
 
 ### Action binding
 

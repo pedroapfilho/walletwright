@@ -3,8 +3,6 @@ import type { BrowserContext, Page } from "@playwright/test";
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
 import {
-  type Approval,
-  awaitApproval,
   DEFAULT_NOTIFICATION_MATCH,
   findNotificationPopup,
   hasNotificationPopup,
@@ -17,25 +15,9 @@ const POPUP_CLOSE_TIMEOUT_MS = 15_000;
 const OPTIONAL_POPUP_TIMEOUT_MS = 10_000;
 /** The MV3 service worker spawns a popup slowly once the wallet's own UI has been driven. */
 const REQUIRED_POPUP_TIMEOUT_MS = 30_000;
-/**
- * Budget for a wallet whose approval the engine has to open itself. Far longer than the popup
- * waits, and used even for an optional approval, because the wallet has to route the page to the
- * request after it opens: measured at up to 11s on a developer machine and several times that on a
- * loaded CI runner. Nothing pending means nothing ever routes, so the full wait is only spent when
- * there is genuinely nothing to approve.
- */
-const APPROVAL_PAGE_TIMEOUT_MS = 60_000;
-/** Grace for the wallet's own window to surface before the engine opens the approval entry. */
-const OPEN_APPROVAL_AFTER_MS = 5000;
-
 type ResolveOptions = { optional?: boolean };
 
 type CreateWalletOptions = {
-  /**
-   * Approval entry for the engine to open when it finds no window to drive, set headless, where a
-   * wallet's approval window may never surface as a page. Undefined means popups only.
-   */
-  approvalPage?: string;
   context: BrowserContext;
   definition: WalletDefinition;
   extensionId: string;
@@ -46,7 +28,6 @@ type CreateWalletOptions = {
 
 /** Build the runtime controller that drives an unlocked wallet against the dapp under test. */
 export const createWallet = ({
-  approvalPage,
   context,
   definition,
   extensionId,
@@ -67,23 +48,15 @@ export const createWallet = ({
     await dapp?.bringToFront().catch(() => {});
   };
 
-  /** Reach the pending approval: the window the wallet spawned, or the page the engine opens. */
-  const findApproval = async (optional: boolean): Promise<Approval | undefined> => {
-    if (approvalPage === undefined) {
-      const timeoutMs = optional ? OPTIONAL_POPUP_TIMEOUT_MS : REQUIRED_POPUP_TIMEOUT_MS;
-      const spawned = await findNotificationPopup(context, extensionId, match, timeoutMs);
-      return spawned ? { owned: false, page: spawned } : undefined;
-    }
-    return awaitApproval({
+  /** Wait for the approval window the wallet opens for a pending request. */
+  const findApproval = (optional: boolean): Promise<Page | undefined> =>
+    findNotificationPopup({
       approvalControls: definition.approvalControls,
       context,
       extensionId,
       match,
-      notificationPage: approvalPage,
-      openAfterMs: OPEN_APPROVAL_AFTER_MS,
-      timeoutMs: APPROVAL_PAGE_TIMEOUT_MS,
+      timeoutMs: optional ? OPTIONAL_POPUP_TIMEOUT_MS : REQUIRED_POPUP_TIMEOUT_MS,
     });
-  };
 
   /** Drive the pending approval popup with `settle`, then wait for it to close. */
   const resolvePopup = async (
@@ -92,40 +65,32 @@ export const createWallet = ({
   ): Promise<void> => {
     await frontDapp();
     const find = () => findApproval(optional);
-    let approval = await find();
-    if (!approval) {
+    const popup = await find();
+    if (!popup) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
       }
-      // Which pages exist says why: an approval entry still sitting at its bare URL means the
-      // request never reached the wallet, while no approval page at all means it never opened one.
+      // Naming the open pages separates "the wallet never opened one" from "it opened one showing
+      // something other than the request", which look identical from the timeout alone.
       const open = context.pages().map((page) => page.url());
       throw new Error(
         `[walletwright] approval popup did not appear. Open pages: ${open.join(" | ") || "none"}`,
       );
     }
-    if (!approval.owned) {
-      await placeApprovalWindow(approval.page); // a window the wallet opened can land off-screen
-    }
+    await placeApprovalWindow(popup); // it can open partly off a small or virtual display
     try {
-      await settle(approval.page);
+      await settle(popup);
     } catch (error) {
       // The finder can grab the previous popup in its final moments (the window closes right after
       // its own approval resolves). If ours died under us, one fresh find gets the real popup.
-      if (!approval.page.isClosed()) {
+      if (!popup.isClosed()) {
         throw error;
       }
       const fresh = await find();
       if (!fresh) {
         throw error;
       }
-      // Only the latest needs closing: a retry happens because the previous page had already gone.
-      approval = fresh;
-      await settle(fresh.page);
-    } finally {
-      if (approval.owned) {
-        await approval.page.close().catch(() => {});
-      }
+      await settle(fresh);
     }
 
     // Wait for the popup to close so the next approval doesn't grab a stale page.
