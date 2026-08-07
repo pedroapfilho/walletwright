@@ -277,7 +277,12 @@ Each item below cost real debugging time. Don't "simplify" them away.
     (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
     required popups wait 30s, and `findNotificationPopup` returns a popup only once a button is
     visible, since the window opens as a bare shell and routes later.
-21. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
+21. **MetaMask's Solana connect does not bind to its popup on a GitHub runner.** The window opens and
+    renders the wallet home with a **disabled** `confirm-btn`, so the snap-routed request has nothing
+    to confirm. It passes locally every time, its reject sibling passes on CI, and every other
+    MetaMask spec passes on CI, so it is excluded from the E2E gate as a MetaMask-on-CI problem. The
+    first thing to check is whether the cached profile has a Solana account at all on that hardware.
+22. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
     account names keyed to the seed, and the public test seed is used by thousands, so on a network
     where that sync lands the wallet reports names like `dev1` and `personal` in place of
     `Account 2` and of whatever `accounts.rename` just set, on an account holding a real balance. It

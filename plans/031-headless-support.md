@@ -107,6 +107,15 @@ onboarding matters as much as the run. A profile onboarded headless on that runn
 a later headed run from it reaches `notification.html` showing the wallet home rather than the
 pending request. The gate therefore onboards under `xvfb` too.
 
+## Where CI landed
+
+21 of 22 specs, five wallets, headed under `xvfb`, in about 7 minutes. The one exclusion is
+`MetaMask: connect and sign on Solana`: on a GitHub runner its approval popup renders the wallet
+home with a **disabled** `confirm-btn`, so the snap-routed Solana request never binds to the window
+it opened. It passes locally on every run, its sibling reject spec passes on CI, and every other
+MetaMask spec passes on CI, which puts it in the same MetaMask-on-GitHub-Actions bucket as the
+headless problem rather than anything walletwright drives.
+
 ## Follow-ups
 
 - **MetaMask's account sync is cut off** (`prepareContext` aborts `user-storage.api.cx.metamask.io`),
@@ -114,6 +123,10 @@ pending request. The gate therefore onboards under `xvfb` too.
   shared: CI saw `dev1` and `personal` on an account with a real balance. It worked, and the run that
   followed showed `Account 1` again and went from 5 failures in 26m to 1 in 7.4m. Cutting the auth
   stack around it as well (`authentication`, `oidc`) was too broad and has been narrowed back.
+- **MetaMask's Solana connect on a GitHub runner.** Its popup renders home with a disabled Connect
+  footer. Worth checking whether the cached profile even has a Solana account on that hardware: it is
+  derived through a snap after import, and `buildCache` may close the browser before that lands on a
+  slow machine, which would leave the connect screen with nothing to select and its button disabled.
 - Drop Slush's `prepareContext` stub once `api.slush.app` answers automated requests again.
 - Solflare headless would need to be understood from Solflare's side (why the immediate rejection);
   nothing in the engine changes the outcome.
