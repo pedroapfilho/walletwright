@@ -8,6 +8,7 @@ import {
   DEFAULT_NOTIFICATION_MATCH,
   findNotificationPopup,
   hasNotificationPopup,
+  placeApprovalWindow,
 } from "./utils";
 import { formatTimeout, waitUntil } from "./wait";
 
@@ -102,6 +103,9 @@ export const createWallet = ({
       throw new Error(
         `[walletwright] approval popup did not appear. Open pages: ${open.join(" | ") || "none"}`,
       );
+    }
+    if (!approval.owned) {
+      await placeApprovalWindow(approval.page); // a window the wallet opened can land off-screen
     }
     try {
       await settle(approval.page);

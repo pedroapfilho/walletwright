@@ -100,6 +100,37 @@ export const findNotificationPopup = (
 /** A pending approval, and whether the engine opened the page it is on (and so must close it). */
 export type Approval = { owned: boolean; page: Page };
 
+/** MetaMask's own popup dimensions, which its layout is built for. */
+const APPROVAL_WINDOW = { height: 592, width: 360 };
+/** Far enough from the edge that a popup this size lands fully on any usable display. */
+const APPROVAL_WINDOW_OFFSET = 50;
+
+/**
+ * Put a wallet-spawned approval window somewhere it can be clicked. It can open partly off-screen
+ * on a small or virtual display, and Playwright will not click what is out of view, so a confirm
+ * button that is rendered and enabled still times out. Synpress carries the same workaround.
+ *
+ * Best-effort throughout: headless has no window to move, and nothing here is required for a window
+ * that already sits on screen.
+ */
+export const placeApprovalWindow = async (page: Page): Promise<void> => {
+  await page.setViewportSize(APPROVAL_WINDOW).catch(() => {});
+  try {
+    const session = await page.context().newCDPSession(page);
+    const { targetInfo } = await session.send("Target.getTargetInfo");
+    const { windowId } = await session.send("Browser.getWindowForTarget", {
+      targetId: targetInfo.targetId,
+    });
+    await session.send("Browser.setWindowBounds", {
+      bounds: { left: APPROVAL_WINDOW_OFFSET, top: APPROVAL_WINDOW_OFFSET },
+      windowId,
+    });
+    await session.detach();
+  } catch {
+    // no window to place (headless), or the page refused a CDP session
+  }
+};
+
 const APPROVAL_POLL_INTERVAL_MS = 250;
 const APPROVAL_ENTRY_LOAD_TIMEOUT_MS = 10_000;
 

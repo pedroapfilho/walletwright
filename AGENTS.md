@@ -291,9 +291,12 @@ Each item below cost real debugging time. Don't "simplify" them away.
 21. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
     account names keyed to the seed, and the public test seed is used by thousands, so on a network
     where that sync lands the wallet reports names like `dev1` and `personal` in place of
-    `Account 2` and of whatever `accounts.rename` just set. It shows up as a naming assertion that
-    passes locally and fails on CI, not as an error. `add, rename, and switch accounts` is excluded
-    from the E2E gate for this; a real fix means stopping that sync for the test profile.
+    `Account 2` and of whatever `accounts.rename` just set, on an account holding a real balance. It
+    shows up as a naming assertion that passes locally and fails on CI, not as an error. `metamask.ts`
+    therefore aborts requests to `user-storage`, `authentication` and `oidc` under
+    `api.cx.metamask.io` via `prepareContext`, which is what MetaMask's own e2e suite does to its
+    external services. Only the identity stack is cut: RPC, token, price and security APIs are left
+    alone, so blocking more broadly is not the intent.
 
 ## Conventions
 

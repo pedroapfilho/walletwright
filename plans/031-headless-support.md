@@ -116,15 +116,13 @@ pending request. The gate therefore onboards under `xvfb` too.
 
 ## Follow-ups
 
-- **MetaMask renames the accounts of a shared SRP.** On CI, `add, rename, and switch accounts` sees
-  names like `dev1` and `personal` where it set its own, because MetaMask's backup-and-sync restores
-  names keyed to the seed and the public test seed is used by thousands. Confirmed by watching the
-  extension's traffic: a fresh profile contacts `user-storage.api.cx.metamask.io`,
-  `authentication.api.cx.metamask.io`, `accounts.api.cx.metamask.io`, and `oidc.api.cx.metamask.io`.
-  The spec is excluded from the E2E gate and still runs locally. Answering `user-storage` from
-  `prepareContext` (the hook Slush already uses) is the likely fix, and would make account naming
-  deterministic for everyone; it needs verifying on a runner where the sync actually lands, since it
-  does not reproduce locally.
+- **MetaMask's backup-and-sync is cut off** (`prepareContext` aborts `user-storage`,
+  `authentication` and `oidc` under `api.cx.metamask.io`), because it restores account names for
+  whichever SRP the profile holds and the public test seed is shared: CI saw `dev1` and `personal`
+  on an account with a real balance. Confirmed by watching a fresh profile's traffic locally.
+  MetaMask's own e2e suite mocks its external services for the same reason. Watch whether this also
+  settles the MetaMask approval flakiness on the runner, where every failure snapshot showed that
+  synced account.
 - Drop Slush's `prepareContext` stub once `api.slush.app` answers automated requests again.
 - Solflare headless would need to be understood from Solflare's side (why the immediate rejection);
   nothing in the engine changes the outcome.
