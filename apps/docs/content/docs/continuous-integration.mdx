@@ -91,5 +91,5 @@ MV3 service workers can be timing-sensitive on cold launches. Set Playwright `re
 and keep `workers: 1` for wallet suites so several browsers don't contend for the machine.
 walletwright already reloads patiently while it reaches the unlock screen, and waits up to 60 seconds
 for an approval to render. A CI runner routes a wallet's approval page several times slower than a
-developer machine, so give a wallet suite a Playwright `timeout` of at least `240_000`: a single test
+developer machine, so give a wallet suite a Playwright `timeout` of at least `300_000`: a single test
 can wait out two approvals, and a test timeout cuts the wait short mid-approval.

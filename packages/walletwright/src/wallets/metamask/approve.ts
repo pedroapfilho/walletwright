@@ -1,6 +1,16 @@
 import type { Page } from "@playwright/test";
 
 /**
+ * How long a confirm or cancel button gets to become clickable. The engine hands the popup over as
+ * soon as it renders a button, which on a loaded CI runner can be well before MetaMask has rendered
+ * its footer: every approval in the GitHub-runner suite missed a 15s budget here while the same
+ * suite passed locally.
+ */
+const BUTTON_TIMEOUT_MS = 45_000;
+/** The retry only covers a notice that rendered late, so it does not need the full budget again. */
+const RETRY_TIMEOUT_MS = 10_000;
+
+/**
  * First-time requests that MetaMask routes through a protocol Snap (e.g. adding a custom chain)
  * open a "Third-party software notice" modal over the confirm footer, and every click is
  * intercepted until it is accepted. Its buttons carry no testids, only text, and Accept stays
@@ -40,11 +50,11 @@ export const approve = async (popup: Page): Promise<void> => {
     .first();
   await acceptThirdPartyNotice(popup);
   try {
-    await button.click({ timeout: 15_000 });
+    await button.click({ timeout: BUTTON_TIMEOUT_MS });
   } catch (error) {
     // The notice can render after the first accept attempt; clear it once and retry.
     await acceptThirdPartyNotice(popup);
-    await button.click({ timeout: 5000 }).catch(() => {
+    await button.click({ timeout: RETRY_TIMEOUT_MS }).catch(() => {
       throw error;
     });
   }
@@ -58,5 +68,5 @@ export const reject = async (popup: Page): Promise<void> => {
     .or(popup.locator('[data-testid="page-container-footer-cancel"]'))
     .or(popup.locator('[data-testid$="-cancel-snap-footer-button"]'))
     .first();
-  await button.click({ timeout: 15_000 });
+  await button.click({ timeout: BUTTON_TIMEOUT_MS });
 };

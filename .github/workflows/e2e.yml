@@ -34,7 +34,14 @@ jobs:
           done
       # Headless covers MetaMask, Phantom, and Rabby. Solflare and Slush need a display; they are
       # excluded rather than run under xvfb, to keep this gate a headless one.
-      - run: pnpm --filter demo exec playwright test --grep-invert "Solflare|Slush"
+      #
+      # "add, rename, and switch accounts" is excluded for a different reason: MetaMask renames the
+      # accounts of this SRP from its own backup-and-sync, and the public test seed is shared, so on
+      # a runner where that sync lands the wallet reports names like "dev1" and "personal" instead of
+      # the ones walletwright set. It still runs locally. See plans/031 for the follow-up.
+      - run: |
+          pnpm --filter demo exec playwright test \
+            --grep-invert "Solflare|Slush|add, rename, and switch accounts"
       # Playwright writes a page snapshot per failure. Without it a red run here can only be read
       # through the log, which says what timed out but not what the wallet was showing at the time.
       - if: failure()

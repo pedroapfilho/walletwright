@@ -186,18 +186,22 @@ Each item below cost real debugging time. Don't "simplify" them away.
    `internal/launch.ts` and `internal/cache.ts`. Second, **whether a headless approval window
    surfaces as a page is per-wallet, so probe before assuming**: MetaMask's is created (the request
    does reach the wallet) but never exposed, so `findNotificationPopup` polls forever, while
-   Phantom's does surface. `findApproval` (`internal/controller.ts`) therefore probes for a spawned
-   window for 5s first and only then opens the wallet's `notificationPage` itself
-   (`openNotificationPage` in `internal/utils.ts`), which reaches the very same pending approval.
-   Skipping that probe on the theory that headless never spawns breaks Phantom: its request stays in
-   the window nobody drove, and the dapp hangs. The engine closes only the page it opened itself
-   (`Approval.owned`); closing a wallet-spawned window early can abort the request instead.
-   Readiness of an engine-opened page is "the wallet routed it away from the entry URL", not "a
-   button is visible": an idle `notification.html` renders a button of its own. Routing has been
-   measured at up to 11s on a cold MV3 worker locally and far slower on a loaded CI runner, hence
-   the 60s budget for that path even when the approval is optional. Both routes are watched by one
-   poll rather than one-then-the-other, because a window that surfaces late (or a page that routes
-   late) otherwise falls outside its own slice of the budget and the dapp hangs with no approval.
+   Phantom's does surface. `awaitApproval` (`internal/utils.ts`) therefore watches both in one poll:
+   the wallet's window, and the `notificationPage` it opens itself after a 5s grace, which reaches
+   the very same pending approval. Searching one _then_ the other, each with its own slice of the
+   budget, is what broke the first CI run: whichever route arrived outside its slice was missed and
+   the dapp hung. Skipping the wallet's window entirely breaks Phantom the same way, from the other
+   side. The engine closes only the page it opened itself (`Approval.owned`); closing a
+   wallet-spawned window early can abort the request instead.
+   **Readiness is per-route.** For the engine's own page it is "the wallet routed it away from the
+   entry URL", because an idle `notification.html` renders a button of its own; for a spawned window
+   a rendered button is enough, because the window only exists when a request is pending. Applying
+   the stricter rule to both breaks Phantom, whose popup sits on that same entry URL.
+   **Budgets are the CI story.** Routing was measured at up to 11s locally and far slower on a
+   GitHub runner (roughly 4x on everything), so that path gets 60s even when the approval is
+   optional, and MetaMask's confirm click gets 45s: the engine hands the popup over as soon as it
+   renders _a_ button, which on that runner is well before the footer exists, and a 15s click budget
+   missed every single approval. Give a wallet suite a Playwright `timeout` of 300s to match.
    Verified headless: MetaMask (all 12 demo specs), Phantom, Rabby. Headed-only: Solflare (it
    answers a headless connect with "Connection rejected" in ~2s, before any approval UI exists, with
    or without the engine's tab) and Slush (opening `index.html?isPopup=1` in a tab drops the query
@@ -277,6 +281,12 @@ Each item below cost real debugging time. Don't "simplify" them away.
     (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
     required popups wait 30s, and `findNotificationPopup` returns a popup only once a button is
     visible, since the window opens as a bare shell and routes later.
+21. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
+    account names keyed to the seed, and the public test seed is used by thousands, so on a network
+    where that sync lands the wallet reports names like `dev1` and `personal` in place of
+    `Account 2` and of whatever `accounts.rename` just set. It shows up as a naming assertion that
+    passes locally and fails on CI, not as an error. `add, rename, and switch accounts` is excluded
+    from the E2E gate for this; a real fix means stopping that sync for the test profile.
 
 ## Conventions
 

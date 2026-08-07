@@ -11,7 +11,7 @@ exposed as a page (MetaMask's is not; Phantom's is), leaving nothing to poll for
 opens the wallet's new `WalletDefinition.notificationPage` itself, which lands on the same pending
 request, and closes that page once the approval is settled. Both routes are watched by one poll, and
 that path waits up to 60s, because a loaded CI runner routes an approval far slower than a developer
-machine; give a wallet suite a Playwright `timeout` of at least `240_000` to match.
+machine; give a wallet suite a Playwright `timeout` of at least `300_000` to match.
 
 Verified end-to-end headless for MetaMask, Phantom, and Rabby. Solflare answers a headless connect
 with `Connection rejected` before any approval UI exists, and Slush has no verified flow, so both

@@ -15,10 +15,9 @@ export default defineConfig({
   reporter: "line",
   retries: 2,
   testDir: "./tests",
-  // A single test can wait out two approvals, and walletwright gives an approval it has to open
-  // itself 60s, because a loaded CI runner routes the wallet's approval page far slower than a
-  // developer machine does.
-  timeout: 240_000,
+  // A single test can wait out two approvals, and on a loaded CI runner each one costs up to 60s to
+  // reach plus 45s for MetaMask to render the button that settles it.
+  timeout: 300_000,
   use: { baseURL: "http://localhost:3000", trace: "off" },
   webServer: {
     command: "pnpm dev",
