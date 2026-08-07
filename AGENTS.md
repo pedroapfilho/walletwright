@@ -280,8 +280,10 @@ Each item below cost real debugging time. Don't "simplify" them away.
 21. **MetaMask's Solana connect does not bind to its popup on a GitHub runner.** The window opens and
     renders the wallet home with a **disabled** `confirm-btn`, so the snap-routed request has nothing
     to confirm. It passes locally every time, its reject sibling passes on CI, and every other
-    MetaMask spec passes on CI, so it is excluded from the E2E gate as a MetaMask-on-CI problem. The
-    first thing to check is whether the cached profile has a Solana account at all on that hardware.
+    MetaMask spec passes on CI, so it is excluded from the E2E gate as a MetaMask-on-CI problem. A
+    missing Solana account is ruled out: the failure snapshot lists Solana in the token list with a
+    balance. What is still unknown is whether the popup routed to the request and rendered the wrong
+    thing, or never routed at all, which needs the popup's URL captured next to the snapshot.
 22. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
     account names keyed to the seed, and the public test seed is used by thousands, so on a network
     where that sync lands the wallet reports names like `dev1` and `personal` in place of

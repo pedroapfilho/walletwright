@@ -124,9 +124,11 @@ headless problem rather than anything walletwright drives.
   followed showed `Account 1` again and went from 5 failures in 26m to 1 in 7.4m. Cutting the auth
   stack around it as well (`authentication`, `oidc`) was too broad and has been narrowed back.
 - **MetaMask's Solana connect on a GitHub runner.** Its popup renders home with a disabled Connect
-  footer. Worth checking whether the cached profile even has a Solana account on that hardware: it is
-  derived through a snap after import, and `buildCache` may close the browser before that lands on a
-  slow machine, which would leave the connect screen with nothing to select and its button disabled.
+  footer. A missing Solana account is **ruled out**: the failure snapshot lists Solana in the token
+  list with a balance, so the cached profile derived one. So the account is there and the request
+  still does not bind to the window. Next probe, and it needs a CI round: dump the popup's URL
+  alongside the snapshot, to tell "routed to the request and rendered wrong" from "never routed at
+  all". Everything so far has been inferred from the rendering alone.
 - Drop Slush's `prepareContext` stub once `api.slush.app` answers automated requests again.
 - Solflare headless would need to be understood from Solflare's side (why the immediate rejection);
   nothing in the engine changes the outcome.
