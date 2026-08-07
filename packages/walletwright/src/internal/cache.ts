@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import type { WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
+import { extensionContextOptions } from "./chromium";
 import { DEFAULT_CACHE_DIR, extensionIdFromPath, extensionStateDir, profileKey } from "./utils";
 import { gotoWithRetry, sleep, waitUntilOrThrow } from "./wait";
 
@@ -39,7 +40,7 @@ const hasPersistedState = async (profileDir: string, extensionId: string): Promi
  * launch a ready-to-unlock wallet instead of re-running onboarding each time. Returns the profile
  * directory. Idempotent per (wallet, version, seed, password).
  *
- * `headless` only affects this build step (onboarding has no approval popups). Tests must run headed.
+ * `headless` only affects this build step; the tests choose their own mode via `launchWallet`.
  */
 export const buildCache = async (
   setup: WalletSetup,
@@ -53,16 +54,12 @@ export const buildCache = async (
   await rm(profileDir, { force: true, recursive: true });
   await mkdir(profileDir, { recursive: true });
 
-  const args = [
-    `--disable-extensions-except=${extensionPath}`,
-    `--load-extension=${extensionPath}`,
-  ];
-  if (options.headless === true) {
-    args.push("--headless=new");
-  }
-
-  const context = await chromium.launchPersistentContext(profileDir, { args, headless: false });
+  const context = await chromium.launchPersistentContext(
+    profileDir,
+    extensionContextOptions(extensionPath, options.headless === true),
+  );
   try {
+    await definition.prepareContext?.(context);
     const extensionId = extensionIdFromPath(extensionPath);
 
     // Navigate to the onboarding entry ourselves (the extension's auto-opened tab is unreliable,

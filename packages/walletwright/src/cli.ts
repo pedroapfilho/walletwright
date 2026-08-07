@@ -22,7 +22,7 @@ Options:
   --password <pw>    wallet password
   --version <v>      pin an extension version
   --cache-dir <dir>  cache directory (default: .walletwright)
-  --headless         build the cache headless (onboarding only; tests still need headed)
+  --headless         build the cache headless
   -h, --help         show this help
 
 --seed and --password are visible in shell history and process lists when passed as flags; use

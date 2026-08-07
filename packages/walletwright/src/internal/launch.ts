@@ -8,6 +8,7 @@ import { type BrowserContext, chromium, type Page } from "@playwright/test";
 import type { Wallet, WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
+import { extensionContextOptions } from "./chromium";
 import { createWallet } from "./controller";
 import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey } from "./utils";
 
@@ -15,12 +16,6 @@ export type LaunchedWallet = {
   context: BrowserContext;
   wallet: Wallet;
 };
-
-const launchArgs = (extensionPath: string): Array<string> => [
-  `--disable-extensions-except=${extensionPath}`,
-  // Required: current Chromium does NOT auto-load the cached unpacked extension without this.
-  `--load-extension=${extensionPath}`,
-];
 
 /**
  * Drop the tabs nobody drives: Chromium's initial `about:blank` and the extension's own auto-opened
@@ -45,11 +40,22 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
 
 /**
  * Launch a fresh persistent context from the onboarded cache and return an unlocked wallet
- * controller. Runs headed, extension approval popups don't open in headless Chromium (use a
- * virtual display such as xvfb on CI). Outside Playwright fixtures, `context.close()` is yours.
+ * controller. Headed by default; `headless` needs the wallet to declare `headlessApprovals`, since
+ * some wallets create an approval window headless that is never exposed as a page. Outside
+ * Playwright fixtures, `context.close()` is yours.
  */
-export const launchWallet = async (setup: WalletSetup): Promise<LaunchedWallet> => {
+export const launchWallet = async (
+  setup: WalletSetup,
+  { headless = false }: { headless?: boolean } = {},
+): Promise<LaunchedWallet> => {
   const definition = wallets[setup.wallet];
+  // A wallet whose approval window never surfaces headless reaches no approval at all, and would
+  // fail 30s later at the first connect with nothing pointing back at the mode as the cause.
+  if (headless && definition.headlessApprovals !== true) {
+    throw new Error(
+      `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
+    );
+  }
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
   const profileDir = path.join(cacheDir, profileKey(setup));
   if (!existsSync(profileDir)) {
@@ -64,10 +70,10 @@ export const launchWallet = async (setup: WalletSetup): Promise<LaunchedWallet> 
   const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
   await cp(profileDir, runDir, { recursive: true });
 
-  const context = await chromium.launchPersistentContext(runDir, {
-    args: launchArgs(extensionPath),
-    headless: false,
-  });
+  const context = await chromium.launchPersistentContext(
+    runDir,
+    extensionContextOptions(extensionPath, headless),
+  );
 
   // The throwaway profile copy is only needed while the context is live; drop it on close so a long
   // suite (workers x specs x retries) doesn't fill the temp dir with profile copies.
@@ -78,6 +84,7 @@ export const launchWallet = async (setup: WalletSetup): Promise<LaunchedWallet> 
   const extensionId = extensionIdFromPath(extensionPath);
 
   try {
+    await definition.prepareContext?.(context);
     // Kept open (not closed after unlock): the settings/network/account actions drive this page.
     const home = await definition.reachUnlockScreen(context, extensionId);
     await definition.unlock(home, setup.password);
@@ -85,7 +92,13 @@ export const launchWallet = async (setup: WalletSetup): Promise<LaunchedWallet> 
 
     return {
       context,
-      wallet: createWallet({ context, definition, extensionId, home, password: setup.password }),
+      wallet: createWallet({
+        context,
+        definition,
+        extensionId,
+        home,
+        password: setup.password,
+      }),
     };
   } catch (error) {
     // Fires the context.on("close") handler above, which removes the throwaway runDir.

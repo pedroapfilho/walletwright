@@ -1,21 +1,58 @@
 ---
 title: Continuous integration
-description: Run walletwright tests headed on CI with a virtual display, and cache the downloaded extensions between runs.
+description: Run walletwright tests on CI, headless where the wallet supports it, and cache the downloaded extensions between runs.
 ---
 
-Approval popups only open in headed Chromium. A headless run loads the extension but never shows the
-connect/sign popup, so the tests hang. On a headless CI machine, give the browser a virtual display.
+Phantom and Rabby run headless anywhere, including on a GitHub-hosted runner. MetaMask, Solflare and
+Slush need a real window for their approvals, so a mixed suite is simplest to run under a virtual
+display, which is what this project's own gate does. Cache building is headless for every wallet
+except on a GitHub runner, where MetaMask must be onboarded under the display too.
+
+## Headless
+
+Nothing to configure: Playwright defaults to headless and the fixtures pass that through to the
+wallet. walletwright launches Playwright's bundled Chromium through the `chromium` channel, because
+the default headless build is the headless _shell_, which cannot load an extension at all.
+
+```bash
+pnpm exec playwright install chromium
+pnpm exec tsx scripts/build-cache.ts
+pnpm exec playwright test
+```
+
+A wallet with no verified headless approval flow throws at launch instead of hanging, so a mistake
+here is loud.
+
+<Callout type="warn">
+  Only Phantom and Rabby declare headless support, because only their approval windows surface as a
+  page that way. `launchWallet` throws by name for the others rather than hanging. MetaMask also has
+  documented compatibility problems running headless on GitHub Actions, so onboard it under the
+  display there as well.
+</Callout>
 
 ## Headed via a virtual display
 
-On Linux CI, wrap the test command in `xvfb-run`:
+The simplest thing that covers every wallet on Linux CI: install `xvfb`, default the suite to
+headed, and give the display a real size, since a popup that opens partly off it cannot be clicked.
 
-```bash
-xvfb-run --auto-servernum pnpm exec playwright test
+```ts
+// playwright.config.ts
+use: {
+  headless: false;
+}
 ```
 
-`buildCache()` itself can run headless, since onboarding has no popups, but the tests that connect and
-sign must be headed.
+```bash
+sudo apt-get install -y xvfb
+xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm exec playwright test
+```
+
+Specs for a wallet that supports headless can opt back in, and `xvfb-run` is harmless for them:
+
+```ts
+// tests/phantom.spec.ts
+test.use({ headless: true });
+```
 
 ## GitHub Actions
 
@@ -35,9 +72,16 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec tsx scripts/build-cache.ts
-      - run: xvfb-run --auto-servernum pnpm exec playwright test
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: xvfb-run --auto-servernum pnpm exec tsx scripts/build-cache.ts
+      - run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            pnpm exec playwright test
 ```
+
+Onboard under the display too, not headless. MetaMask has documented compatibility problems running
+headless on GitHub Actions, and a profile onboarded that way stays broken: its `notification.html`
+then renders the wallet home instead of the pending request, even for specs that run headed.
 
 ## Caching between runs
 
@@ -59,12 +103,15 @@ The specs that submit a transaction or switch networks also need a local chain o
 with chain id `31337`: start Foundry's `anvil` directly, or via `createLocalChain()` from
 `@walletwright/core/chain` (which spawns the same binary and needs the optional `prool` peer).
 Without a chain these specs fail with slow timeouts rather than skipping, so either add an anvil step
-before
-the test run or exclude them, for example
-`xvfb-run --auto-servernum pnpm exec playwright test --grep-invert "network|transaction"`.
+before the test run or exclude them, for example
+`pnpm exec playwright test --grep-invert "network|transaction"`.
 
 ## Flakiness
 
 MV3 service workers can be timing-sensitive on cold launches. Set Playwright `retries` (2 is plenty)
-and keep `workers: 1` for wallet suites so several browsers don't contend for the display.
-walletwright already reloads patiently while it reaches the unlock screen.
+and keep `workers: 1` for wallet suites so several browsers don't contend for the machine.
+walletwright already reloads patiently while it reaches the unlock screen, waits up to 30 seconds for
+a required approval to appear, and places that window on screen before clicking it. A CI runner is
+several times slower than a developer machine, so give a wallet suite a Playwright `timeout` of at
+least `300_000`: a single test can wait out two approvals, and a test timeout cuts the wait short
+mid-approval.

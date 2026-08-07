@@ -12,10 +12,10 @@ in three phases: build a cache, launch from it, and drive the popups.
    onboarding page, run the import-from-seed flow, close the browser, then apply any post-close fix.
    The onboarded profile is written to `.walletwright/<hash>`.
 2. **Launch** (`createWalletFixtures` or `launchWallet`). Copy the cached profile to a throwaway
-   directory, launch headed with the extension, resolve the extension id, reach the unlock screen, and
+   directory, launch with the extension, resolve the extension id, reach the unlock screen, and
    unlock. This returns a `Wallet`.
-3. **Drive** (the `wallet` fixture). For each `connectToDapp` or `confirmSignature`, find the wallet's
-   approval popup and click its confirm button.
+3. **Drive** (the `wallet` fixture). For each `connectToDapp` or `confirmSignature`, wait for the
+   approval window the wallet opens, place it on screen, and click the confirm button.
 
 ## The WalletDefinition
 
@@ -46,8 +46,11 @@ The optional `actions` group is how a wallet declares capabilities beyond connec
 
 Each of these is load-bearing. Drop one and the wallet either drives the dapp or hangs forever.
 
-- **Headed only.** Connect/sign popups don't open in headless Chromium. Cache building can be
-  headless; the tests can't. See [Continuous integration](/continuous-integration).
+- **Headless needs the `chromium` channel, and works per wallet.** Playwright's default headless
+  build cannot load an extension at all, so walletwright launches the `chromium` channel (the full
+  browser). Even then, a wallet's approval window may be created without ever being exposed as a
+  page (MetaMask's is not; Phantom's and Rabby's are), so only those two run headless and
+  `launchWallet` refuses the others by name. See [Continuous integration](/continuous-integration).
 - **The extension id is derived, not queried.** `chrome://extensions` is blocked headless and the MV3
   service worker starts lazily, so querying races. walletwright computes the id from the manifest's
   public `key` if present (Phantom uses its fixed Web Store id) or from the absolute load path

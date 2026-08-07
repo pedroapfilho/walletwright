@@ -2,11 +2,19 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
-import { DEFAULT_NOTIFICATION_MATCH, findNotificationPopup, hasNotificationPopup } from "./utils";
+import {
+  DEFAULT_NOTIFICATION_MATCH,
+  findNotificationPopup,
+  hasNotificationPopup,
+  placeApprovalWindow,
+} from "./utils";
 import { formatTimeout, waitUntil } from "./wait";
 
 const POPUP_CLOSE_TIMEOUT_MS = 15_000;
-
+/** Optional approvals keep a short wait: "no popup" is a normal outcome, and the wait is latency. */
+const OPTIONAL_POPUP_TIMEOUT_MS = 10_000;
+/** The MV3 service worker spawns a popup slowly once the wallet's own UI has been driven. */
+const REQUIRED_POPUP_TIMEOUT_MS = 30_000;
 type ResolveOptions = { optional?: boolean };
 
 type CreateWalletOptions = {
@@ -29,23 +37,47 @@ export const createWallet = ({
   const match = definition.notificationMatch ?? DEFAULT_NOTIFICATION_MATCH;
   const ctx: WalletActionContext = { context, extensionId, home, password };
 
+  /**
+   * Make the dapp the active tab. While an extension page holds that spot, MetaMask renders a new
+   * approval inline in it rather than opening a notification window, and the window that does open
+   * shows the wallet home instead of the request. The wallet's own page can end up fronted both
+   * after an action and after a previous approval settles.
+   */
+  const frontDapp = async (): Promise<void> => {
+    const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
+    await dapp?.bringToFront().catch(() => {});
+  };
+
+  /** Wait for the approval window the wallet opens for a pending request. */
+  const findApproval = (optional: boolean): Promise<Page | undefined> =>
+    findNotificationPopup({
+      approvalControls: definition.approvalControls,
+      context,
+      extensionId,
+      match,
+      timeoutMs: optional ? OPTIONAL_POPUP_TIMEOUT_MS : REQUIRED_POPUP_TIMEOUT_MS,
+    });
+
   /** Drive the pending approval popup with `settle`, then wait for it to close. */
   const resolvePopup = async (
     settle: (popup: Page) => Promise<void>,
     { optional = false }: ResolveOptions,
   ): Promise<void> => {
-    // Required popups get 30s: the MV3 service worker spawns them slowly after the wallet's own UI
-    // has been driven. Optional ones keep the short wait, since "no popup" is a normal outcome
-    // there (e.g. Phantom auto-approving a trusted site) and the extra wait would just be latency.
-    const find = () =>
-      findNotificationPopup(context, extensionId, match, optional ? 10_000 : 30_000);
+    await frontDapp();
+    const find = () => findApproval(optional);
     const popup = await find();
     if (!popup) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
       }
-      throw new Error("[walletwright] approval popup did not appear");
+      // Naming the open pages separates "the wallet never opened one" from "it opened one showing
+      // something other than the request", which look identical from the timeout alone.
+      const open = context.pages().map((page) => page.url());
+      throw new Error(
+        `[walletwright] approval popup did not appear. Open pages: ${open.join(" | ") || "none"}`,
+      );
     }
+    await placeApprovalWindow(popup); // it can open partly off a small or virtual display
     try {
       await settle(popup);
     } catch (error) {
@@ -91,9 +123,8 @@ export const createWallet = ({
    * what has been driven against the real extension, so an undeclared action is a real gap rather
    * than something to swallow. Extra args (e.g. a network config) forward after the context.
    *
-   * After the action, focus returns to the dapp: actions drive the wallet's own page via
-   * `bringToFront`, and while an extension page stays the active tab, MetaMask renders new
-   * approvals inline there instead of spawning the `notification.html` popup the engine drives.
+   * After the action, focus returns to the dapp (see `frontDapp`), since actions drive the wallet's
+   * own page via `bringToFront`.
    */
   const action =
     <A extends ReadonlyArray<unknown>>(
@@ -111,8 +142,7 @@ export const createWallet = ({
       // hand focus back to the dapp below so new approvals open as popups instead of inline.
       await home.bringToFront().catch(() => {});
       await fn(ctx, ...args);
-      const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
-      await dapp?.bringToFront().catch(() => {});
+      await frontDapp();
     };
 
   // A capability is declared once, on the *Api types in types.ts: WalletActions derives from those,
