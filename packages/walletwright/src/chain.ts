@@ -1,9 +1,9 @@
 import { Instance } from "prool";
 
 /**
- * A running local EVM node for transaction and network tests. `walletwright/chain` is a separate
- * entry point: it needs `prool` and Foundry's `anvil` binary, which the core connect/sign flow does
- * not, so it stays out of the default install.
+ * A running local EVM node for transaction and network tests. `@walletwright/core/chain` is a
+ * separate entry point: it needs `prool` and Foundry's `anvil` binary, which the core connect/sign
+ * flow does not, so it stays out of the default install.
  */
 export type LocalChain = {
   chainId: number;

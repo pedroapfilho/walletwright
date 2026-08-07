@@ -1,5 +1,5 @@
 ---
-"walletwright": patch
+"@walletwright/core": patch
 ---
 
 Fix the Slush cache build. Slush's own backend answers an automated browser with a Cloudflare 403

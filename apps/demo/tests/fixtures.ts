@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-import { createWalletFixtures } from "walletwright";
-import type { Wallet } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
+import type { Wallet } from "@walletwright/core";
 
 import {
   metamaskSetup,

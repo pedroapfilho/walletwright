@@ -3,8 +3,8 @@ import { connectMetamask, metamaskTest } from "./fixtures";
 const test = metamaskTest;
 const { expect } = test;
 
-// Needs the local chain on 127.0.0.1:8545 (see `walletwright/chain`): the sender must hold funds
-// and MetaMask reads balance, nonce, and gas off the chain to render the confirmation.
+// Needs the local chain on 127.0.0.1:8545 (see `@walletwright/core/chain`): the sender must hold
+// funds and MetaMask reads balance, nonce, and gas off the chain to render the confirmation.
 const RPC_URL = "http://127.0.0.1:8545";
 
 const receiptStatus = async (hash: string): Promise<string | undefined> => {

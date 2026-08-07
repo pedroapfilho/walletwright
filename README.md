@@ -1,13 +1,13 @@
 # walletwright
 
 A monorepo for [`walletwright`](./packages/walletwright), Playwright wallet automation for MetaMask
-(EVM + Solana), Phantom (EVM + Solana), and Slush (Sui).
+(EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), Solflare (Solana), and Slush (Sui).
 
 ## Packages
 
 | Package                                          | Description                                       |
 | ------------------------------------------------ | ------------------------------------------------- |
-| [`walletwright`](./packages/walletwright)        | The library, published to npm.                    |
+| [`@walletwright/core`](./packages/walletwright)  | The library, published to npm.                    |
 | [`apps/demo`](./apps/demo)                       | A Vite dapp and Playwright tests for the wallets. |
 | [`apps/docs`](./apps/docs)                       | The documentation site (Fumadocs on Next).        |
 | [`apps/landing`](./apps/landing)                 | The landing page (Next and Tailwind).             |
@@ -35,8 +35,8 @@ pnpm test:e2e      # connect and sign on each wallet
 
 The network and transaction specs additionally need a local chain on `127.0.0.1:8545` (chain id
 `31337`) seeded with the public Foundry test mnemonic: start Foundry's `anvil` directly, or via
-`createLocalChain()` from `walletwright/chain` (which spawns the same binary and needs the optional
-`prool` peer).
+`createLocalChain()` from `@walletwright/core/chain` (which spawns the same binary and needs the
+optional `prool` peer).
 
 ## Docs and context
 

@@ -1,5 +1,5 @@
 ---
-"walletwright": patch
+"@walletwright/core": patch
 ---
 
 Declare each wallet capability once. `AccountActions`, `NetworkActions` and `SettingsActions` are now

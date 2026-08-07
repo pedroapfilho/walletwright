@@ -1,5 +1,5 @@
 ---
-"walletwright": minor
+"@walletwright/core": minor
 ---
 
 Run wallet suites headless. `launchWallet` takes `{ headless }` and `createWalletFixtures` passes

@@ -3,7 +3,7 @@ title: API reference
 description: "Every walletwright export: buildCache, createWalletFixtures, launchWallet, the Wallet fixture, the CLI, and the types."
 ---
 
-The core API is exported from the package root; `walletwright/chain`, `walletwright/mock`, and `walletwright/mock-standard` are optional subpath entry points (documented below; `chain` and `mock` each need an optional peer, `mock-standard` needs none).
+The core API is exported from the package root; `@walletwright/core/chain`, `@walletwright/core/mock`, and `@walletwright/core/mock-standard` are optional subpath entry points (documented below; `chain` and `mock` each need an optional peer, `mock-standard` needs none).
 
 ```ts
 import {
@@ -17,7 +17,7 @@ import {
   type WalletSetup,
   type WalletKind,
   type WalletDefinition,
-} from "walletwright";
+} from "@walletwright/core";
 ```
 
 ## `WalletSetup`
@@ -26,7 +26,7 @@ The wallet to import and the credentials to unlock it.
 
 ```ts
 type Ecosystem = "evm" | "svm" | "sui" | "dot" | "btc";
-type WalletKind = "metamask" | "phantom" | "slush";
+type WalletKind = "metamask" | "phantom" | "rabby" | "slush" | "solflare";
 
 type WalletSetup = {
   wallet: WalletKind;
@@ -134,9 +134,9 @@ declared throws rather than silently doing nothing:
 [walletwright] Slush does not support settings.lock()
 ```
 
-Today `reject` is verified on MetaMask, Phantom, and Slush, and `settings`, `network.add`, and
-`accounts` on MetaMask. Slush drives connect, sign, and reject end to end but declares none of the
-other optional capabilities yet, so calling those on Slush throws.
+Every wallet declares `reject`. `settings`, `network.add`, and `accounts` are MetaMask-only today:
+Phantom, Rabby, Solflare, and Slush drive connect, sign, and reject end to end but declare none of
+the other optional capabilities yet, so calling those on them throws.
 
 `network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
 and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls
@@ -166,14 +166,14 @@ MetaMask, Solflare and Slush throw at launch with a named error; run those heade
 `createWalletFixtures` passes Playwright's own `headless` option through, so a fixture-based suite
 sets the mode in `playwright.config.ts` or with `--headed` rather than here.
 
-## `walletwright/chain`
+## `@walletwright/core/chain`
 
 A local EVM node for network and transaction tests, as a separate entry point so the core
 connect/sign flow doesn't depend on it. It needs the `prool` package (optional peer) and Foundry's
 `anvil` binary on `PATH`.
 
 ```ts
-import { createLocalChain } from "walletwright/chain";
+import { createLocalChain } from "@walletwright/core/chain";
 
 const chain = await createLocalChain(); // { chainId: 31337, rpcUrl: "http://127.0.0.1:8545" }
 // … run tests against it …
@@ -190,7 +190,7 @@ await chain.stop();
 The default mnemonic pre-funds `0xf39F…92266` with 10000 ETH, the same account the MetaMask
 `WalletSetup` in these docs imports, so specs can assert against it with no extra funding step.
 
-## `walletwright/mock`
+## `@walletwright/core/mock`
 
 A headless injected-wallet fake for dapp tests that don't need a real extension, so they run in
 plain (even headless) Chromium in a second or two. It announces itself over EIP-6963, answers the
@@ -199,7 +199,7 @@ EIP-1193 requests a connect/sign flow makes, and signs with a real key so signat
 
 ```ts
 import { test, expect } from "@playwright/test";
-import { installMockWallet } from "walletwright/mock";
+import { installMockWallet } from "@walletwright/core/mock";
 
 test("connect and sign, no extension", async ({ page }) => {
   const address = await installMockWallet(page.context());
@@ -219,9 +219,9 @@ test("connect and sign, no extension", async ({ page }) => {
 It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_sign`, and no-ops the
 chain-switch methods. It is a connect/sign stand-in, not an EVM: it does not execute transactions.
 For anything real (transactions, balances, receipts), drive an actual extension against
-`walletwright/chain`.
+`@walletwright/core/chain`.
 
-## `walletwright/mock-standard`
+## `@walletwright/core/mock-standard`
 
 A headless Wallet-Standard fake for Solana dapp tests that don't need a real extension, so they run
 in plain (even headless) Chromium. It registers over the Wallet-Standard protocol, answers
@@ -231,7 +231,7 @@ context or a single page.
 
 ```ts
 import { test, expect } from "@playwright/test";
-import { installMockStandardWallet } from "walletwright/mock-standard";
+import { installMockStandardWallet } from "@walletwright/core/mock-standard";
 
 test("connect and sign a Solana dapp, no extension", async ({ page }) => {
   const { address } = await installMockStandardWallet(page, { ecosystem: "svm" });
@@ -255,14 +255,15 @@ connect/sign stand-in, not a chain; drive a real extension for anything that tou
 ## `wallets`
 
 The registry of built-in `WalletDefinition`s, keyed by `WalletKind` (`"metamask"`, `"phantom"`,
-`"slush"`). Useful for inspection or extension.
+`"rabby"`, `"slush"`, `"solflare"`). Useful for inspection or extension.
 
 ## `walletKindsByEcosystem(ecosystem)`
 
 The wallet kinds that can drive a given `Ecosystem`.
 
 ```ts
-walletKindsByEcosystem("evm"); // ["metamask", "phantom"]
+walletKindsByEcosystem("evm"); // ["metamask", "phantom", "rabby"]
+walletKindsByEcosystem("svm"); // ["metamask", "phantom", "solflare"]
 walletKindsByEcosystem("sui"); // ["slush"]
 ```
 
@@ -273,12 +274,12 @@ walletwright cache --setup ./wallet-setup.ts
 walletwright cache --wallet metamask --seed "YOUR_SEED_HERE" --password "YOUR_PASSWORD_HERE"
 ```
 
-| Flag                | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `--setup <file>`    | A module whose default export is a `WalletSetup`. |
-| `--wallet <kind>`   | `metamask`, `phantom`, or `slush`.                |
-| `--seed <phrase>`   | Seed phrase to import.                            |
-| `--password <pw>`   | Wallet password.                                  |
-| `--version <v>`     | Pin an extension version.                         |
-| `--cache-dir <dir>` | Cache directory (default `.walletwright`).        |
-| `--headless`        | Build the cache headless.                         |
+| Flag                | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `--setup <file>`    | A module whose default export is a `WalletSetup`.       |
+| `--wallet <kind>`   | `metamask`, `phantom`, `rabby`, `solflare`, or `slush`. |
+| `--seed <phrase>`   | Seed phrase to import.                                  |
+| `--password <pw>`   | Wallet password.                                        |
+| `--version <v>`     | Pin an extension version.                               |
+| `--cache-dir <dir>` | Cache directory (default `.walletwright`).              |
+| `--headless`        | Build the cache headless.                               |

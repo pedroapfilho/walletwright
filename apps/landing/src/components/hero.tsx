@@ -3,7 +3,7 @@ import { CodeBlock } from "@/components/code-block";
 import { InstallCommand } from "@/components/install-command";
 import { GETTING_STARTED_URL, GITHUB_URL } from "@/lib/site";
 
-const HERO_CODE = `import { createWalletFixtures } from "walletwright";
+const HERO_CODE = `import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "./wallet-setup";
 
 const test = createWalletFixtures(metamask);

@@ -4,7 +4,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { GETTING_STARTED_URL } from "@/lib/site";
 
 const SETUP_CODE = `// wallet-setup.ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",

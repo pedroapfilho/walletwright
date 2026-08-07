@@ -1,4 +1,4 @@
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamaskSetup: WalletSetup = {
   password: "Tester@1234",

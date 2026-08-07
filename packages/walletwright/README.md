@@ -14,7 +14,7 @@ It connects and signs in the real browser extensions.
 ## Install
 
 ```sh
-pnpm add -D walletwright @playwright/test
+pnpm add -D @walletwright/core @playwright/test
 pnpm exec playwright install chromium
 ```
 
@@ -24,7 +24,7 @@ pnpm exec playwright install chromium
 
 ```ts
 // wallet-setup.ts
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",
@@ -46,7 +46,7 @@ walletwright cache --setup ./wallet-setup.ts
 Or call it from code, which works well as a Playwright global setup:
 
 ```ts
-import { buildCache } from "walletwright";
+import { buildCache } from "@walletwright/core";
 import { metamask } from "./wallet-setup.ts";
 
 await buildCache(metamask);
@@ -55,7 +55,7 @@ await buildCache(metamask);
 ## 3. Write a test
 
 ```ts
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "./wallet-setup.ts";
 
 const test = createWalletFixtures(metamask);
@@ -89,7 +89,7 @@ The same two calls drive every chain. A Phantom test can connect and sign on
 ## Without fixtures
 
 ```ts
-import { launchWallet } from "walletwright";
+import { launchWallet } from "@walletwright/core";
 
 const { context, wallet } = await launchWallet(metamask);
 const page = await context.newPage();

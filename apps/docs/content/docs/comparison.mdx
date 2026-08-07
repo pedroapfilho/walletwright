@@ -20,9 +20,9 @@ more surface.
 | --------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Test runner           | plain `@playwright/test` (peer dependency, you own the version)                                            | Playwright and Cypress, with its own fixtures package per wallet                            |
 | Playwright version    | current (`>=1.48` peer range)                                                                              | pinned older (4.x targets 1.48)                                                             |
-| Wallet builds         | current MetaMask 13.x, Phantom, Slush                                                                      | the versions its selectors target                                                           |
+| Wallet builds         | current MetaMask 13.x, Phantom, Rabby, Solflare, Slush                                                     | the versions its selectors target                                                           |
 | Ecosystems            | EVM, Solana, Sui                                                                                           | EVM, Solana                                                                                 |
-| Wallets               | MetaMask (EVM + Solana), Phantom (EVM + Solana), Slush (Sui)                                               | MetaMask, Phantom, EVM wallet mock                                                          |
+| Wallets               | MetaMask (EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), Solflare (Solana), Slush (Sui)               | MetaMask, Phantom, EVM wallet mock                                                          |
 | Connect / sign        | yes, verified per wallet                                                                                   | yes                                                                                         |
 | Reject flows          | `reject`, `rejectConnection`, `rejectSignature`, `rejectTransaction`                                       | `reject*` for signatures, transactions, networks, token permissions                         |
 | Transactions          | `confirmTransaction` / `rejectTransaction`                                                                 | `confirmTransaction({ gasSetting })` with gas presets, `confirmTransactionAndWaitForMining` |
@@ -31,8 +31,8 @@ more surface.
 | Tokens                | roadmap                                                                                                    | `approveTokenPermission({ spendLimit })`, `addNewToken`                                     |
 | Lock / unlock         | `settings.lock` / `settings.unlock`                                                                        | `lock` / `unlock`                                                                           |
 | Undeclared capability | throws `[walletwright] <wallet> does not support <action>()`                                               | method exists per wallet class                                                              |
-| Local chain           | `walletwright/chain` (anvil via prool, optional peer)                                                      | Anvil fixtures plus `deployToken` / `deployAndMintERC1155` helpers                          |
-| Provider mock         | `walletwright/mock`: EIP-6963 announce, signs with a real key so signatures verify                         | `ethereum-wallet-mock` package                                                              |
+| Local chain           | `@walletwright/core/chain` (anvil via prool, optional peer)                                                | Anvil fixtures plus `deployToken` / `deployAndMintERC1155` helpers                          |
+| Provider mock         | `@walletwright/core/mock`: EIP-6963 announce, signs with a real key so signatures verify                   | `ethereum-wallet-mock` package                                                              |
 | Cache identity        | hash of `(wallet, version, seed, password)`                                                                | hash of the setup function's source, so custom setup steps cache too                        |
 | Adding a wallet       | one `WalletDefinition` object in one registry                                                              | a new package with its own page objects and fixtures                                        |
 | Extension id          | derived from the manifest key or load path (no browser query to race)                                      | queried from the browser                                                                    |
@@ -49,7 +49,7 @@ Connect and sign against MetaMask.
 
 ```ts
 // walletwright
-import { createWalletFixtures } from "walletwright";
+import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "./wallet-setup";
 
 const test = createWalletFixtures(metamask);
@@ -97,7 +97,7 @@ construct the wallet page object per test.
 
 ```ts
 // walletwright: wallet-setup.ts, a plain data object
-import type { WalletSetup } from "walletwright";
+import type { WalletSetup } from "@walletwright/core";
 
 export const metamask: WalletSetup = {
   wallet: "metamask",
@@ -154,8 +154,8 @@ For a suite moving from Synpress's MetaMask class to the walletwright `wallet` f
 | `metamask.lock()` / `unlock()`                | `wallet.settings.lock()` / `wallet.settings.unlock()`                                                                                                                                                |
 | `metamask.approveTokenPermission(...)`        | not yet; on the roadmap                                                                                                                                                                              |
 | `connectToDapp(accounts)` (account selection) | not yet; connect approves as-is                                                                                                                                                                      |
-| Anvil fixtures / `deployToken`                | `createLocalChain()` from `walletwright/chain`; no deploy helper yet                                                                                                                                 |
-| `ethereum-wallet-mock`                        | `installMockWallet()` from `walletwright/mock`                                                                                                                                                       |
+| Anvil fixtures / `deployToken`                | `createLocalChain()` from `@walletwright/core/chain`; no deploy helper yet                                                                                                                           |
+| `ethereum-wallet-mock`                        | `installMockWallet()` from `@walletwright/core/mock`                                                                                                                                                 |
 | Cypress commands (`cy.*`)                     | none by design; walletwright is Playwright-only                                                                                                                                                      |
 
 ## When to pick which

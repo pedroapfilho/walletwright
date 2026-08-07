@@ -17,7 +17,7 @@ patched dependencies.
 
 ```
 packages/
-  walletwright/        the library (npm: `walletwright`)
+  walletwright/        the library (npm: `@walletwright/core`)
     src/index.ts         public API surface
     src/types.ts         WalletSetup, WalletDefinition, Wallet
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures

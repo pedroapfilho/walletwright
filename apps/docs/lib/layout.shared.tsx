@@ -17,7 +17,7 @@ export const baseOptions = (): BaseLayoutProps => ({
       external: true,
       text: "npm",
       type: "button",
-      url: "https://www.npmjs.com/package/walletwright",
+      url: "https://www.npmjs.com/package/@walletwright/core",
     },
   ],
   nav: {

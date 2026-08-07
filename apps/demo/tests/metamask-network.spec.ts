@@ -4,7 +4,7 @@ const test = metamaskTest;
 const { expect } = test;
 
 // These specs need the local chain running on 127.0.0.1:8545 with chain id 31337 (see
-// `walletwright/chain`). MetaMask validates a custom network's RPC before saving it.
+// `@walletwright/core/chain`). MetaMask validates a custom network's RPC before saving it.
 const LOCAL_CHAIN_HEX = "0x7a69";
 
 test("dapp-initiated add-and-switch via wallet_addEthereumChain", async ({ page, wallet }) => {
