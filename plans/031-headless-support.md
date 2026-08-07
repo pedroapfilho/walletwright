@@ -35,8 +35,9 @@ Measurements worth keeping:
   connect hang, because its request stayed in a window nothing drove.
 - Close only the page the engine opened. A wallet-spawned window closes itself once the approval
   registers, and closing it earlier can read as a dismissal.
-- Readiness of an engine-opened page is **"the URL left the entry"**, not "a button is visible": an
-  idle `notification.html` renders a button of its own and would pass the naive check forever.
+- Readiness of an engine-opened page is **"the wallet's own approval controls are on screen"**
+  (`WalletDefinition.approvalControls`). Neither weaker test survives contact with a real runner: an
+  idle `notification.html` renders buttons, and it does not stay on the entry URL either.
 - The page took **up to 11s** to route on a cold MV3 worker locally, and far longer on a GitHub
   runner, where every MetaMask approval missed a 30s budget and the whole suite ran 4x slower. Its
   budget is now 60s (`APPROVAL_PAGE_TIMEOUT_MS`), and the demo's Playwright `timeout` is 300s so a
@@ -50,7 +51,7 @@ Measurements worth keeping:
 
 | Wallet   | Headless | Evidence                                                                                                    |
 | -------- | -------- | ----------------------------------------------------------------------------------------------------------- |
-| MetaMask | yes      | all 12 demo specs (connect/sign, accounts, actions, solana, network, transaction)                           |
+| MetaMask | local    | all 12 demo specs on a developer machine; no approval ever appears on a GitHub runner                       |
 | Phantom  | yes      | `phantom.spec.ts`, `phantom-actions.spec.ts`                                                                |
 | Rabby    | yes      | `rabby.spec.ts`                                                                                             |
 | Solflare | no       | dapp gets `Connection rejected` ~2s after the click, with or without the engine's tab; Solflare's own doing |
@@ -88,14 +89,34 @@ run rather than guessed:
 Rule of thumb from this: the runner is roughly 4x slower than a developer machine, and a budget that
 has never been exercised near its limit locally is not evidence of anything.
 
+Neither budget was enough, and the third round is what showed why. With the page snapshots uploaded
+(added in round two, and worth every line), every MetaMask failure was waiting on **the wallet home
+screen**: account header, Buy/Swap/Send, a news carousel. An idle `notification.html` does not stay
+a bare shell on that runner, it renders home, so "the URL left the entry" accepted it. Readiness now
+asks the wallet (`WalletDefinition.approvalControls`), and with that in place MetaMask reaches the
+full 60s finding nothing at all: on a GitHub runner it surfaces no approval window and routes the
+engine's page to home. So **MetaMask headless is a developer-machine capability, not a
+GitHub-runner one**, and the E2E gate runs headed under `xvfb`, which covers all five wallets.
+
+What cost the most time here was iterating against a 40-minute feedback loop on a machine I could not
+reproduce. Two cheaper moves, in order: upload the artifacts _first_, and prefer the known-good
+fallback (`xvfb`) over a third round of budget guessing.
+
 ## Follow-ups
 
+- **MetaMask headless on a GitHub runner.** No approval window surfaces and the engine's page routes
+  to the wallet home, so nothing is there to drive. Unknown whether the request reaches the wallet at
+  all. Next probe: on the runner, dump the dapp's provider state and MetaMask's pending-approval
+  count at the moment of the request, rather than inferring from what the page shows.
 - **MetaMask renames the accounts of a shared SRP.** On CI, `add, rename, and switch accounts` sees
   names like `dev1` and `personal` where it set its own, because MetaMask's backup-and-sync restores
-  names keyed to the seed and the public test seed is used by thousands. The spec is excluded from
-  the E2E gate and still runs locally. Fixing it properly means stopping that sync for the test
-  profile (its endpoints could be answered from `prepareContext`, the hook Slush already uses), which
-  needs the endpoints identified against the real extension first.
+  names keyed to the seed and the public test seed is used by thousands. Confirmed by watching the
+  extension's traffic: a fresh profile contacts `user-storage.api.cx.metamask.io`,
+  `authentication.api.cx.metamask.io`, `accounts.api.cx.metamask.io`, and `oidc.api.cx.metamask.io`.
+  The spec is excluded from the E2E gate and still runs locally. Answering `user-storage` from
+  `prepareContext` (the hook Slush already uses) is the likely fix, and would make account naming
+  deterministic for everyone; it needs verifying on a runner where the sync actually lands, since it
+  does not reproduce locally.
 - Drop Slush's `prepareContext` stub once `api.slush.app` answers automated requests again.
 - Solflare headless would need to be understood from Solflare's side (why the immediate rejection);
   nothing in the engine changes the outcome.

@@ -3,8 +3,10 @@ title: Continuous integration
 description: Run walletwright tests on CI, headless where the wallet supports it, and cache the downloaded extensions between runs.
 ---
 
-MetaMask, Phantom, and Rabby run headless, so a plain `playwright test` works on a headless CI
-machine. Solflare and Slush still need a real display; give those a virtual one.
+Phantom and Rabby run headless anywhere, including on a GitHub-hosted runner. MetaMask runs headless
+on a developer machine but **not** on a GitHub runner, where its approvals never materialise, and
+Solflare and Slush need a display everywhere. So a mixed suite is simplest to run headed under a
+virtual display, which is what this project's own gate does.
 
 ## Headless
 
@@ -21,22 +23,31 @@ pnpm exec playwright test
 A wallet with no verified headless approval flow throws at launch instead of hanging, so a mistake
 here is loud.
 
+<Callout type="warn">
+  MetaMask headless is verified on a developer machine, not on a GitHub-hosted runner. There, no
+  approval window surfaces and the page walletwright opens itself renders the wallet home instead of
+  the request, so every MetaMask approval times out. Run MetaMask specs headed on that hardware.
+</Callout>
+
 ## Headed via a virtual display
 
-Pin the specs that need a display, so the rest of the suite still runs headless:
+The simplest thing that covers every wallet on Linux CI: install `xvfb` and run the whole suite
+headed.
+
+```bash
+sudo apt-get install -y xvfb
+xvfb-run --auto-servernum pnpm exec playwright test --headed
+```
+
+To keep part of the suite headless instead, pin only the specs that need a display, and drop
+`--headed`:
 
 ```ts
 // tests/solflare.spec.ts
 test.use({ headless: false });
 ```
 
-Then wrap the run on Linux CI:
-
-```bash
-xvfb-run --auto-servernum pnpm exec playwright test
-```
-
-`xvfb-run` is harmless for the headless specs, so one command covers a mixed suite.
+`xvfb-run` is harmless for the headless specs either way, so one command covers a mixed suite.
 
 ## GitHub Actions
 
@@ -56,9 +67,12 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm exec playwright install --with-deps chromium
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
       - run: pnpm exec tsx scripts/build-cache.ts
-      - run: pnpm exec playwright test
+      - run: xvfb-run --auto-servernum pnpm exec playwright test --headed
 ```
+
+Cache building stays headless, which is faster; only the specs need the display.
 
 Put `xvfb-run --auto-servernum` in front of the last step if the suite includes Solflare or Slush.
 

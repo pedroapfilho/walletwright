@@ -13,7 +13,9 @@ request, and closes that page once the approval is settled. Both routes are watc
 that path waits up to 60s, because a loaded CI runner routes an approval far slower than a developer
 machine; give a wallet suite a Playwright `timeout` of at least `300_000` to match.
 
-Verified end-to-end headless for MetaMask, Phantom, and Rabby. Solflare answers a headless connect
+Verified end-to-end headless for MetaMask, Phantom, and Rabby on a developer machine. On a
+GitHub-hosted runner only Phantom and Rabby hold up: MetaMask surfaces no approval there, so run its
+specs headed under `xvfb` on that hardware. Solflare answers a headless connect
 with `Connection rejected` before any approval UI exists, and Slush has no verified flow, so both
 declare no `notificationPage` and `launchWallet` throws a named error for them instead of hanging;
 run those specs with `test.use({ headless: false })`.
