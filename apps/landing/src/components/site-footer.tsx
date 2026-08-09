@@ -23,10 +23,6 @@ const PROJECT_LINKS: Array<FooterLink> = [
   { href: NPM_URL, label: "npm" },
 ];
 
-// Resolved once at module load (server-side for this static page) so the year
-// is a constant by render time, never a non-deterministic value reached from JSX.
-const CURRENT_YEAR = new Date().getFullYear();
-
 const FooterColumn = ({ links, title }: FooterColumnProps) => (
   <div>
     <h3 className="text-foreground text-sm font-medium">{title}</h3>
@@ -45,32 +41,36 @@ const FooterColumn = ({ links, title }: FooterColumnProps) => (
   </div>
 );
 
-const SiteFooter = () => (
-  <footer className="border-border border-t">
-    <h2 className="sr-only">Footer</h2>
-    <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-6 py-12 sm:grid-cols-4">
-      <div className="col-span-2">
-        <Link
-          aria-label="Homepage"
-          className="focus-visible:outline-ring inline-flex rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2"
-          href="/"
-        >
-          <BrandLogo />
-        </Link>
-        <p className="text-muted-foreground mt-4 max-w-[40ch] text-sm text-pretty">
-          Playwright wallet automation for MetaMask, Phantom, Rabby, Solflare, and Slush. Real
-          extensions across EVM, Solana, and Sui.
-        </p>
+const SiteFooter = () => {
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer className="border-border border-t">
+      <h2 className="sr-only">Footer</h2>
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-6 py-12 sm:grid-cols-4">
+        <div className="col-span-2">
+          <Link
+            aria-label="Homepage"
+            className="focus-visible:outline-ring inline-flex rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+            href="/"
+          >
+            <BrandLogo />
+          </Link>
+          <p className="text-muted-foreground mt-4 max-w-[40ch] text-sm text-pretty">
+            Playwright wallet automation for MetaMask, Phantom, Rabby, Solflare, and Slush. Real
+            extensions across EVM, Solana, and Sui.
+          </p>
+        </div>
+
+        <FooterColumn links={RESOURCE_LINKS} title="Resources" />
+        <FooterColumn links={PROJECT_LINKS} title="Project" />
       </div>
 
-      <FooterColumn links={RESOURCE_LINKS} title="Resources" />
-      <FooterColumn links={PROJECT_LINKS} title="Project" />
-    </div>
-
-    <div className="mx-auto w-full max-w-6xl px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
-      <p className="text-muted-foreground text-sm">© {CURRENT_YEAR} walletwright · MIT-licensed</p>
-    </div>
-  </footer>
-);
+      <div className="mx-auto w-full max-w-6xl px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+        <p className="text-muted-foreground text-sm">© {currentYear} walletwright · MIT-licensed</p>
+      </div>
+    </footer>
+  );
+};
 
 export { SiteFooter };

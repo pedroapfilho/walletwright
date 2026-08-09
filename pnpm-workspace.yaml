@@ -28,3 +28,7 @@ onlyBuiltDependencies:
 
 ignoredBuiltDependencies:
   - "@parcel/watcher"
+
+minimumReleaseAgeExclude:
+  - oxlint-config-awesomeness@3.3.0
+  - oxlint-plugin-react-doctor@0.9.6
