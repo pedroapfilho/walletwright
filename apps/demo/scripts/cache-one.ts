@@ -1,24 +1,11 @@
 import { buildCache } from "@walletwright/core";
 
-import {
-  metamaskSetup,
-  phantomSetup,
-  rabbySetup,
-  slushSetup,
-  solflareSetup,
-} from "../wallet-setup";
+import { walletSetups } from "../wallet-setup";
 
-const setups = {
-  metamask: metamaskSetup,
-  phantom: phantomSetup,
-  rabby: rabbySetup,
-  slush: slushSetup,
-  solflare: solflareSetup,
-};
-const name = process.argv[2] as keyof typeof setups;
-const setup = setups[name];
+const name = process.argv[2] as keyof typeof walletSetups;
+const setup = walletSetups[name];
 if (!setup) {
-  throw new Error(`usage: pnpm test:cache:one <${Object.keys(setups).join("|")}>`);
+  throw new Error(`usage: pnpm test:cache:one <${Object.keys(walletSetups).join("|")}>`);
 }
 const dir = await buildCache(setup, { headless: process.argv.includes("--headless") });
 process.stdout.write(`${name} cache → ${dir}\n`);
