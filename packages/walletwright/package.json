@@ -66,7 +66,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
-    "classic-level": "^1.4.1"
+    "classic-level": "^3.0.0"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

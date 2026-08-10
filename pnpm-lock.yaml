@@ -216,8 +216,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       classic-level:
-        specifier: ^1.4.1
-        version: 1.4.1
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@playwright/test':
         specifier: 1.62.1
@@ -3575,9 +3575,9 @@ packages:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
 
-  abstract-level@1.0.4:
-    resolution: {integrity: sha512-eUP/6pbXBkMbXFdx4IH2fVgvB7M0JvR7/lIL33zcs0IBcwjdzSSl31TOJsaCzmKSSDF9h8QYSOJux4Nd4YJqFg==}
-    engines: {node: '>=12'}
+  abstract-level@3.1.1:
+    resolution: {integrity: sha512-CW2gKbJFTuX1feMvOrvsVMmijAOgI9kg2Ie9Dq3gOcMt/dVVoVmqNlLcEUCT13NxHFMEajcUcVBIplbyDroDiw==}
+    engines: {node: '>=18'}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -3747,10 +3747,6 @@ packages:
     resolution: {integrity: sha512-F705O3xrsUtgt98j7leetNhTWPe+5S72rlL5O4jA1pKqBVQ/dT1O1D6PFxmSXvc0SUOinWS57DKx0I3CHrXJHQ==}
     hasBin: true
 
-  catering@2.1.1:
-    resolution: {integrity: sha512-K7Qy8O9p76sL3/3m7/zLKbRkyOlSZAgzEaLhyj2mXS8PsCud2Eo4hAb8aLtZqHh0QGqLcb9dlJSu6lHRVENm1w==}
-    engines: {node: '>=6'}
-
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
 
@@ -3794,9 +3790,9 @@ packages:
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
 
-  classic-level@1.4.1:
-    resolution: {integrity: sha512-qGx/KJl3bvtOHrGau2WklEZuXhS3zme+jf+fsu6Ej7W7IP/C49v7KNlWIsT1jZu0YnfzSIYDGcEWpCa1wKGWXQ==}
-    engines: {node: '>=12'}
+  classic-level@3.0.0:
+    resolution: {integrity: sha512-yGy8j8LjPbN0Bh3+ygmyYvrmskVita92pD/zCoalfcC9XxZj6iDtZTAnz+ot7GG8p9KLTG+MZ84tSA4AhkgVZQ==}
+    engines: {node: '>=18'}
 
   client-only@0.0.1:
     resolution: {integrity: sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==}
@@ -4833,9 +4829,9 @@ packages:
   keyvaluestorage-interface@1.0.0:
     resolution: {integrity: sha512-8t6Q3TclQ4uZynJY9IGr2+SsIGwK9JHcO6ootkHCGA0CrQCRy+VkouYNO2xicET6b9al7QKzpebNow+gkpCL8g==}
 
-  level-supports@4.0.1:
-    resolution: {integrity: sha512-PbXpve8rKeNcZ9C1mUicC9auIYFyGpkV9/i6g76tLgANwWhtG2v7I4xNBUlkn3lE2/dZF3Pi0ygYGtLc4RXXdA==}
-    engines: {node: '>=12'}
+  level-supports@6.2.0:
+    resolution: {integrity: sha512-QNxVXP0IRnBmMsJIh+sb2kwNCYcKciQZJEt+L1hPCHrKNELllXhvrlClVHXBYZVT+a7aTSM6StgNXdAldoab3w==}
+    engines: {node: '>=16'}
 
   level-transcoder@1.0.1:
     resolution: {integrity: sha512-t7bFwFtsQeD8cl8NIoQ2iwxA0CL/9IFw7/9gAjOonH0PWTTiRfY7Hq+Ejbsxh86tXobDQ6IOiddjNYIfOBs06w==}
@@ -5070,6 +5066,10 @@ packages:
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
+
+  maybe-combine-errors@1.0.0:
+    resolution: {integrity: sha512-eefp6IduNPT6fVdwPp+1NgD0PML1NU5P6j1Mj5nz1nidX8/sWY7119WL8vTAHgqfsY74TzW0w1XPgdYEKkGZ5A==}
+    engines: {node: '>=10'}
 
   md5@2.3.0:
     resolution: {integrity: sha512-T1GITYmFaKuO91vxyoQMFETst+O71VUPEU3ze5GNzDm0OWdP8v1ziTaAEPUr/3kLsY3Sftgz242A1SetQiDL7g==}
@@ -11506,15 +11506,14 @@ snapshots:
     dependencies:
       event-target-shim: 5.0.1
 
-  abstract-level@1.0.4:
+  abstract-level@3.1.1:
     dependencies:
       buffer: 6.0.3
-      catering: 2.1.1
       is-buffer: 2.0.5
-      level-supports: 4.0.1
+      level-supports: 6.2.0
       level-transcoder: 1.0.1
+      maybe-combine-errors: 1.0.0
       module-error: 1.0.2
-      queue-microtask: 1.2.3
 
   acorn-jsx@5.3.2(acorn@8.17.0):
     dependencies:
@@ -11669,8 +11668,6 @@ snapshots:
 
   canonicalize@2.1.0: {}
 
-  catering@2.1.1: {}
-
   ccount@2.0.1: {}
 
   chai@6.2.2: {}
@@ -11701,10 +11698,9 @@ snapshots:
     dependencies:
       clsx: 2.1.1
 
-  classic-level@1.4.1:
+  classic-level@3.0.0:
     dependencies:
-      abstract-level: 1.0.4
-      catering: 2.1.1
+      abstract-level: 3.1.1
       module-error: 1.0.2
       napi-macros: 2.2.2
       node-gyp-build: 4.8.4
@@ -12803,7 +12799,7 @@ snapshots:
 
   keyvaluestorage-interface@1.0.0: {}
 
-  level-supports@4.0.1: {}
+  level-supports@6.2.0: {}
 
   level-transcoder@1.0.1:
     dependencies:
@@ -12996,6 +12992,8 @@ snapshots:
   markdown-table@3.0.4: {}
 
   math-intrinsics@1.1.0: {}
+
+  maybe-combine-errors@1.0.0: {}
 
   md5@2.3.0:
     dependencies:
