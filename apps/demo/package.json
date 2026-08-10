@@ -14,21 +14,21 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@privy-io/react-auth": "^3.34.0",
+    "@privy-io/react-auth": "^3.37.0",
     "@wallet-standard/app": "^1.1.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.9.1",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@walletwright/core": "workspace:*",
-    "tsx": "^4.23.0",
+    "tsx": "^4.23.11",
     "typescript": "^6.0.3",
-    "viem": "^2.21.0",
-    "vite": "^8.0.16"
+    "viem": "^2.55.11",
+    "vite": "^8.2.1"
   }
 }

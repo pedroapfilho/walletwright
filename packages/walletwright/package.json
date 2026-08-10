@@ -74,10 +74,10 @@
     "@repo/typescript-config": "workspace:*",
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^25.9.1",
-    "prool": "^0.2.10",
+    "prool": "^0.2.14",
     "typescript": "^6.0.3",
-    "viem": "^2.21.0",
-    "vitest": "^4.1.8"
+    "viem": "^2.55.11",
+    "vitest": "^4.1.10"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.48 <2",
