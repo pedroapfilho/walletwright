@@ -3,7 +3,6 @@ import { rabbyTest } from "./fixtures";
 const test = rabbyTest;
 const { expect } = test;
 
-// Rabby's approval window surfaces headless, so these prove the headless path still works.
 test.use({ headless: true });
 
 const ACCOUNT = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";

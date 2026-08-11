@@ -98,9 +98,6 @@ describe("downloadAndExtractExtension", () => {
   it("rejects a zip entry that escapes the extraction dir", async () => {
     const zip = new AdmZip();
     zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
-    // addFile() itself sanitizes a leading "../" out of the entry name, so a malicious archive is
-    // simulated by adding a placeholder and rewriting its entryName directly (round-trips through
-    // toBuffer() unsanitized, same as a hand-crafted malicious zip would).
     zip.addFile("placeholder.txt", Buffer.from("evil"));
     const entries = zip.getEntries();
     entries[1].entryName = "../escape.txt";

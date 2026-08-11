@@ -71,7 +71,6 @@ export const approve = async (popup: Page): Promise<void> => {
   try {
     await button.click({ timeout: BUTTON_TIMEOUT_MS });
   } catch (error) {
-    // The notice can render after the first accept attempt; clear it once and retry.
     await acceptThirdPartyNotice(popup);
     await button.click({ timeout: RETRY_TIMEOUT_MS }).catch(() => {
       throw error;

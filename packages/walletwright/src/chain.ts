@@ -21,8 +21,6 @@ export type LocalChainOptions = {
   port?: number;
 };
 
-// Anvil and Hardhat both default to this mnemonic and pre-fund account #0 as
-// 0xf39F…92266 with 10000 ETH, the account walletwright's MetaMask setup already imports.
 const TEST_MNEMONIC = "test test test test test test test test test test test junk";
 
 const createLocalChain = async (options: LocalChainOptions = {}): Promise<LocalChain> => {

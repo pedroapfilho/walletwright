@@ -64,8 +64,6 @@ export const createUnlockScreen = ({
       timeoutMs: NAVIGATION_TIMEOUT_MS,
     });
 
-    // The MV3 service worker needs a few seconds to restore the vault; be patient, then reload
-    // (re-navigating resets the page before the worker responds).
     let state = await settleWithin(page, FIRST_SETTLE_TIMEOUT_MS);
     for (let attempt = 0; attempt < RELOAD_ATTEMPTS && state === undefined; attempt++) {
       await page.reload().catch(() => {});

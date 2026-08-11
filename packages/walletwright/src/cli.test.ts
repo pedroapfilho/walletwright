@@ -15,8 +15,6 @@ afterAll(() => {
   }
 });
 
-// Resolved through symlinks so the paths compare equal to a file URL: macOS `tmpdir()` is itself
-// a symlink (/var to /private/var).
 const makeTempDir = (): string => {
   const prefix = path.join(tmpdir(), "walletwright-cli-");
   const dir = realpathSync(mkdtempSync(prefix));

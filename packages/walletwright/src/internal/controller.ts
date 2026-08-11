@@ -70,8 +70,6 @@ export const createWallet = ({
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no popup)
       }
-      // Naming the open pages separates "the wallet never opened one" from "it opened one showing
-      // something other than the request", which look identical from the timeout alone.
       const open = context.pages().map((page) => page.url());
       throw new Error(
         `[walletwright] approval popup did not appear. Open pages: ${open.join(" | ") || "none"}`,
@@ -81,8 +79,6 @@ export const createWallet = ({
     try {
       await settle(popup);
     } catch (error) {
-      // The finder can grab the previous popup in its final moments (the window closes right after
-      // its own approval resolves). If ours died under us, one fresh find gets the real popup.
       if (!popup.isClosed()) {
         throw error;
       }
@@ -93,7 +89,6 @@ export const createWallet = ({
       await settle(fresh);
     }
 
-    // Wait for the popup to close so the next approval doesn't grab a stale page.
     const closed = await waitUntil(() => !hasNotificationPopup(context, extensionId, match), {
       timeoutMs: POPUP_CLOSE_TIMEOUT_MS,
     });
@@ -138,16 +133,11 @@ export const createWallet = ({
       if (home.isClosed()) {
         throw new Error(`[walletwright] wallet home page is closed; cannot run ${name}()`);
       }
-      // Actions drive the wallet's own page; front it first so clicks land on a visible tab, then
-      // hand focus back to the dapp below so new approvals open as popups instead of inline.
       await home.bringToFront().catch(() => {});
       await fn(ctx, ...args);
       await frontDapp();
     };
 
-  // A capability is declared once, on the *Api types in types.ts: WalletActions derives from those,
-  // so a new method makes this object fail to compile until it is bound. Only the fn-to-slot pairing
-  // below can still be wrong, and capability-wiring.test.ts guards that.
   return {
     accounts: {
       add: action(definition.actions?.accounts?.add, "accounts.add"),
@@ -161,7 +151,6 @@ export const createWallet = ({
     approve,
     confirmSignature: () => approve(),
     confirmTransaction: () => approve(),
-    // Connect may auto-approve on some wallets, so a missing popup is not an error here.
     connectToDapp: () => approve({ optional: true }),
     extensionId,
     home,

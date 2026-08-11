@@ -19,9 +19,6 @@ const proxy = (request: NextRequest) => {
   return NextResponse.next();
 };
 
-// Negotiation lives at the site root, so scope it to rendered doc pages only:
-// skip the Markdown/llms endpoints (else they'd be rewritten onto themselves),
-// the search API, and any file-extension asset.
 export const config = {
   // A plain string literal so Next can statically extract the matcher.
   // oxlint-disable-next-line unicorn/prefer-string-raw

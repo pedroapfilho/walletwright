@@ -3,13 +3,11 @@ import { phantomTest } from "./fixtures";
 const test = phantomTest;
 const { expect } = test;
 
-// Phantom's approval window surfaces headless, so these prove the headless path still works.
 test.use({ headless: true });
 
 test("Phantom: connect + sign on EVM and Solana", async ({ page, wallet }) => {
   await page.goto("/");
 
-  // --- EVM (window.phantom.ethereum) ---
   await page.locator("#phantomEvmConnect").click();
   await wallet.connectToDapp();
   await expect(page.locator("#phantomEvmAccount")).toHaveText(/^0x[0-9a-fA-F]{40}$/);
@@ -18,7 +16,6 @@ test("Phantom: connect + sign on EVM and Solana", async ({ page, wallet }) => {
   await wallet.confirmSignature();
   await expect(page.locator("#phantomEvmSignature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
 
-  // --- Solana / SVM (window.phantom.solana) ---
   await page.locator("#phantomSvmConnect").click();
   await wallet.connectToDapp(); // Phantom may auto-approve an already-trusted site
   await expect(page.locator("#phantomSvmAccount")).not.toBeEmpty();

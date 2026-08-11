@@ -17,7 +17,6 @@ const add = async ({ home }: WalletActionContext): Promise<void> => {
   await openAccountMenu(home);
   const cells = home.getByTestId("account-cell-avatar");
   const before = await cells.count();
-  // One click derives the next HD account from the seed; no dialog follows.
   await home.getByTestId("add-multichain-account-button").click();
   await cells.nth(before).waitFor({ state: "visible", timeout: 15_000 });
   await closeAccountMenu(home);
@@ -34,11 +33,8 @@ const importPrivateKey = async (
   await chooseImport.click();
   const confirm = home.getByTestId("import-account-confirm-button");
   await confirm.waitFor({ state: "visible" });
-  // The key field is the first of the view's inputs and carries no testid; filling it enables the
-  // confirm button.
   await home.locator("input").first().fill(privateKey);
   await confirm.click();
-  // A successful import returns to the wallet-type chooser, not home.
   await confirm.waitFor({ state: "hidden", timeout: 15_000 });
   await closeAccountMenu(home);
 };
@@ -58,8 +54,6 @@ const rename = async (
 const switchTo = async ({ home }: WalletActionContext, index: number): Promise<void> => {
   await openAccountMenu(home);
   await home.getByTestId("account-cell-avatar").nth(index).click();
-  // Selecting an account closes the menu and makes it active; if the menu is still open, the
-  // switch did not happen (bad index, missed click), which must be an error, not a silent no-op.
   const menuClosed = await home
     .getByTestId("add-multichain-account-button")
     .waitFor({ state: "hidden", timeout: 10_000 })

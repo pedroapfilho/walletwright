@@ -48,9 +48,6 @@ describe("profileKey", () => {
 describe("extensionIdFromPath", () => {
   const fakePath = "/tmp/walletwright-does-not-exist-xyz";
 
-  // extensionIdFromPath slices 32 hex chars (16 bytes) off the sha256 digest and maps each
-  // nibble to a..p, one char per nibble, so the real output is 32 characters, not the 16-char
-  // extension-id-length shorthand used elsewhere.
   it("returns a 32-character string in a..p for a path with no manifest.json on disk", () => {
     expect(extensionIdFromPath(fakePath)).toMatch(/^[a-p]{32}$/v);
   });

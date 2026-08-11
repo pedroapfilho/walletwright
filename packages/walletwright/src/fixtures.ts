@@ -33,9 +33,6 @@ export const createWalletFixtures = (setup: WalletSetup) =>
     wallet: async ({ walletLaunch }, use) => {
       await use(walletLaunch.wallet);
     },
-    // Depends only on Playwright's `headless` option (so `--headed` and `use: { headless }` reach
-    // the wallet): its own `browser` fixture would launch a second Chromium that no test ever
-    // drives, since the wallet needs a persistent context of its own.
     walletLaunch: async ({ headless }, use) => {
       const launched = await launchWallet(setup, { headless });
       await use(launched);

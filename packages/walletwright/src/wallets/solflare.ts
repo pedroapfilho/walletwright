@@ -4,7 +4,6 @@ import { prepareWebStoreExtension } from "../internal/download";
 import { createUnlockScreen } from "../internal/unlock-screen";
 import type { WalletDefinition } from "../types";
 
-// Solflare. Pulled from the Chrome Web Store. No manifest `key`, so its id is path-derived.
 const SOLFLARE_EXTENSION_ID = "bhhhlbepdkbapadjdnnojkbgioiodbic";
 
 const { reachUnlockScreen, unlock } = createUnlockScreen({
@@ -28,17 +27,12 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
   await page.getByTestId("input-repeat-password").fill(password);
   await page.getByTestId("btn-continue").click({ timeout: 30_000 });
 
-  // An unfunded seed derives no "active" (SOL-holding) accounts, so Solflare asks how to pick them.
-  // Quick setup takes the default account, which is the one the tests drive.
   await page.getByTestId("btn-quick-setup").click({ timeout: 60_000 });
 
-  // "You're All Set!" - accepting here is what leaves onboarding in a completed state.
   await page.getByTestId("btn-explore").click({ timeout: 60_000 });
 };
 
 export const solflare: WalletDefinition = {
-  // Connect popups confirm with `btn-connect`, signature popups with `btn-approve`; a popup renders
-  // exactly one of them, so the union resolves whichever is present.
   approve: async (popup) => {
     await popup
       .getByTestId("btn-connect")
@@ -53,15 +47,10 @@ export const solflare: WalletDefinition = {
 
   importWallet,
 
-  // Approvals open in their own confirm_popup.html window.
   notificationMatch: "confirm_popup.html",
-
-  // No `headlessApprovals`: Solflare rejects a connection outright when the browser runs headless,
-  // the dapp getting "Connection rejected" within ~2s, before any approval UI exists.
 
   onboardingPage: "wallet.html",
 
-  // Latest from the Web Store, so `version` is ignored.
   prepareExtension: (cacheDir) =>
     prepareWebStoreExtension({
       cacheDir,

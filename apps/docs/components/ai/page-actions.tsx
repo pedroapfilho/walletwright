@@ -22,9 +22,6 @@ const MarkdownCopyButton = ({
   markdownUrl: string;
 }) => {
   const [isPending, startTransition] = useTransition();
-  // fumadocs' useCopyButton flips its checked state as soon as the callback
-  // returns, so a failed copy would still flash the success check, own the
-  // status instead and only set it once the clipboard write settles.
   const [status, setStatus] = useState<"copied" | "failed" | "idle">("idle");
   const timeoutRef = useRef<number | undefined>(undefined);
 
@@ -50,7 +47,6 @@ const MarkdownCopyButton = ({
         (async () => {
           const res = await fetch(markdownUrl);
           if (!res.ok) {
-            // A 404/500 body must not be cached and copied as "markdown".
             throw new Error(`fetching ${markdownUrl} failed with ${res.status}`);
           }
           return res.text();
@@ -59,8 +55,6 @@ const MarkdownCopyButton = ({
         cache.set(markdownUrl, promise);
       }
       try {
-        // ClipboardItem takes the pending promise so the write keeps the
-        // user-activation Safari requires across the fetch.
         await navigator.clipboard.write([
           new ClipboardItem({
             "text/plain": promise,
@@ -68,15 +62,11 @@ const MarkdownCopyButton = ({
         ]);
         showStatus("copied");
       } catch (error) {
-        // A failed fetch must not poison the cache, but only the fetch: on a
-        // clipboard-write failure the cached markdown is still good. The write
-        // already settled, so this await just inspects the outcome.
         try {
           await promise;
         } catch {
           cache.delete(markdownUrl);
         }
-        // The user must see the failure, not just the console.
         showStatus("failed");
         console.warn("[walletwright docs] copying the page Markdown failed", error);
       }

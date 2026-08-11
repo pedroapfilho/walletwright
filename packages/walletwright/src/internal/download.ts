@@ -5,8 +5,6 @@ import path from "node:path";
 
 import AdmZip from "adm-zip";
 
-// ZIP local-file-header signature ("PK\x03\x04") as decimal bytes. It marks where the embedded ZIP
-// begins inside a CRX. Decimal (not hex) avoids the oxfmt/number-literal-case casing conflict.
 const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
 
 /**
@@ -28,9 +26,6 @@ export const downloadAndExtractExtension = async (options: {
   const { cacheDir, kind, name, sha256, url } = options;
   const cacheRoot = path.resolve(cacheDir);
   const outDir = path.resolve(cacheDir, name);
-  // A wallet-supplied `name` (e.g. built from a version string) must resolve to a directory
-  // strictly inside the cache dir; this outDir gets `rm -rf`'d below, so a "../"-bearing name must
-  // never escape it, and a name resolving to the cache root itself would wipe the whole cache.
   if (outDir === cacheRoot || !outDir.startsWith(cacheRoot + path.sep)) {
     throw new Error(`[walletwright] invalid extension name: ${name}`);
   }
@@ -71,7 +66,6 @@ export const downloadAndExtractExtension = async (options: {
   const root = path.resolve(outDir);
   for (const entry of zip.getEntries()) {
     const target = path.resolve(root, entry.entryName);
-    // Reject zip-slip: an entry like "../../x" must not resolve outside the extraction root.
     if (target !== root && !target.startsWith(root + path.sep)) {
       throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
     }
@@ -98,8 +92,6 @@ export const prepareWebStoreExtension = (options: {
     cacheDir: options.cacheDir,
     kind: "crx",
     name: options.name,
-    // Unpinnable by construction: the Web Store endpoint always serves the current version, so its
-    // bytes change under us. Only versioned release URLs (MetaMask's) can carry a hash.
     sha256: undefined,
     url: chromeWebStoreCrxUrl(options.extensionId),
   });

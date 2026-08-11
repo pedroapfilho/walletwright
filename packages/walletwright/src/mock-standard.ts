@@ -28,7 +28,6 @@ type MockStandardAccount = {
   publicKeyHex: string;
 };
 
-// A fixed 32-byte seed so the derived Solana address is stable across runs.
 const DEFAULT_SEED_HEX = "0101010101010101010101010101010101010101010101010101010101010101";
 
 const PKCS8_ED25519_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");

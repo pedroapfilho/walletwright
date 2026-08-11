@@ -3,7 +3,6 @@ import { metamaskTest } from "./fixtures";
 const test = metamaskTest;
 const { expect } = test;
 
-// Well-known accounts derived from the public test mnemonic (anvil/hardhat defaults).
 const ACCOUNT_2_SHORT = "0x70997...c79C8";
 const ACCOUNT_3_KEY = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a";
 const ACCOUNT_3_SHORT = "0x3C44C...293BC";
