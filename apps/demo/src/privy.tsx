@@ -73,7 +73,6 @@ const App = () => {
     <PrivyProvider
       appId={appId}
       config={{
-        // External wallets only: no embedded wallet, no email/social login.
         appearance: { walletList: ["detected_ethereum_wallets"] },
         embeddedWallets: { ethereum: { createOnLogin: "off" } },
         loginMethods: ["wallet"],

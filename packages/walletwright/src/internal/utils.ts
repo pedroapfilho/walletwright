@@ -97,11 +97,6 @@ export const findNotificationPopup = ({
         return undefined;
       }
       await popup.waitForLoadState("domcontentloaded").catch(() => {});
-      // The window opens before the approval renders (bare URL, zero buttons) and routes later,
-      // sometimes tens of seconds later under a busy MV3 worker. "Found" must mean "usable", so
-      // keep polling the same shell rather than handing back a page that cannot be settled. A
-      // rendered button is the weakest form of that: MetaMask's popup can also render its home
-      // screen, buttons and all, so it says which controls mean "a request is on screen".
       const ready =
         approvalControls === undefined
           ? await hasVisibleButton(popup)

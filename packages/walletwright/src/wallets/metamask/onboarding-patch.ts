@@ -46,8 +46,6 @@ export const markMetaMaskOnboarded = async (
   try {
     await db.open();
 
-    // classic-level 3 resolves `undefined` for a missing key instead of rejecting with
-    // LEVEL_NOT_FOUND, so a rejection here is a real read failure and must not be swallowed.
     const perController = await db.get("OnboardingController");
     if (perController !== undefined && perController !== "") {
       const onboarding = asState(JSON.parse(perController));

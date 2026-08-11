@@ -4,7 +4,6 @@ const alt = "walletwright: Playwright wallet automation";
 const contentType = "image/png";
 const size = { height: 630, width: 1200 };
 
-// Matches the dark `--background` and `icon.svg` so the card reads as the same surface as the site.
 const INK = "#0a0a0a";
 const PAPER = "#fafafa";
 

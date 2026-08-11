@@ -3,8 +3,6 @@ import { connectMetamask, metamaskTest } from "./fixtures";
 const test = metamaskTest;
 const { expect } = test;
 
-// Needs the local chain on 127.0.0.1:8545 (see `@walletwright/core/chain`): the sender must hold
-// funds and MetaMask reads balance, nonce, and gas off the chain to render the confirmation.
 const RPC_URL = "http://127.0.0.1:8545";
 
 const receiptStatus = async (hash: string): Promise<string | undefined> => {
@@ -35,7 +33,6 @@ test("confirm a transaction and see it mined", async ({ page, wallet }) => {
 
   const hash = page.locator("#txHash");
   await expect(hash).toHaveText(/^0x[0-9a-fA-F]{64}$/);
-  // Anvil mines instantly, so the receipt is available right away.
   expect(await receiptStatus((await hash.textContent()) ?? "")).toBe("0x1");
 });
 

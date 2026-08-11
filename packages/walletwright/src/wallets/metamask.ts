@@ -53,22 +53,17 @@ export const metamask: WalletDefinition = {
   ecosystems: ["evm", "svm"],
   extensionName: "MetaMask",
 
+  finalizeCache: markMetaMaskOnboarded,
+
+  importWallet,
+
+  onboardingPage: "home.html",
+
   prepareContext: async (context) => {
     await context.route(`**://${ACCOUNT_SYNC_HOST}/**`, (route) => route.abort());
   },
-
   prepareExtension: (cacheDir, version = DEFAULT_VERSION) =>
     downloadAndExtractExtension(metamaskDownload(cacheDir, version)),
-
-  // Fresh install of home.html redirects to the onboarding welcome screen.
-  finalizeCache: markMetaMaskOnboarded,
-
-  // No `headlessApprovals`: MetaMask creates its approval window headless but never exposes it as a
-  // page, so there is nothing for the engine to find, and it renders its home screen rather than the
-  // request when reached any other way.
-
-  importWallet,
-  onboardingPage: "home.html",
   reachUnlockScreen,
   reject,
   unlock,

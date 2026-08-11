@@ -16,7 +16,6 @@ export type MockWalletOptions = {
   privateKey?: `0x${string}`;
 };
 
-// Anvil/Hardhat account #0, address 0xf39F…92266.
 const DEFAULT_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 type Rpc = { method: string; params?: ReadonlyArray<unknown> };
@@ -38,7 +37,6 @@ const createRpcHandler =
         return Promise.resolve(chainIdHex);
       }
       case "personal_sign": {
-        // params: [message, address]. Dapps pass either a 0x-hex message or a plain UTF-8 string.
         const [message] = params;
         if (typeof message !== "string") {
           return Promise.reject(
@@ -76,8 +74,6 @@ const installMockWallet = async (
   try {
     await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
   } catch (error) {
-    // Playwright rejects a second exposeFunction with the same name; the bridge is already there,
-    // so a repeat install (e.g. in a per-test hook) is fine. Any other error is real.
     if (!(error instanceof Error && error.message.includes("already registered"))) {
       throw error;
     }
@@ -88,10 +84,9 @@ const installMockWallet = async (
       const call = (window as unknown as Record<string, (rpc: Rpc) => Promise<unknown>>)[binding];
       const provider = {
         isMetaMask: true,
-        request: (rpc: Rpc) => call(rpc),
-        // Minimal event surface so wagmi/web3-onboard don't throw wiring listeners.
         on: () => provider,
         removeListener: () => provider,
+        request: (rpc: Rpc) => call(rpc),
       };
       (window as unknown as { ethereum?: unknown }).ethereum = provider;
 

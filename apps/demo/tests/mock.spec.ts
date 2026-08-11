@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import { installMockWallet } from "@walletwright/core/mock";
 import { verifyMessage } from "viem";
 
-// The mock needs no extension, so this is a plain @playwright/test spec, not a wallet fixture.
 const ACCOUNT = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
 
 test("connect and sign against the mock wallet", async ({ page }) => {
@@ -11,14 +10,12 @@ test("connect and sign against the mock wallet", async ({ page }) => {
 
   await page.goto("/");
   await page.locator("#connectButton").click();
-  // The dapp renders the checksummed address the mock returns.
   await expect(page.locator("#accounts")).toHaveText(new RegExp(ACCOUNT, "i"));
 
   await page.locator("#signButton").click();
   const signature = page.locator("#signature");
   await expect(signature).toHaveText(/^0x[0-9a-fA-F]{130}$/);
 
-  // The signature is real: it recovers to the mock's account.
   const valid = await verifyMessage({
     address: ACCOUNT,
     message: "Hello walletwright",

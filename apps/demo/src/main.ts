@@ -17,8 +17,6 @@ type PhantomWindow = {
 
 const $ = <T extends HTMLElement>(id: string): T => document.querySelector<T>(id)!;
 
-// Injected providers appear asynchronously (the wallet's content script injects them after load),
-// so poll briefly before giving up.
 const waitFor = async <T>(get: () => T | undefined): Promise<T> => {
   for (let i = 0; i < 50; i++) {
     const value = get();
@@ -33,14 +31,9 @@ const waitFor = async <T>(get: () => T | undefined): Promise<T> => {
 const toHex = (bytes: Uint8Array): string =>
   `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
 
-// --- MetaMask (EVM, window.ethereum) ---
 const getEthereum = () => waitFor(() => (window as { ethereum?: Eip1193Provider }).ethereum);
 let mmAccount = "";
 
-// A rejected request rejects the provider promise, so surface it: a test asserting on a rejection
-// needs something to read, and an unhandled rejection would look like nothing happened.
-// Wallets reject with an EIP-1193 error object ({ code: 4001, message }) rather than an Error, so
-// `String(error)` would render "[object Object]".
 const showError = (error: unknown, target = "#error") => {
   const { message } = (error ?? {}) as { message?: string };
   $(target).textContent = error instanceof Error ? error.message : (message ?? String(error));
@@ -75,7 +68,6 @@ const handleSign = async () => {
   }
 };
 
-// A local dev chain (anvil/hardhat defaults), for the network and transaction recipes.
 const LOCAL_CHAIN = {
   chainId: "0x7a69",
   chainName: "Walletwright Local",
@@ -88,9 +80,6 @@ const refreshChainId = async () => {
   $("#chainId").textContent = chainId;
 };
 
-// `wallet_addEthereumChain` rather than EIP-3326 `wallet_switchEthereumChain`: it is idempotent
-// (adds when missing, switches when present), and in MetaMask 13.x a bare switch request to a
-// wallet-added custom chain hangs with no popup and no error.
 const handleSwitchChain = async () => {
   $("#error").textContent = "";
   try {
@@ -113,7 +102,6 @@ const handleSendTx = async () => {
       params: [
         {
           from: mmAccount,
-          // 0.001 ETH to the second anvil test account.
           to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
           value: "0x38d7ea4c68000",
         },
@@ -125,7 +113,6 @@ const handleSendTx = async () => {
   }
 };
 
-// --- Phantom EVM (window.phantom.ethereum) ---
 const getPhantomEvm = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.ethereum);
 let phantomEvmAccount = "";
@@ -159,7 +146,6 @@ const handlePhantomEvmSign = async () => {
   }
 };
 
-// --- Phantom Solana / SVM (window.phantom.solana) ---
 const getPhantomSolana = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.solana);
 
@@ -185,9 +171,6 @@ const handlePhantomSvmSign = async () => {
   }
 };
 
-// --- Wallet Standard sections (MetaMask Solana, mock Solana, Slush Sui) ---
-// One shape, three wallets: the sections differ only in which wallet they match, which feature signs,
-// and which elements they render into.
 type StandardSection = {
   ids: { account: string; connect: string; error: string; sign: string; signature: string };
   label: string;
@@ -301,8 +284,6 @@ wireStandardSection({
     signature: "#mockSvmSignature",
   },
   label: "Mock (Solana)",
-  // Any non-MetaMask Wallet-Standard Solana wallet, so @walletwright/core/mock-standard drives this
-  // section without impersonating a named extension.
   match: (wallet) =>
     wallet.name !== "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
   sign: (wallet, account) => signSolanaMessage(wallet, account, "Hello walletwright Mock Solana"),

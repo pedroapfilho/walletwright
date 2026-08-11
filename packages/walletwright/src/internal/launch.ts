@@ -49,8 +49,6 @@ export const launchWallet = async (
   { headless = false }: { headless?: boolean } = {},
 ): Promise<LaunchedWallet> => {
   const definition = wallets[setup.wallet];
-  // A wallet whose approval window never surfaces headless reaches no approval at all, and would
-  // fail 30s later at the first connect with nothing pointing back at the mode as the cause.
   if (headless && definition.headlessApprovals !== true) {
     throw new Error(
       `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
@@ -66,7 +64,6 @@ export const launchWallet = async (
 
   const extensionPath = await definition.prepareExtension(cacheDir, setup.version);
 
-  // Run from a throwaway copy so the cache stays pristine and parallel runs don't share a profile.
   const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
   await cp(profileDir, runDir, { recursive: true });
 
@@ -75,8 +72,6 @@ export const launchWallet = async (
     extensionContextOptions(extensionPath, headless),
   );
 
-  // The throwaway profile copy is only needed while the context is live; drop it on close so a long
-  // suite (workers x specs x retries) doesn't fill the temp dir with profile copies.
   context.on("close", async () => {
     await rm(runDir, { force: true, recursive: true }).catch(() => {});
   });
@@ -85,7 +80,6 @@ export const launchWallet = async (
 
   try {
     await definition.prepareContext?.(context);
-    // Kept open (not closed after unlock): the settings/network/account actions drive this page.
     const home = await definition.reachUnlockScreen(context, extensionId);
     await definition.unlock(home, setup.password);
     await closeStrayPages(context, home);
@@ -101,7 +95,6 @@ export const launchWallet = async (
       }),
     };
   } catch (error) {
-    // Fires the context.on("close") handler above, which removes the throwaway runDir.
     await context.close().catch(() => {});
     throw error;
   }

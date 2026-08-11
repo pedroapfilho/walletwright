@@ -53,8 +53,6 @@ const metadata: Metadata = {
   },
 };
 
-// `#0a0a0a` is the sRGB value of the dark `--background`, so the mobile URL bar
-// blends into the page instead of banding against it.
 const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [

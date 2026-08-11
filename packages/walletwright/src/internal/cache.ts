@@ -62,8 +62,6 @@ export const buildCache = async (
     await definition.prepareContext?.(context);
     const extensionId = extensionIdFromPath(extensionPath);
 
-    // Navigate to the onboarding entry ourselves (the extension's auto-opened tab is unreliable,
-    // especially headless).
     const page =
       context.pages().find((candidate) => candidate.url() === "about:blank") ??
       (await context.newPage());
@@ -75,15 +73,12 @@ export const buildCache = async (
 
     await definition.importWallet(page, setup.seedPhrase, setup.password);
     await sleep(FLUSH_SETTLE_MS); // let the wallet flush state to disk before we close
-    // A cache that holds no wallet state is worse than a failed build: it launches, unlocks nothing,
-    // and turns into a mystery failure in someone's spec. Fail here, where the cause is visible.
     await waitUntilOrThrow(() => hasPersistedState(profileDir, extensionId), {
       intervalMs: 500,
       message: `${definition.extensionName} onboarding wrote no wallet state into ${profileDir}`,
       timeoutMs: STATE_WRITE_TIMEOUT_MS,
     });
     await context.close();
-    // Runs while the browser is closed (the leveldb is not locked).
     await definition.finalizeCache?.(profileDir, extensionId);
     return profileDir;
   } catch (error) {

@@ -39,8 +39,6 @@ const CopyButton = ({ className, label, value }: CopyButtonProps) => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      // Without clearing, a second click inside the window lets the first
-      // timer fire and blank the checkmark while the new copy is still fresh.
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         setCopied(false);

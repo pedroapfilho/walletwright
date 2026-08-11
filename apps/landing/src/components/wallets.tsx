@@ -58,7 +58,6 @@ const WALLETS: Array<Wallet> = [
   },
   {
     ecosystems: [SUI],
-    // @web3icons/react has no Slush brand mark, so reuse the Sui network icon.
     icon: <NetworkSui aria-hidden size={28} variant="branded" />,
     name: "Slush",
   },
