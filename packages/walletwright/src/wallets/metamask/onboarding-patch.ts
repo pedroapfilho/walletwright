@@ -46,8 +46,10 @@ export const markMetaMaskOnboarded = async (
   try {
     await db.open();
 
-    const perController = await db.get("OnboardingController").catch(() => null);
-    if (perController !== null && perController !== "") {
+    // classic-level 3 resolves `undefined` for a missing key instead of rejecting with
+    // LEVEL_NOT_FOUND, so a rejection here is a real read failure and must not be swallowed.
+    const perController = await db.get("OnboardingController");
+    if (perController !== undefined && perController !== "") {
       const onboarding = asState(JSON.parse(perController));
       if (onboarding === undefined) {
         throw new Error(`[walletwright] MetaMask's OnboardingController state is not an object`);
@@ -58,8 +60,8 @@ export const markMetaMaskOnboarded = async (
       return;
     }
 
-    const raw = await db.get("data").catch(() => null);
-    if (raw === null || raw === "") {
+    const raw = await db.get("data");
+    if (raw === undefined || raw === "") {
       throw new Error(
         `[walletwright] MetaMask persisted no onboarding state in ${dbDir} (neither an OnboardingController key nor a data key)`,
       );
