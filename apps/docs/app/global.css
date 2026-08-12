@@ -23,6 +23,10 @@
 
 @source "../node_modules/fumadocs-ui/dist/**/*.js";
 
+html {
+  scrollbar-gutter: stable;
+}
+
 /*
  * walletwright docs theme: neutral grayscale; the brand is tooling, not a coloured product.
  * Fumadocs' neutral preset already maps these onto its --color-fd-* variables;
