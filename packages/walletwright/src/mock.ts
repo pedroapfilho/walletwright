@@ -81,6 +81,7 @@ const installMockWallet = async (
 
   await target.addInitScript(
     ([binding, info]) => {
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- Playwright's exposeBinding installs `binding` on the page's window after this script's types are fixed
       const call = (window as unknown as Record<string, (rpc: Rpc) => Promise<unknown>>)[binding];
       const provider = {
         isMetaMask: true,
@@ -88,6 +89,7 @@ const installMockWallet = async (
         removeListener: () => provider,
         request: (rpc: Rpc) => call(rpc),
       };
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- injecting the EIP-1193 provider is the point of this script; the DOM lib has no `ethereum` slot
       (window as unknown as { ethereum?: unknown }).ethereum = provider;
 
       const announce = () => {
