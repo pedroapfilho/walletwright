@@ -97,6 +97,7 @@
 
 html {
   color-scheme: light dark;
+  scrollbar-gutter: stable;
   /* Clears the 4rem sticky header so skip-link and in-page jumps land visibly. */
   scroll-padding-top: 4rem;
 }
