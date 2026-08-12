@@ -130,9 +130,11 @@ const installMockStandardWallet = async (
 
   await target.addInitScript(
     ([binding, info]) => {
-      const call = (
-        window as unknown as Record<string, (rpc: BridgeRequest) => Promise<Array<number>>>
-      )[binding];
+      const call =
+        // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- Playwright's exposeBinding installs `binding` on the page's window after this script's types are fixed
+        (window as unknown as Record<string, (rpc: BridgeRequest) => Promise<Array<number>>>)[
+          binding
+        ];
       const publicKeyBytes = Uint8Array.from(
         (info.publicKeyHex.match(/.{2}/gv) ?? []).map((byte) => Number.parseInt(byte, 16)),
       );
