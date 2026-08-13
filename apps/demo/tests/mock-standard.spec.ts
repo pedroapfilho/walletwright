@@ -13,7 +13,7 @@ const publicKeyFromRawHex = (rawHex: string) =>
   });
 
 test("connect and sign against the Wallet-Standard Solana mock", async ({ page }) => {
-  const { address, publicKeyHex } = await installMockStandardWallet(page, { ecosystem: "svm" });
+  const { address, publicKeyHex } = await installMockStandardWallet(page);
   expect(address).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 
   await page.goto("/");

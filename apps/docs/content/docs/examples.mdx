@@ -532,7 +532,7 @@ import { test, expect } from "@playwright/test";
 import { installMockStandardWallet } from "@walletwright/core/mock-standard";
 
 test("connect and sign a Solana dapp, no extension", async ({ page }) => {
-  const { address, publicKeyHex } = await installMockStandardWallet(page, { ecosystem: "svm" });
+  const { address, publicKeyHex } = await installMockStandardWallet(page);
 
   await page.goto("/");
   await page.getByTestId("connect").click();
