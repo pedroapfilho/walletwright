@@ -108,7 +108,7 @@ const Features = () => (
         {FEATURES.map((feature) => (
           <div className={CARD_CLASSES} key={feature.title}>
             <dt className="text-card-foreground font-medium">
-              <span className="bg-brand/10 text-brand ring-brand/20 flex size-10 items-center justify-center rounded-md ring-1 ring-inset">
+              <span className="bg-primary/10 text-primary ring-primary/20 flex size-10 items-center justify-center rounded-md ring-1 ring-inset">
                 {feature.icon}
               </span>
               <span className="mt-4 block">{feature.title}</span>

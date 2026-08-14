@@ -86,7 +86,7 @@ const Wallets = () => (
           <ul className="mt-3 flex flex-wrap gap-1.5">
             {wallet.ecosystems.map((ecosystem) => (
               <li
-                className="text-brand ring-brand/20 bg-brand/10 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs ring-1 ring-inset"
+                className="bg-primary/10 text-primary ring-primary/20 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs ring-1 ring-inset"
                 key={ecosystem.name}
               >
                 {ecosystem.icon}

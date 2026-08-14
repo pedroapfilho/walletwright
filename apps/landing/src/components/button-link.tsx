@@ -10,17 +10,17 @@ type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
 const BASE_CLASSES =
   "relative inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,color,translate] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
-const VARIANT_CLASSES: Record<NonNullable<ButtonLinkProps["variant"]>, string> = {
+const VARIANT_CLASSES = {
   primary:
-    "bg-primary text-primary-foreground ring-1 ring-inset ring-black/5 hover:bg-primary-hover active:translate-y-px dark:ring-white/10",
+    "bg-primary text-primary-foreground ring-1 ring-foreground/5 ring-inset hover:bg-primary/90 active:translate-y-px dark:ring-background/10",
   secondary:
     "border border-border bg-background text-foreground hover:bg-muted hover:border-foreground/20 active:translate-y-px",
-};
+} satisfies Record<NonNullable<ButtonLinkProps["variant"]>, string>;
 
-const SIZE_CLASSES: Record<NonNullable<ButtonLinkProps["size"]>, string> = {
+const SIZE_CLASSES = {
   md: "px-4 py-2.5 text-sm",
   sm: "px-3 py-1.5 text-sm",
-};
+} satisfies Record<NonNullable<ButtonLinkProps["size"]>, string>;
 
 const ButtonLink = ({
   children,

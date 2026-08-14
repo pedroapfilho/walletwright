@@ -11,7 +11,7 @@ type SectionHeadingProps = {
 
 const SectionHeading = ({ children, eyebrow, title, titleClassName }: SectionHeadingProps) => (
   <div>
-    <p className="text-brand font-mono text-xs tracking-[0.14em] uppercase">{eyebrow}</p>
+    <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">{eyebrow}</p>
     <h2
       className={cn(
         "mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl",

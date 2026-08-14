@@ -5,9 +5,8 @@
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.52 0.13 155);
   --primary-foreground: oklch(0.985 0 0);
-  --primary-hover: oklch(0.28 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.97 0 0);
@@ -15,11 +14,9 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --border: oklch(0.922 0 0);
-  --ring: oklch(0.205 0 0);
+  --ring: oklch(0.52 0.13 155);
   --radius: 0.625rem;
 
-  --brand: oklch(0.52 0.13 155);
-  --brand-foreground: oklch(0.985 0 0);
   --elevation-card: 0 1px 2px 0 oklch(0.145 0 0 / 5%), 0 1px 3px 0 oklch(0.145 0 0 / 4%);
   --elevation-card-hover:
     0 2px 4px 0 oklch(0.145 0 0 / 6%), 0 12px 28px -12px oklch(0.145 0 0 / 14%);
@@ -31,9 +28,8 @@
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
     --card-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
+    --primary: oklch(0.79 0.16 155);
     --primary-foreground: oklch(0.205 0 0);
-    --primary-hover: oklch(0.92 0 0);
     --secondary: oklch(0.274 0.006 286.033);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
@@ -41,9 +37,7 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --border: oklch(1 0 0 / 12%);
-    --ring: oklch(0.985 0 0);
-    --brand: oklch(0.79 0.16 155);
-    --brand-foreground: oklch(0.205 0 0);
+    --ring: oklch(0.79 0.16 155);
     --elevation-card: inset 0 1px 0 0 oklch(1 0 0 / 5%);
     --elevation-card-hover: inset 0 1px 0 0 oklch(1 0 0 / 9%), 0 12px 28px -12px oklch(0 0 0 / 60%);
   }
@@ -56,9 +50,6 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: var(--primary-hover);
-  --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -100,6 +91,20 @@ body {
     linear-gradient(color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px);
   background-size: 2rem 2rem;
+}
+
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style, normal);
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki,
+  .shiki span {
+    color: var(--shiki-dark);
+    font-style: var(--shiki-dark-font-style, normal);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

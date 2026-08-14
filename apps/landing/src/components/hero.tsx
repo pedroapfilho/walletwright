@@ -49,7 +49,7 @@ const Hero = () => (
     <div className="mx-auto w-full max-w-6xl px-6 pt-20 pb-16 sm:pt-28 sm:pb-20">
       <div className="grid gap-12 lg:grid-cols-[9fr_11fr] lg:items-center">
         <div>
-          <p className="text-brand font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
             Playwright wallet automation
           </p>
 
@@ -84,7 +84,7 @@ const Hero = () => (
         <div className="border-border bg-card shadow-card rounded-xl border p-3 sm:p-4">
           <div className="text-muted-foreground flex items-center justify-between px-1 pb-3 font-mono text-xs">
             <span>approval run</span>
-            <span className="text-brand tabular-nums">4 checks passed</span>
+            <span className="text-primary tabular-nums">4 checks passed</span>
           </div>
           <ol
             aria-label="Wallet test sequence"
@@ -95,9 +95,9 @@ const Hero = () => (
                 className="border-border flex items-center gap-3 border-b p-3 text-base last:border-b-0 sm:border-r sm:text-sm sm:odd:border-r sm:[&:nth-child(3)]:border-b-0 sm:[&:nth-child(4)]:border-r-0 sm:[&:nth-child(4)]:border-b-0"
                 key={step}
               >
-                <span className="text-brand font-mono tabular-nums">0{index + 1}</span>
+                <span className="text-primary font-mono tabular-nums">0{index + 1}</span>
                 <span>{step}</span>
-                <span aria-hidden="true" className="text-brand ml-auto">
+                <span aria-hidden="true" className="text-primary ml-auto">
                   ✓
                 </span>
               </li>
