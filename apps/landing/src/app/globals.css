@@ -1,10 +1,5 @@
 @import "tailwindcss";
 
-/*
- * walletwright brand theme: neutral grayscale with a near-ink primary, the same
- * palette as the docs site. Dark mode is driven by the OS via
- * `prefers-color-scheme`, so the landing page needs no theme provider.
- */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -23,21 +18,8 @@
   --ring: oklch(0.205 0 0);
   --radius: 0.625rem;
 
-  /*
-   * The single accent, echoing the approve check mark in the logo. Green also
-   * avoids every wallet brand mark on the page (MetaMask orange, Phantom
-   * purple, Rabby and Sui blue, Solflare yellow), so tinted chrome never reads
-   * as belonging to one of them.
-   */
   --brand: oklch(0.52 0.13 155);
   --brand-foreground: oklch(0.985 0 0);
-
-  /*
-   * Light mode gets a conventional drop shadow. Dark mode cannot: a shadow is
-   * invisible against a near-black ground, so elevation there comes from an
-   * inset top highlight instead. Both directions live behind one token pair so
-   * components never branch on the color scheme.
-   */
   --elevation-card: 0 1px 2px 0 oklch(0.145 0 0 / 5%), 0 1px 3px 0 oklch(0.145 0 0 / 4%);
   --elevation-card-hover:
     0 2px 4px 0 oklch(0.145 0 0 / 6%), 0 12px 28px -12px oklch(0.145 0 0 / 14%);
@@ -98,7 +80,6 @@
 html {
   color-scheme: light dark;
   scrollbar-gutter: stable;
-  /* Clears the 4rem sticky header so skip-link and in-page jumps land visibly. */
   scroll-padding-top: 4rem;
 }
 
@@ -114,7 +95,13 @@ body {
   background-color: color-mix(in oklab, var(--foreground) 18%, transparent);
 }
 
-/* Guards every hover transition on the page at once, rather than per call site. */
+.wallet-lab-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
