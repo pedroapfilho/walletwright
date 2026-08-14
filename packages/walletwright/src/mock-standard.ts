@@ -12,10 +12,7 @@ import type { BrowserContext, Page } from "@playwright/test";
  * ed25519 signing runs Node-side (viem is secp256k1-only), reusing the same exposeFunction bridge
  * pattern as the EVM mock. No extra dependency: Node's built-in `crypto` signs ed25519 natively.
  */
-type MockEcosystem = "svm";
-
 type MockStandardWalletOptions = {
-  ecosystem?: MockEcosystem;
   /** Wallet name announced over Wallet Standard. */
   name?: string;
   /** 32-byte ed25519 seed as hex. Defaults to a fixed test seed so the address is stable. */
@@ -104,12 +101,7 @@ const installMockStandardWallet = async (
   target: BrowserContext | Page,
   options: MockStandardWalletOptions = {},
 ): Promise<MockStandardAccount> => {
-  const { ecosystem = "svm", name = "Walletwright Mock", seedHex = DEFAULT_SEED_HEX } = options;
-  if (ecosystem !== "svm") {
-    throw new Error(
-      `[walletwright/mock-standard] prototype supports only svm, got ${String(ecosystem)}`,
-    );
-  }
+  const { name = "Walletwright Mock", seedHex = DEFAULT_SEED_HEX } = options;
   const seed = Buffer.from(seedHex, "hex");
   if (seed.length !== 32) {
     throw new Error("[walletwright/mock-standard] seedHex must be 32 bytes");
@@ -205,4 +197,4 @@ const installMockStandardWallet = async (
 };
 
 export { createStandardHandler, encodeBase58, installMockStandardWallet, privateKeyFromSeed };
-export type { MockEcosystem, MockStandardAccount, MockStandardWalletOptions };
+export type { MockStandardAccount, MockStandardWalletOptions };

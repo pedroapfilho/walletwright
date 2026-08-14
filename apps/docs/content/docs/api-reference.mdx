@@ -234,7 +234,7 @@ import { test, expect } from "@playwright/test";
 import { installMockStandardWallet } from "@walletwright/core/mock-standard";
 
 test("connect and sign a Solana dapp, no extension", async ({ page }) => {
-  const { address } = await installMockStandardWallet(page, { ecosystem: "svm" });
+  const { address } = await installMockStandardWallet(page);
 
   await page.goto("/");
   await page.getByTestId("connect").click();
@@ -242,11 +242,10 @@ test("connect and sign a Solana dapp, no extension", async ({ page }) => {
 });
 ```
 
-| Option      | Default             | Description                                             |
-| ----------- | ------------------- | ------------------------------------------------------- |
-| `ecosystem` | `svm`               | The chain family to mock; only `svm` (Solana) is built. |
-| `name`      | `Walletwright Mock` | Name announced over Wallet Standard.                    |
-| `seedHex`   | fixed test seed     | 32-byte ed25519 seed as hex; sets the stable address.   |
+| Option    | Default             | Description                                           |
+| --------- | ------------------- | ----------------------------------------------------- |
+| `name`    | `Walletwright Mock` | Name announced over Wallet Standard.                  |
+| `seedHex` | fixed test seed     | 32-byte ed25519 seed as hex; sets the stable address. |
 
 It returns `{ address, publicKeyHex }` so a spec can verify a returned signature against the public
 key. Sui is out of scope: it needs a blake2b256 dependency Node's `crypto` lacks. It is a
