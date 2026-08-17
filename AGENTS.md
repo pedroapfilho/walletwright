@@ -40,7 +40,9 @@ Root-only: `format`/`format:check` (oxfmt), `test:e2e` (the demo's headed specs,
 `pnpm --filter demo`), `changeset`/`version-packages`/`release`.
 
 Run the demo end-to-end from `apps/demo`: `pnpm exec playwright install chromium`, then
-`pnpm test:cache` to onboard the wallets, then `pnpm test:e2e` to connect and sign. Run it headed
+`pnpm test:cache` to onboard the wallets (or `pnpm test:cache slush` for one), then `pnpm test:e2e`
+to connect and sign. `test:cache` derives its wallet list from `wallet-setup.ts`, and CI calls the
+same script. Run it headed
 (see below). The network and transaction specs also need a local chain on `127.0.0.1:8545` (chain
 id `31337`), e.g. Foundry's `anvil` seeded with the public test mnemonic.
 

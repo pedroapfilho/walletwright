@@ -17,18 +17,7 @@ const markOnboarded = (onboarding: OnboardingState): OnboardingState => ({
   onboardingTabs: {},
 });
 
-/**
- * Force `completedOnboarding=true` in MetaMask's persisted state so the cached wallet boots straight
- * to the unlock screen instead of getting stuck on the "wallet is ready" screen (whose "Open wallet"
- * action goes through the MV3 service worker and is unreliable under automation).
- *
- * MetaMask 13.13.x stored all state under a single `data` key; 13.3x stores each controller under its
- * own key (`OnboardingController`). Both are handled. Must run while the browser is closed.
- *
- * Every branch that can't find the state it means to patch throws: leaving the cache unpatched means
- * a wallet that boots to "wallet is ready" and ignores every dapp request, which is far harder to
- * diagnose from a spec than a failed cache build.
- */
+/** Patch both MetaMask 13.x onboarding layouts while the browser has released LevelDB. */
 export const markMetaMaskOnboarded = async (
   profileDir: string,
   extensionId: string,

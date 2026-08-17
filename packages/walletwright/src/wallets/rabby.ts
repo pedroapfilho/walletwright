@@ -87,23 +87,14 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
 const CONFIRM_LABELS = ["Connect", "Sign", "Confirm"];
 const CANCEL_LABELS = ["Cancel", "Reject"];
 
-/**
- * Rabby's approval window is focus-fragile: it unmounts its contents a few seconds after losing
- * focus, and Playwright's click (which waits for actionability, then for the click to settle) loses
- * the window mid-action. Rabby reads the vanished window as a dismissal, so the dapp gets
- * "User rejected the request" even though the confirm button was visible and enabled. Dispatching
- * the click inside the page skips focus, actionability, and post-click bookkeeping entirely. Rabby
- * is a plain React app, so `evaluate` works here (unlike MetaMask, which scuttles the realm).
- *
- * Signing is a two-step footer: "Sign" swaps itself for "Confirm", which must be clicked too, and
- * both start disabled while Rabby analyses the request. So keep clicking whichever labelled button
- * is currently enabled until the window closes, which is the only signal the request was answered.
- */
+/** Rabby's focus-fragile popup requires in-page clicks; signing then requires a second Confirm click. */
 const clickApprovalButton = async (
   popup: Page,
   labels: ReadonlyArray<string>,
 ): Promise<boolean> => {
-  let lastClicked = "";
+  // Every label already clicked, not just the most recent one: after Sign then Confirm, a one-slot
+  // memory makes "Sign" eligible again, and re-clicking it re-issues the request.
+  const clickedLabels = new Set<string>();
   const answered = await waitUntil(
     async () => {
       if (popup.isClosed()) {
@@ -114,16 +105,16 @@ const clickApprovalButton = async (
           (arg) => {
             const target = [...document.querySelectorAll("button")].find((button) => {
               const text = (button.textContent ?? "").trim();
-              return arg.names.includes(text) && !button.disabled && text !== arg.skip;
+              return arg.names.includes(text) && !button.disabled && !arg.skip.includes(text);
             });
             target?.click();
             return target ? (target.textContent ?? "").trim() : "";
           },
-          { names: [...labels], skip: lastClicked },
+          { names: [...labels], skip: [...clickedLabels] },
         )
         .catch(() => "");
       if (clicked) {
-        lastClicked = clicked;
+        clickedLabels.add(clicked);
       }
       return undefined;
     },

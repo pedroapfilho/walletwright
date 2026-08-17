@@ -13,13 +13,12 @@ const nodeConfig = defineConfig({
       ],
       include: ["src/**/*.{ts,tsx}"],
       provider: "v8",
+      /**
+       * Reported, not gated: consumers drive a real browser through Playwright, so a vitest number
+       * covers the pure-logic slice only (~38% here) and any threshold against it misleads. The gate
+       * that used to live here was cancelled by a per-package override that zeroed it.
+       */
       reporter: ["text", "html", "json-summary"],
-      thresholds: {
-        branches: 60,
-        functions: 70,
-        lines: 78,
-        statements: 78,
-      },
     },
     environment: "node",
     globals: true,

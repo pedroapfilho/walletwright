@@ -20,15 +20,7 @@ export const profileKey = (setup: WalletSetup): string =>
     .digest("hex")
     .slice(0, 20);
 
-/**
- * Compute an extension's id without querying the browser (`chrome://extensions` is blocked headless,
- * and the service worker starts lazily). Chrome derives the id from the sha256 of either the
- * manifest's public `key` (if present, e.g. Phantom → its fixed Web Store id) or the absolute load
- * path (no key, e.g. MetaMask), taking the first 16 bytes and mapping each nibble 0-f → a-p.
- *
- * The path is resolved through symlinks (`realpathSync`) because Chrome hashes the *real* path, a
- * cache under a symlinked dir (e.g. macOS `/tmp` → `/private/tmp`) would otherwise yield a wrong id.
- */
+/** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
 export const extensionIdFromPath = (extensionPath: string): string => {
   const resolved = path.resolve(extensionPath);
   const abs = (() => {
@@ -111,14 +103,7 @@ const APPROVAL_WINDOW = { height: 592, width: 360 };
 /** Far enough from the edge that a popup this size lands fully on any usable display. */
 const APPROVAL_WINDOW_OFFSET = 50;
 
-/**
- * Put a wallet-spawned approval window somewhere it can be clicked. It can open partly off-screen
- * on a small or virtual display, and Playwright will not click what is out of view, so a confirm
- * button that is rendered and enabled still times out. Synpress carries the same workaround.
- *
- * Best-effort throughout: headless has no window to move, and nothing here is required for a window
- * that already sits on screen.
- */
+/** Move approval popups on-screen; headless and unsupported CDP targets are ignored. */
 export const placeApprovalWindow = async (page: Page): Promise<void> => {
   await page.setViewportSize(APPROVAL_WINDOW).catch(() => {});
   try {
@@ -140,9 +125,3 @@ export const placeApprovalWindow = async (page: Page): Promise<void> => {
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
 export const extensionStateDir = (profileDir: string, extensionId: string): string =>
   path.join(profileDir, "Default", "Local Extension Settings", extensionId);
-
-export const hasNotificationPopup = (
-  context: BrowserContext,
-  extensionId: string,
-  match = DEFAULT_NOTIFICATION_MATCH,
-): boolean => context.pages().some((page) => isApprovalPopup(page, extensionId, match));

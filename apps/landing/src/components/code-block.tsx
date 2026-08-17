@@ -14,17 +14,7 @@ type CodeBlockProps = {
   wrap?: boolean;
 };
 
-/**
- * Server-rendered syntax highlighting via shiki. We convert shiki's HAST into
- * real React elements (instead of dangerouslySetInnerHTML) so the highlighted
- * markup is rendered as ordinary children. The panel is always dark: a
- * deliberate fixed surface that reads as intentional on the static page. With a
- * `filename`, it gets a window title bar so it reads as an editor.
- *
- * shiki puts `tabindex="0"` on the `<pre>` so the scroll region is keyboard
- * reachable, which is why the wrapper names it and paints its own focus ring;
- * the UA default is invisible against this background.
- */
+/** Server-render Shiki as React elements and retain keyboard focus for the scroll region. */
 const CodeBlock = async ({ code, filename, label, lang = "tsx", wrap = false }: CodeBlockProps) => {
   const hast = await codeToHast(code, { lang, theme: "github-dark-default" });
 

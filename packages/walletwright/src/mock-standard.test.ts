@@ -39,7 +39,7 @@ describe("createStandardHandler", () => {
   });
 
   it("rejects an unsupported method", async () => {
-    await expect(handle({ method: "solana:signTransaction" })).rejects.toThrow(
+    await expect(handle({ message: [], method: "solana:signTransaction" })).rejects.toThrow(
       /unsupported method/v,
     );
   });

@@ -94,8 +94,9 @@ createWallet(...)                       the Wallet you drive in the test
 `buildCache` is idempotent per `(wallet, version, seedPhrase, password)`: that tuple hashes to the
 profile directory name (`profileKey` in `internal/utils.ts`), so re-running with the same setup
 reuses the profile. Each `launchWallet` copies that profile to a throwaway directory, so
-parallel workers never share a profile and the cache is never mutated. The copy is removed when the
-context closes.
+parallel workers never share a profile and the cache is never mutated. The copy is removed by the
+returned `close()`, on every failure path inside `launchWallet`, and as a fallback when the context
+closes.
 
 <Callout type="info">
   Both phases launch the `chromium` channel, because Playwright's default headless build is the
@@ -349,7 +350,8 @@ directory, so onboarding runs once. Change any of those four and you get a disti
 
 `launchWallet` never launches the cached profile directly. It copies it to a fresh
 `mkdtemp` directory and launches from the copy, so the cache stays pristine and parallel workers do
-not share a profile. That throwaway copy is removed when the context closes.
+not share a profile. That throwaway copy has one owner: `launchWallet` removes it on every failure
+path, and the returned `close()` awaits its removal after closing the browser.
 
 ## The subpackages
 

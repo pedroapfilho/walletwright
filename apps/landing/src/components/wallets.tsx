@@ -70,7 +70,7 @@ const Wallets = () => (
   <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
     <SectionHeading eyebrow="Coverage" title="Real wallets across EVM, Solana, and Sui.">
       One <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono text-[0.9em]">wallet</code>{" "}
-      fixture drives all five. It connects and signs on{" "}
+      fixture drives all {WALLETS.length}. It connects and signs on{" "}
       <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono text-[0.9em]">
         window.ethereum
       </code>
@@ -78,6 +78,7 @@ const Wallets = () => (
       chain.
     </SectionHeading>
 
+    {/* The column count stays a literal: Tailwind only generates classes it can see in the source. */}
     <ul className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
       {WALLETS.map((wallet) => (
         <li className={CARD_CLASSES} key={wallet.name}>

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -169,6 +169,89 @@ describe("downloadAndExtractExtension", () => {
     });
 
     expect(existsSync(path.join(outDir, "manifest.json"))).toBe(true);
+  });
+
+  it("reuses an existing extraction without hitting the server", async () => {
+    const cacheDir = await makeCacheDir();
+    const outDir = path.join(cacheDir, "pre-placed");
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, "manifest.json"), '{"name":"pre-placed"}');
+
+    // An unreachable URL proves the fast path never fetched.
+    await expect(
+      downloadAndExtractExtension({
+        cacheDir,
+        kind: "zip",
+        name: "pre-placed",
+        sha256: undefined,
+        url: "http://127.0.0.1:1/unused.zip",
+      }),
+    ).resolves.toBe(outDir);
+  });
+
+  it("leaves no staging directory behind, so a completed extraction is the only state", async () => {
+    const zip = new AdmZip();
+    zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
+    zip.addFile("background.js", Buffer.from("// noop"));
+    const { close, url } = await serve(zip.toBuffer());
+    servers.push({ close });
+
+    const cacheDir = await makeCacheDir();
+    await downloadAndExtractExtension({
+      cacheDir,
+      kind: "zip",
+      name: "staged-extension",
+      sha256: undefined,
+      url,
+    });
+
+    expect(await readdir(cacheDir)).toEqual(["staged-extension"]);
+  });
+
+  it("does not publish a partial extraction when the archive escapes mid-extract", async () => {
+    const zip = new AdmZip();
+    zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
+    zip.addFile("placeholder.txt", Buffer.from("evil"));
+    zip.getEntries()[1].entryName = "../escape.txt";
+    const { close, url } = await serve(zip.toBuffer());
+    servers.push({ close });
+
+    const cacheDir = await makeCacheDir();
+    await expect(
+      downloadAndExtractExtension({
+        cacheDir,
+        kind: "zip",
+        name: "aborted-extension",
+        sha256: undefined,
+        url,
+      }),
+    ).rejects.toThrow(/escapes/v);
+
+    // Neither a poisoned `<name>` a later run would trust, nor a leftover staging dir.
+    expect(existsSync(path.join(cacheDir, "aborted-extension"))).toBe(false);
+    expect(await readdir(cacheDir)).toEqual([]);
+  });
+
+  it("keeps a previously published extraction when a later download fails", async () => {
+    const cacheDir = await makeCacheDir();
+    const outDir = path.join(cacheDir, "kept-extension");
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, "other.txt"), "first build");
+
+    const { close, url } = await serve(Buffer.from("not a zip"));
+    servers.push({ close });
+
+    await expect(
+      downloadAndExtractExtension({
+        cacheDir,
+        kind: "zip",
+        name: "kept-extension",
+        sha256: undefined,
+        url,
+      }),
+    ).rejects.toThrow();
+
+    expect(existsSync(path.join(outDir, "other.txt"))).toBe(true);
   });
 });
 

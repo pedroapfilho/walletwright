@@ -3,8 +3,6 @@ import { phantomTest } from "./fixtures";
 const test = phantomTest;
 const { expect } = test;
 
-test.use({ headless: true });
-
 test("Phantom: connect + sign on EVM and Solana", async ({ page, wallet }) => {
   await page.goto("/");
 
