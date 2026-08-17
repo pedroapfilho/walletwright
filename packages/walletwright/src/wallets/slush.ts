@@ -64,7 +64,7 @@ export const slush: WalletDefinition = {
 
     const words = seedPhrase.trim().split(/\s+/v);
     for (let i = 0; i < words.length; i++) {
-      await page.locator(`input[placeholder="Word ${i + 1}"]`).fill(words[i] ?? "");
+      await page.getByLabel(`Word ${i + 1}`, { exact: true }).fill(words[i] ?? "");
     }
     await page.getByRole("button", { name: "Next" }).click();
     await sleep(2000);

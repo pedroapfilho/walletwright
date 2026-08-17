@@ -3,8 +3,6 @@ import { rabbyTest } from "./fixtures";
 const test = rabbyTest;
 const { expect } = test;
 
-test.use({ headless: true });
-
 const ACCOUNT = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
 
 test("Rabby: connect wallet and sign a message", async ({ page, wallet }) => {

@@ -2,12 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 import type { PrivateKeyAccount } from "viem/accounts";
 import { privateKeyToAccount } from "viem/accounts";
 
-/**
- * A headless injected-wallet fake for dapp tests that don't need a real extension. It announces
- * itself over EIP-6963 and answers the EIP-1193 requests a connect/sign flow makes, signing with a
- * real key so signatures verify. `@walletwright/core/mock` is a separate entry point that needs
- * `viem` (optional peer); the extension-driving core doesn't.
- */
+/** Headless EIP-6963 and EIP-1193 mock that signs with a real key. */
 export type MockWalletOptions = {
   chainId?: number;
   /** Wallet name announced over EIP-6963. */
@@ -57,6 +52,9 @@ const createRpcHandler =
     }
   };
 
+/** Each install needs its own Playwright binding and EIP-6963 identity. */
+let installCount = 0;
+
 /**
  * Install the mock on a context (every page) or a single page. Call before `goto`, so the provider
  * exists when the dapp looks for it. Returns the account address it announces.
@@ -70,14 +68,9 @@ const installMockWallet = async (
   const chainIdHex = toHex(chainId);
   const handle = createRpcHandler(account, chainIdHex);
 
-  const bindingName = "__walletwrightMockRpc";
-  try {
-    await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
-  } catch (error) {
-    if (!(error instanceof Error && error.message.includes("already registered"))) {
-      throw error;
-    }
-  }
+  const install = installCount++;
+  const bindingName = `__walletwrightMockRpc_${install}`;
+  await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
 
   await target.addInitScript(
     ([binding, info]) => {
@@ -108,7 +101,8 @@ const installMockWallet = async (
         icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>",
         name,
         rdns: "sh.walletwright.mock",
-        uuid: "00000000-0000-0000-0000-000000000000",
+        // Per install, so two providers stay distinguishable in a dapp's uuid-keyed provider map.
+        uuid: `00000000-0000-0000-0000-${String(install).padStart(12, "0")}`,
       },
     ] as const,
   );

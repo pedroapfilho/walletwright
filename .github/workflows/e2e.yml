@@ -22,7 +22,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: apps/demo/.walletwright
-          key: walletwright-${{ runner.os }}-${{ hashFiles('apps/demo/wallet-setup.ts') }}
+          key: walletwright-${{ runner.os }}-${{ hashFiles('apps/demo/wallet-setup.ts', 'packages/walletwright/src/wallets/**') }}
       # `channel: "chromium"` needs the full browser, not the headless shell that ships by default.
       - run: pnpm --filter demo exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y xvfb
@@ -33,12 +33,10 @@ jobs:
       # a run from a headless-built cache reached MetaMask's home screen at `notification.html`
       # instead of the pending request, even when the specs themselves ran headed.
       - run: |
-          for wallet in metamask phantom rabby solflare slush; do
-            xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
-              pnpm --filter demo exec tsx scripts/cache-one.ts "$wallet"
-          done
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            pnpm --filter demo test:cache
       # Under a virtual display, since most of these wallets need a real window for their approvals.
-      # The Phantom and Rabby specs still run headless, pinned in the specs themselves.
+      # Phantom and Rabby run headless, derived from their `headlessApprovals` declaration.
       # A roomy screen on purpose: a wallet popup that opens partly off a small virtual display
       # renders fine but cannot be clicked, which reads as a button timeout rather than a layout
       # problem. walletwright also repositions the window, and the two together are belt and braces.
