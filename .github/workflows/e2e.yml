@@ -22,7 +22,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: apps/demo/.walletwright
-          key: walletwright-${{ runner.os }}-${{ hashFiles('apps/demo/wallet-setup.ts') }}
+          key: walletwright-${{ runner.os }}-${{ hashFiles('apps/demo/wallet-setup.ts', 'packages/walletwright/src/wallets/**') }}
       # `channel: "chromium"` needs the full browser, not the headless shell that ships by default.
       - run: pnpm --filter demo exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y xvfb
