@@ -7,7 +7,7 @@ import { INSTALL_COMMAND } from "@/lib/site";
  * half people most often miss.
  */
 const InstallCommand = () => (
-  <div className="border-border bg-card text-card-foreground inline-flex max-w-full items-center gap-3 rounded-md border py-2 pr-2 pl-4 font-mono text-sm shadow-sm">
+  <div className="border-border bg-card text-card-foreground inline-flex max-w-full items-center gap-3 rounded-md border py-2 pr-2 pl-4 font-mono text-sm">
     <span aria-hidden="true" className="text-muted-foreground select-none">
       $
     </span>

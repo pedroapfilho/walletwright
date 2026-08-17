@@ -62,7 +62,7 @@ const viewport: Viewport = {
 };
 
 const RootLayout = ({ children }: { children: ReactNode }) => (
-  <html lang="en">
+  <html className="antialiased" lang="en">
     <body>
       {/* oxlint-disable-next-line react-doctor/no-layout-shifting-interaction-state -- the padding
       lands only alongside focus:fixed, which takes the link out of flow, so no sibling can move */}

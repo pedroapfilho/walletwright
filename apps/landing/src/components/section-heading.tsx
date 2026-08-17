@@ -1,27 +1,21 @@
 import type { ReactNode } from "react";
 
-import { cn } from "@/lib/cn";
+import { Eyebrow } from "@/components/eyebrow";
 
 type SectionHeadingProps = {
   children?: ReactNode;
   eyebrow: string;
   title: string;
-  titleClassName?: string;
 };
 
-const SectionHeading = ({ children, eyebrow, title, titleClassName }: SectionHeadingProps) => (
+const SectionHeading = ({ children, eyebrow, title }: SectionHeadingProps) => (
   <div>
-    <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">{eyebrow}</p>
-    <h2
-      className={cn(
-        "mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl",
-        titleClassName,
-      )}
-    >
+    <Eyebrow>{eyebrow}</Eyebrow>
+    <h2 className="mt-4 max-w-[35ch] text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
       {title}
     </h2>
     {children === undefined || children === null ? null : (
-      <p className="text-muted-foreground mt-4 max-w-[60ch] text-lg text-pretty">{children}</p>
+      <p className="text-muted-foreground mt-4 max-w-[48ch] text-lg text-pretty">{children}</p>
     )}
   </div>
 );

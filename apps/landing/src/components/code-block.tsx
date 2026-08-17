@@ -29,7 +29,7 @@ const CodeBlock = async ({ code, filename, label, lang = "tsx", wrap = false }: 
     <section
       aria-label={label ?? filename ?? "Code example"}
       className={cn(
-        "border-border bg-card text-card-foreground overflow-hidden rounded-lg border font-mono text-sm shadow-lg",
+        "border-border bg-card text-card-foreground shadow-card overflow-hidden rounded-xl border font-mono text-sm",
         "[&_pre]:overflow-x-auto [&_pre]:p-5 [&_pre]:leading-relaxed",
         "[&_pre:focus-visible]:outline-ring [&_pre:focus-visible]:outline-2 [&_pre:focus-visible]:-outline-offset-2",
         wrap && "[&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap",

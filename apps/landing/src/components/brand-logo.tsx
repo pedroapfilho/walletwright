@@ -11,13 +11,7 @@ type BrandLogoProps = {
  */
 const BrandLogo = ({ className }: BrandLogoProps) => (
   <span className={cn("text-foreground inline-flex items-center gap-2", className)}>
-    <svg
-      aria-hidden="true"
-      className="size-6 shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg aria-hidden="true" className="size-6 shrink-0" fill="none" viewBox="0 0 24 24">
       <rect
         height="19"
         rx="5.5"

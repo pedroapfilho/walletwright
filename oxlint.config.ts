@@ -55,6 +55,14 @@ export default defineConfig({
       },
     },
     {
+      files: ["apps/landing/**/*.tsx"],
+      rules: {
+        // Tailwind's preflight removes the list marker, and Safari/VoiceOver then drops the list
+        // role along with it, so the "redundant" role is the only thing keeping the semantics.
+        "jsx-a11y/no-redundant-roles": "off",
+      },
+    },
+    {
       files: ["apps/demo/**/*.ts", "apps/demo/**/*.tsx"],
       rules: {
         "no-misused-promises": "off",
