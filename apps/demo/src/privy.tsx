@@ -2,6 +2,8 @@ import { PrivyProvider, useLogin, usePrivy, useWallets } from "@privy-io/react-a
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 
+import { toErrorMessage } from "./error-message";
+
 // Privy's public test app id works only from http://localhost:3000 (heavily rate-limited, data wiped
 // periodically), enough for clicking the flow by hand. For the automated spec, provide your own app
 // id via VITE_PRIVY_APP_ID (env var or a local apps/demo/.env, see .env.example).
@@ -29,7 +31,7 @@ const Dapp = () => {
       });
       setSignature(String(result));
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : String(error));
+      setErrorMessage(toErrorMessage(error));
     }
   };
 

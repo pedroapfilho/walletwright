@@ -146,14 +146,15 @@ chains; in MetaMask 13.x it hangs with no popup and no error. See the network re
 
 ## `launchWallet(setup, options?)`
 
-The standalone launcher, without Playwright fixtures. It returns `{ context, wallet }`; close the
-context yourself.
+The standalone launcher, without Playwright fixtures. It returns `{ close, context, wallet }`. Call
+`close()` when you are done: it closes the browser and then awaits removal of the throwaway profile
+copy, which `context.close()` alone cannot guarantee before the process exits.
 
 ```ts
-const { context, wallet } = await launchWallet(setup, { headless: true });
+const { close, context, wallet } = await launchWallet(setup, { headless: true });
 const page = await context.newPage();
 // drive the page and the wallet here
-await context.close();
+await close();
 ```
 
 | Argument           | Type          | Description                                         |

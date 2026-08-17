@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { metamaskDownload } from "./metamask";
+import { DEFAULT_VERSION, metamaskDownload } from "./metamask";
 
 describe("metamaskDownload", () => {
   it("pins an integrity hash for the version the wallet defaults to", () => {
-    const { sha256, url } = metamaskDownload("/tmp/cache", "13.35.1");
+    const { sha256, url } = metamaskDownload("/tmp/cache", DEFAULT_VERSION);
 
     expect(sha256).toMatch(/^[0-9a-f]{64}$/v);
-    expect(url).toContain("v13.35.1/metamask-chrome-13.35.1.zip");
+    expect(url).toContain(`v${DEFAULT_VERSION}/metamask-chrome-${DEFAULT_VERSION}.zip`);
   });
 
   it("leaves sha256 undefined for a caller-pinned version with no recorded hash", () => {

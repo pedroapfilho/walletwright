@@ -75,11 +75,12 @@ const signEd25519 = (seed: Buffer, message: Uint8Array): Array<number> => [
 
 const SVM_CHAINS = ["solana:mainnet", "solana:devnet"] as const;
 
-type BridgeRequest = { message?: Array<number>; method: string };
+/** `message` is required: defaulting it would sign the empty message instead of rejecting. */
+type BridgeRequest = { message: Array<number>; method: string };
 
 const createStandardHandler =
   (seed: Buffer) =>
-  ({ message = [], method }: BridgeRequest): Promise<Array<number>> => {
+  ({ message, method }: BridgeRequest): Promise<Array<number>> => {
     switch (method) {
       case "solana:signMessage": {
         return Promise.resolve(signEd25519(seed, Uint8Array.from(message)));
@@ -97,6 +98,9 @@ const createStandardHandler =
  * single page. Call before `goto`, so the wallet is registered when the dapp discovers wallets.
  * Returns the account it announces so a test can verify signatures against the public key.
  */
+/** Per install, for the same reason as the EVM mock: see the note on `installCount` in `mock.ts`. */
+let installCount = 0;
+
 const installMockStandardWallet = async (
   target: BrowserContext | Page,
   options: MockStandardWalletOptions = {},
@@ -111,14 +115,8 @@ const installMockStandardWallet = async (
   const publicKeyHex = publicKey.toString("hex");
   const handle = createStandardHandler(seed);
 
-  const bindingName = "__walletwrightMockStandardSign";
-  try {
-    await target.exposeFunction(bindingName, (rpc: BridgeRequest) => handle(rpc));
-  } catch (error) {
-    if (!(error instanceof Error && error.message.includes("already registered"))) {
-      throw error;
-    }
-  }
+  const bindingName = `__walletwrightMockStandardSign_${installCount++}`;
+  await target.exposeFunction(bindingName, (rpc: BridgeRequest) => handle(rpc));
 
   await target.addInitScript(
     ([binding, info]) => {

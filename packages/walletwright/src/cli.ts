@@ -2,6 +2,7 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 
 import { buildCache } from "./internal/cache";
 import type { WalletSetup } from "./types";
@@ -25,28 +26,45 @@ Options:
   --headless         build the cache headless
   -h, --help         show this help
 
+--setup carries the whole setup, so it cannot be combined with --wallet/--seed/--password/--version;
+--cache-dir works with either form. A value that begins with "-" needs the --flag=value spelling.
+
 --seed and --password are visible in shell history and process lists when passed as flags; use
 test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
-const parseFlags = (argv: Array<string>): Record<string, string | boolean> => {
-  const flags: Record<string, string | boolean> = {};
-  for (let i = 0; i < argv.length; i++) {
-    const token = argv[i];
-    if (!token?.startsWith("--") && token !== "-h") {
-      continue;
-    }
-    const key = token.replace(/^--?/v, "");
-    const next = argv[i + 1];
-    if (next && !next.startsWith("--")) {
-      flags[key] = next;
-      i++;
-    } else {
-      flags[key] = true;
-    }
-  }
-  return flags;
+/**
+ * Declared so `strict` parsing can reject an unknown flag, a flag given no value, and a boolean flag
+ * handed one. A hand-rolled "does the next token start with --" parser accepted all three silently:
+ * `--cache-dirr ./ci` built into the default directory and exited 0, and `--headless false` turned
+ * headless on, because the string "false" is truthy.
+ */
+const OPTIONS = {
+  "cache-dir": { type: "string" },
+  headless: { type: "boolean" },
+  help: { short: "h", type: "boolean" },
+  password: { type: "string" },
+  seed: { type: "string" },
+  setup: { type: "string" },
+  version: { type: "string" },
+  wallet: { type: "string" },
+} as const;
+
+type Flags = {
+  "cache-dir"?: string;
+  headless?: boolean;
+  help?: boolean;
+  password?: string;
+  seed?: string;
+  setup?: string;
+  version?: string;
+  wallet?: string;
 };
+
+/** The flags `--setup` makes redundant: accepting both silently discarded one of the two. */
+const SETUP_CONFLICTS = ["password", "seed", "version", "wallet"] as const;
+
+type Command = { kind: "help" } | { headless: boolean; kind: "cache"; setup: WalletSetup };
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -73,50 +91,73 @@ const loadSetup = async (file: string): Promise<WalletSetup> => {
   return setup;
 };
 
-const resolveSetup = async (flags: Record<string, string | boolean>): Promise<WalletSetup> => {
-  if (typeof flags.setup === "string") {
-    const loaded = await loadSetup(flags.setup);
-    return typeof flags["cache-dir"] === "string"
-      ? { ...loaded, cacheDir: flags["cache-dir"] }
-      : loaded;
-  }
-  const { password, seed, wallet } = flags;
-  if (isNonEmptyString(wallet) && isNonEmptyString(seed) && isNonEmptyString(password)) {
-    if (!isWalletKind(wallet)) {
+const resolveSetup = async (flags: Flags): Promise<WalletSetup> => {
+  const withCacheDir = (setup: WalletSetup): WalletSetup =>
+    isNonEmptyString(flags["cache-dir"]) ? { ...setup, cacheDir: flags["cache-dir"] } : setup;
+
+  if (isNonEmptyString(flags.setup)) {
+    const redundant = SETUP_CONFLICTS.filter((name) => flags[name] !== undefined);
+    if (redundant.length > 0) {
       throw new Error(
-        `[walletwright] unknown --wallet "${wallet}". Expected one of: ${Object.keys(wallets).join(", ")}.`,
+        `[walletwright] --setup carries the whole setup, so --${redundant.join(", --")} would be ignored. Pass one or the other.`,
       );
     }
-    return {
-      password,
-      seedPhrase: seed,
-      wallet,
-      ...(typeof flags.version === "string" ? { version: flags.version } : {}),
-      ...(typeof flags["cache-dir"] === "string" ? { cacheDir: flags["cache-dir"] } : {}),
-    };
+    return withCacheDir(await loadSetup(flags.setup));
   }
-  throw new Error(
-    "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
-  );
+
+  const { password, seed, wallet } = flags;
+  if (!isNonEmptyString(wallet) || !isNonEmptyString(seed) || !isNonEmptyString(password)) {
+    throw new Error(
+      "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
+    );
+  }
+  if (!isWalletKind(wallet)) {
+    throw new Error(
+      `[walletwright] unknown --wallet "${wallet}". Expected one of: ${KINDS.join(", ")}.`,
+    );
+  }
+  const base: WalletSetup = { password, seedPhrase: seed, wallet };
+  return withCacheDir(isNonEmptyString(flags.version) ? { ...base, version: flags.version } : base);
 };
 
-const main = async (): Promise<void> => {
-  const argv = process.argv.slice(2);
-  const [command] = argv;
-  const flags = parseFlags(argv);
+const parseArgv = async (argv: Array<string>): Promise<Command> => {
+  let parsed;
+  try {
+    parsed = parseArgs({ allowPositionals: true, args: argv, options: OPTIONS, strict: true });
+  } catch (error) {
+    // node's ERR_PARSE_ARGS_* messages are good; they just need the prefix everything else here has.
+    throw new Error(`[walletwright] ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
+  }
 
-  if (!command || command === "help" || flags.help !== undefined || flags.h !== undefined) {
-    process.stdout.write(HELP);
-    return;
+  const flags: Flags = parsed.values;
+  const [command, ...extra] = parsed.positionals;
+
+  if (flags.help === true || command === undefined || command === "help") {
+    return { kind: "help" };
   }
   if (command !== "cache") {
     throw new Error(`[walletwright] unknown command "${command}". Run \`walletwright --help\`.`);
   }
+  if (extra.length > 0) {
+    throw new Error(
+      `[walletwright] unexpected argument "${extra[0]}". Run \`walletwright --help\`.`,
+    );
+  }
 
-  const setup = await resolveSetup(flags);
+  return { headless: flags.headless === true, kind: "cache", setup: await resolveSetup(flags) };
+};
 
-  process.stdout.write(`[walletwright] building ${setup.wallet} cache…\n`);
-  const profileDir = await buildCache(setup, { headless: Boolean(flags.headless) });
+const main = async (): Promise<void> => {
+  const command = await parseArgv(process.argv.slice(2));
+  if (command.kind === "help") {
+    process.stdout.write(HELP);
+    return;
+  }
+
+  process.stdout.write(`[walletwright] building ${command.setup.wallet} cache…\n`);
+  const profileDir = await buildCache(command.setup, { headless: command.headless });
   process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
 };
 
@@ -134,8 +175,11 @@ if (isEntryPoint(import.meta.url, process.argv[1])) {
     await main();
   } catch (error: unknown) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exit(1);
+    // Not process.exit(1): writes to a piped stderr are async and exit() does not flush them, so
+    // `walletwright cache … 2>&1 | tee build.log` could exit 1 with an empty diagnostic. Nothing runs
+    // after this block, so the process ends on its own once the write drains.
+    process.exitCode = 1;
   }
 }
 
-export { isEntryPoint, parseFlags, resolveSetup };
+export { isEntryPoint, parseArgv, resolveSetup };

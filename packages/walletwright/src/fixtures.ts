@@ -36,6 +36,6 @@ export const createWalletFixtures = (setup: WalletSetup) =>
     walletLaunch: async ({ headless }, use) => {
       const launched = await launchWallet(setup, { headless });
       await use(launched);
-      await launched.context.close();
+      await launched.close();
     },
   });

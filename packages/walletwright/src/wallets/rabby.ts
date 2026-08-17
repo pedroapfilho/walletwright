@@ -103,7 +103,9 @@ const clickApprovalButton = async (
   popup: Page,
   labels: ReadonlyArray<string>,
 ): Promise<boolean> => {
-  let lastClicked = "";
+  // Every label already clicked, not just the most recent one: after Sign then Confirm, a one-slot
+  // memory makes "Sign" eligible again, and re-clicking it re-issues the request.
+  const clickedLabels = new Set<string>();
   const answered = await waitUntil(
     async () => {
       if (popup.isClosed()) {
@@ -114,16 +116,16 @@ const clickApprovalButton = async (
           (arg) => {
             const target = [...document.querySelectorAll("button")].find((button) => {
               const text = (button.textContent ?? "").trim();
-              return arg.names.includes(text) && !button.disabled && text !== arg.skip;
+              return arg.names.includes(text) && !button.disabled && !arg.skip.includes(text);
             });
             target?.click();
             return target ? (target.textContent ?? "").trim() : "";
           },
-          { names: [...labels], skip: lastClicked },
+          { names: [...labels], skip: [...clickedLabels] },
         )
         .catch(() => "");
       if (clicked) {
-        lastClicked = clicked;
+        clickedLabels.add(clicked);
       }
       return undefined;
     },

@@ -58,6 +58,16 @@ const createRpcHandler =
   };
 
 /**
+ * Bridge and EIP-6963 identity are per install, not per module. A shared binding name meant a second
+ * install with different options hit Playwright's "already registered", swallowed it, and left the
+ * page routing to the *first* install's handler while returning the second one's address: a silently
+ * wrong signature and chain rather than an error. Installing twice with the same options is still
+ * harmless, it just announces twice (init scripts cannot be removed), and `window.ethereum` is
+ * last-wins either way.
+ */
+let installCount = 0;
+
+/**
  * Install the mock on a context (every page) or a single page. Call before `goto`, so the provider
  * exists when the dapp looks for it. Returns the account address it announces.
  */
@@ -70,14 +80,9 @@ const installMockWallet = async (
   const chainIdHex = toHex(chainId);
   const handle = createRpcHandler(account, chainIdHex);
 
-  const bindingName = "__walletwrightMockRpc";
-  try {
-    await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
-  } catch (error) {
-    if (!(error instanceof Error && error.message.includes("already registered"))) {
-      throw error;
-    }
-  }
+  const install = installCount++;
+  const bindingName = `__walletwrightMockRpc_${install}`;
+  await target.exposeFunction(bindingName, (rpc: Rpc) => handle(rpc));
 
   await target.addInitScript(
     ([binding, info]) => {
@@ -108,7 +113,8 @@ const installMockWallet = async (
         icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>",
         name,
         rdns: "sh.walletwright.mock",
-        uuid: "00000000-0000-0000-0000-000000000000",
+        // Per install, so two providers stay distinguishable in a dapp's uuid-keyed provider map.
+        uuid: `00000000-0000-0000-0000-${String(install).padStart(12, "0")}`,
       },
     ] as const,
   );

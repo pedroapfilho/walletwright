@@ -8,8 +8,6 @@ import { approvalControls, approve, reject } from "./metamask/approve";
 import { importWallet, reachUnlockScreen, unlock } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
 
-const DEFAULT_VERSION = "13.35.1";
-
 /**
  * sha256 of each pinned `metamask-chrome-<version>.zip` release asset, so a pinned download is
  * verified rather than trusted. This is the one place to fill in when bumping `DEFAULT_VERSION`:
@@ -19,16 +17,26 @@ const DEFAULT_VERSION = "13.35.1";
  * A version a caller pins through `setup.version` has no entry here and downloads unverified, and
  * the Web-Store wallets can't be pinned at all (that endpoint always serves the current version).
  */
-const RELEASE_SHA256: Readonly<Record<string, string>> = {
+const RELEASE_SHA256 = {
   "13.35.1": "4e0f8626df0ae9fb15f5f3ad6784a0b518f3ede067b2b0d4f539f9f457c5049c",
-};
+} as const satisfies Readonly<Record<string, string>>;
+
+/**
+ * Typed as a key of `RELEASE_SHA256`, so bumping the default without adding its hash above is a
+ * compile error. `download.ts` skips verification for an unpinned `sha256`, so the same bump would
+ * otherwise silently downgrade every default MetaMask download to unverified.
+ */
+export const DEFAULT_VERSION: keyof typeof RELEASE_SHA256 = "13.35.1";
+
+const releaseSha256 = (version: string): string | undefined =>
+  Object.entries(RELEASE_SHA256).find(([pinned]) => pinned === version)?.[1];
 
 /** Download inputs for a MetaMask release, split out so the integrity wiring is unit-testable. */
 export const metamaskDownload = (cacheDir: string, version: string) => ({
   cacheDir,
   kind: "zip" as const,
   name: `metamask-chrome-${version}`,
-  sha256: RELEASE_SHA256[version],
+  sha256: releaseSha256(version),
   url: `https://github.com/MetaMask/metamask-extension/releases/download/v${version}/metamask-chrome-${version}.zip`,
 });
 

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "./error-message";
 import { connectStandard, findStandardWallet } from "./wallet-standard";
 import type { StandardAccount, StandardWallet } from "./wallet-standard";
 
@@ -35,8 +36,27 @@ const getEthereum = () => waitFor(() => (window as { ethereum?: Eip1193Provider 
 let mmAccount = "";
 
 const showError = (error: unknown, target = "#error") => {
-  const { message } = (error ?? {}) as { message?: string };
-  $(target).textContent = error instanceof Error ? error.message : (message ?? String(error));
+  $(target).textContent = toErrorMessage(error);
+};
+
+type SectionSlots = { account: string; sign: string; signature: string };
+
+/**
+ * Render a section from its account, on success and on failure alike. Writing these slots only on
+ * success left the previous address on screen, and the sign button enabled, beside a fresh rejection;
+ * `metamask-solana.spec.ts` and `slush.spec.ts` already assert the opposite and pass only because
+ * every test starts from a fresh page load.
+ */
+const renderAccount = (slots: SectionSlots, account: string) => {
+  $(slots.account).textContent = account;
+  $(slots.signature).textContent = "";
+  $<HTMLButtonElement>(slots.sign).disabled = account === "";
+};
+
+const MM_SLOTS: SectionSlots = {
+  account: "#accounts",
+  sign: "#signButton",
+  signature: "#signature",
 };
 
 const handleConnect = async () => {
@@ -46,15 +66,17 @@ const handleConnect = async () => {
       await getEthereum()
     ).request({ method: "eth_requestAccounts" })) as Array<string>;
     mmAccount = accounts[0] ?? "";
-    $("#accounts").textContent = mmAccount;
-    $<HTMLButtonElement>("#signButton").disabled = mmAccount === "";
   } catch (error) {
+    mmAccount = "";
     showError(error);
   }
+  renderAccount(MM_SLOTS, mmAccount);
+  $("#txHash").textContent = "";
 };
 
 const handleSign = async () => {
   $("#error").textContent = "";
+  $("#signature").textContent = "";
   try {
     const signature = (await (
       await getEthereum()
@@ -94,6 +116,7 @@ const handleSwitchChain = async () => {
 
 const handleSendTx = async () => {
   $("#error").textContent = "";
+  $("#txHash").textContent = "";
   try {
     const hash = (await (
       await getEthereum()
@@ -117,6 +140,12 @@ const getPhantomEvm = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.ethereum);
 let phantomEvmAccount = "";
 
+const PHANTOM_EVM_SLOTS: SectionSlots = {
+  account: "#phantomEvmAccount",
+  sign: "#phantomEvmSign",
+  signature: "#phantomEvmSignature",
+};
+
 const handlePhantomEvmConnect = async () => {
   $("#phantomEvmError").textContent = "";
   try {
@@ -124,15 +153,16 @@ const handlePhantomEvmConnect = async () => {
       await getPhantomEvm()
     ).request({ method: "eth_requestAccounts" })) as Array<string>;
     phantomEvmAccount = accounts[0] ?? "";
-    $("#phantomEvmAccount").textContent = phantomEvmAccount;
-    $<HTMLButtonElement>("#phantomEvmSign").disabled = phantomEvmAccount === "";
   } catch (error) {
+    phantomEvmAccount = "";
     showError(error, "#phantomEvmError");
   }
+  renderAccount(PHANTOM_EVM_SLOTS, phantomEvmAccount);
 };
 
 const handlePhantomEvmSign = async () => {
   $("#phantomEvmError").textContent = "";
+  $("#phantomEvmSignature").textContent = "";
   try {
     const signature = (await (
       await getPhantomEvm()
@@ -149,19 +179,28 @@ const handlePhantomEvmSign = async () => {
 const getPhantomSolana = () =>
   waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.solana);
 
+const PHANTOM_SVM_SLOTS: SectionSlots = {
+  account: "#phantomSvmAccount",
+  sign: "#phantomSvmSign",
+  signature: "#phantomSvmSignature",
+};
+let phantomSvmAccount = "";
+
 const handlePhantomSvmConnect = async () => {
   $("#phantomSvmError").textContent = "";
   try {
     const { publicKey } = await (await getPhantomSolana()).connect();
-    $("#phantomSvmAccount").textContent = publicKey.toString();
-    $<HTMLButtonElement>("#phantomSvmSign").disabled = false;
+    phantomSvmAccount = publicKey.toString();
   } catch (error) {
+    phantomSvmAccount = "";
     showError(error, "#phantomSvmError");
   }
+  renderAccount(PHANTOM_SVM_SLOTS, phantomSvmAccount);
 };
 
 const handlePhantomSvmSign = async () => {
   $("#phantomSvmError").textContent = "";
+  $("#phantomSvmSignature").textContent = "";
   try {
     const message = new TextEncoder().encode("Hello Phantom Solana");
     const { signature } = await (await getPhantomSolana()).signMessage(message, "utf8");
@@ -228,15 +267,16 @@ const wireStandardSection = ({ ids, label, match, sign }: StandardSection): void
     $(ids.error).textContent = "";
     try {
       connected = await connectStandard(await getWallet());
-      $(ids.account).textContent = connected.address;
-      $<HTMLButtonElement>(ids.sign).disabled = false;
     } catch (error) {
+      connected = undefined;
       showError(error, ids.error);
     }
+    renderAccount(ids, connected?.address ?? "");
   };
 
   const handleSectionSign = async () => {
     $(ids.error).textContent = "";
+    $(ids.signature).textContent = "";
     try {
       const account = connected;
       if (!account) {

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-import { createWalletFixtures } from "@walletwright/core";
-import type { Wallet } from "@walletwright/core";
+import { createWalletFixtures, wallets } from "@walletwright/core";
+import type { Wallet, WalletSetup } from "@walletwright/core";
 
 import {
   metamaskSetup,
@@ -10,11 +10,22 @@ import {
   solflareSetup,
 } from "../wallet-setup";
 
-export const metamaskTest = createWalletFixtures(metamaskSetup);
-export const phantomTest = createWalletFixtures(phantomSetup);
-export const rabbyTest = createWalletFixtures(rabbySetup);
-export const slushTest = createWalletFixtures(slushSetup);
-export const solflareTest = createWalletFixtures(solflareSetup);
+/**
+ * Browser mode is a property of the wallet, not of the spec. `headlessApprovals` says whether a
+ * wallet's approval window surfaces as a page headless, and `launchWallet` throws by name for the
+ * rest, so deriving it here means a spec cannot claim a mode the wallet cannot drive, and a new spec
+ * for a headless-capable wallet cannot silently run headed by omitting a `test.use` line.
+ */
+const walletTest = (setup: WalletSetup) =>
+  createWalletFixtures(setup).extend({
+    headless: [wallets[setup.wallet].headlessApprovals === true, { scope: "worker" }],
+  });
+
+export const metamaskTest = walletTest(metamaskSetup);
+export const phantomTest = walletTest(phantomSetup);
+export const rabbyTest = walletTest(rabbySetup);
+export const slushTest = walletTest(slushSetup);
+export const solflareTest = walletTest(solflareSetup);
 
 /** The shared EVM connect baseline reused across specs. */
 export const connectMetamask = async (page: Page, wallet: Wallet): Promise<void> => {

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 import AdmZip from "adm-zip";
@@ -8,9 +8,23 @@ import AdmZip from "adm-zip";
 const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
 
 /**
+ * Prefix for in-progress extractions. It has to live inside `cacheDir` so publishing is a `rename`
+ * on one filesystem (a cross-device rename fails with EXDEV), and it starts with a dot so it can
+ * never collide with a wallet's `name`.
+ */
+const STAGING_PREFIX = ".staging-";
+
+/**
  * Download an extension archive and extract it to `<cacheDir>/<name>`, returning that path. A `.crx`
  * is a ZIP with a binary header, we slice from the ZIP signature before unzipping. Reuses an
  * existing extraction (so you can pre-place the extension to skip the download).
+ *
+ * Extraction goes to a staging directory and is published with a single `rename`, so `<name>` only
+ * ever exists complete. Extracting in place would make an interrupted run (Ctrl-C, ENOSPC, a CI
+ * timeout) leave a partial tree that still holds `manifest.json`, which every later run would then
+ * short-circuit on as a valid cache and fail against as a Chrome-side broken extension. This runs on
+ * every `launchWallet`, in every Playwright worker, so it is also what keeps one worker from deleting
+ * the directory another worker's browser is running from.
  */
 export const downloadAndExtractExtension = async (options: {
   cacheDir: string;
@@ -61,21 +75,30 @@ export const downloadAndExtractExtension = async (options: {
     zipBytes = bytes.subarray(start);
   }
 
-  await rm(outDir, { force: true, recursive: true });
-  const zip = new AdmZip(zipBytes);
-  const root = path.resolve(outDir);
-  for (const entry of zip.getEntries()) {
-    const target = path.resolve(root, entry.entryName);
-    if (target !== root && !target.startsWith(root + path.sep)) {
-      throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
+  const staging = await mkdtemp(path.join(cacheRoot, STAGING_PREFIX));
+  try {
+    const zip = new AdmZip(zipBytes);
+    for (const entry of zip.getEntries()) {
+      const target = path.resolve(staging, entry.entryName);
+      if (target !== staging && !target.startsWith(staging + path.sep)) {
+        throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
+      }
     }
-  }
-  zip.extractAllTo(outDir, /* overwrite */ true);
+    zip.extractAllTo(staging, /* overwrite */ true);
 
-  if (!existsSync(path.join(outDir, "manifest.json"))) {
-    throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
+    if (!existsSync(path.join(staging, "manifest.json"))) {
+      throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
+    }
+
+    if (existsSync(path.join(outDir, "manifest.json"))) {
+      return outDir; // another worker published while we were downloading
+    }
+    await rm(outDir, { force: true, recursive: true });
+    await rename(staging, outDir);
+    return outDir;
+  } finally {
+    await rm(staging, { force: true, recursive: true }).catch(() => {});
   }
-  return outDir;
 };
 
 /** Build the Chrome Web Store CRX download URL for an extension id. */

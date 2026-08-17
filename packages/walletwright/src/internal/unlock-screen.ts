@@ -10,6 +10,12 @@ const RELOAD_ATTEMPTS = 5;
 const RELOAD_SETTLE_TIMEOUT_MS = 5000;
 const PROBE_INTERVAL_MS = 500;
 const PASSWORD_CLEARED_TIMEOUT_MS = 15_000;
+/**
+ * Short on purpose. `unlock` is normally handed a page `reachUnlockScreen` already settled, so this
+ * budget only matters when it is called on its own (the `settings.unlock` path), where a wallet with a
+ * late-mounting UI needs a poll rather than a single read but a dead page should still fail fast.
+ */
+const UNLOCK_SETTLE_TIMEOUT_MS = 5000;
 
 type UnlockScreenOptions = {
   /** Extension-relative page that renders the unlock screen (e.g. `home.html`). */
@@ -80,18 +86,18 @@ export const createUnlockScreen = ({
   };
 
   const unlock = async (page: Page, password: string): Promise<void> => {
-    const field = page.locator(PASSWORD_FIELD);
-    const locked = await field.isVisible().catch(() => false);
-    if (!locked) {
-      const unlocked = await isUnlocked?.(page).catch(() => false);
-      if (unlocked === true) {
-        return;
-      }
+    // Through `settleWithin`, so there is one answer to "what state is this page in" and it waits.
+    const state = await settleWithin(page, UNLOCK_SETTLE_TIMEOUT_MS);
+    if (state === "unlocked") {
+      return;
+    }
+    if (state === undefined) {
       throw new Error(
         `[walletwright] ${wallet} showed neither an unlock screen nor an unlocked wallet`,
       );
     }
 
+    const field = page.locator(PASSWORD_FIELD);
     await field.fill(password);
     await (submit === undefined ? field.press("Enter") : submit(page, field));
     const cleared = await field

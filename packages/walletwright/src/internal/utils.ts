@@ -140,9 +140,3 @@ export const placeApprovalWindow = async (page: Page): Promise<void> => {
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
 export const extensionStateDir = (profileDir: string, extensionId: string): string =>
   path.join(profileDir, "Default", "Local Extension Settings", extensionId);
-
-export const hasNotificationPopup = (
-  context: BrowserContext,
-  extensionId: string,
-  match = DEFAULT_NOTIFICATION_MATCH,
-): boolean => context.pages().some((page) => isApprovalPopup(page, extensionId, match));

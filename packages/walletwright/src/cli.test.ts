@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { isEntryPoint, parseFlags, resolveSetup } from "./cli";
+import { isEntryPoint, parseArgv, resolveSetup } from "./cli";
 
 const tempDirs: Array<string> = [];
 
@@ -48,49 +48,75 @@ describe("isEntryPoint", () => {
   });
 });
 
-describe("parseFlags", () => {
-  it("reads a flag's value from the following token", () => {
-    expect(parseFlags(["--wallet", "metamask"])).toEqual({ wallet: "metamask" });
+const CREDENTIALS = ["--wallet", "metamask", "--seed", "a b c", "--password", "pw"];
+
+describe("parseArgv", () => {
+  it("prints help for no arguments, the help command, and either help flag", async () => {
+    for (const argv of [[], ["help"], ["--help"], ["-h"]]) {
+      await expect(parseArgv(argv)).resolves.toEqual({ kind: "help" });
+    }
   });
 
-  it("reads a help flag that leads the argv, where no command precedes it", () => {
-    expect(parseFlags(["--help"])).toEqual({ help: true });
-    expect(parseFlags(["-h"])).toEqual({ h: true });
-  });
-
-  it("skips a leading command token", () => {
-    expect(parseFlags(["cache", "--wallet", "metamask"])).toEqual({ wallet: "metamask" });
-  });
-
-  it("coerces a value-less flag to boolean true", () => {
-    expect(parseFlags(["--wallet", "metamask", "--seed", "--password", "pw"])).toEqual({
-      password: "pw",
-      seed: true,
-      wallet: "metamask",
+  it("builds a cache command from --wallet/--seed/--password", async () => {
+    await expect(parseArgv(["cache", ...CREDENTIALS])).resolves.toEqual({
+      headless: false,
+      kind: "cache",
+      setup: { password: "pw", seedPhrase: "a b c", wallet: "metamask" },
     });
+  });
+
+  it("accepts the --flag=value spelling", async () => {
+    await expect(
+      parseArgv(["cache", "--wallet=metamask", "--seed=a b c", "--password=pw"]),
+    ).resolves.toMatchObject({ setup: { wallet: "metamask" } });
+  });
+
+  it("rejects an unknown flag instead of ignoring it", async () => {
+    await expect(parseArgv(["cache", ...CREDENTIALS, "--cache-dirr", "./ci"])).rejects.toThrow(
+      /\[walletwright\].*cache-dirr/v,
+    );
+  });
+
+  it("rejects a value handed to a boolean flag, which used to invert it", async () => {
+    await expect(parseArgv(["cache", ...CREDENTIALS, "--headless", "false"])).rejects.toThrow(
+      /unexpected argument "false"/v,
+    );
+  });
+
+  it("reads --headless as a boolean", async () => {
+    await expect(parseArgv(["cache", ...CREDENTIALS, "--headless"])).resolves.toMatchObject({
+      headless: true,
+    });
+  });
+
+  it("rejects a value-less required flag instead of coercing it to a boolean", async () => {
+    await expect(
+      parseArgv(["cache", "--wallet", "metamask", "--seed", "--password", "pw"]),
+    ).rejects.toThrow(/\[walletwright\]/v);
+  });
+
+  it("rejects an unknown command", async () => {
+    await expect(parseArgv(["bake", ...CREDENTIALS])).rejects.toThrow(/unknown command "bake"/v);
   });
 });
 
 describe("resolveSetup", () => {
-  it("rejects a value-less required flag instead of coercing it to a boolean", async () => {
-    const flags = parseFlags(["--wallet", "metamask", "--seed", "--password", "pw"]);
-    await expect(resolveSetup(flags)).rejects.toThrow(/--wallet\/--seed\/--password/v);
-  });
-
   it("rejects an unknown --wallet and lists the valid kinds", async () => {
-    const flags = parseFlags(["--wallet", "foo", "--seed", "a b c", "--password", "pw"]);
-    await expect(resolveSetup(flags)).rejects.toThrow(
+    await expect(resolveSetup({ password: "pw", seed: "a b c", wallet: "foo" })).rejects.toThrow(
       /unknown --wallet "foo"\. Expected one of: metamask, phantom, rabby, slush, solflare\./v,
     );
   });
 
-  it("builds a setup from --wallet/--seed/--password", async () => {
-    const flags = parseFlags(["--wallet", "metamask", "--seed", "a b c", "--password", "pw"]);
-    await expect(resolveSetup(flags)).resolves.toEqual({
-      password: "pw",
-      seedPhrase: "a b c",
-      wallet: "metamask",
-    });
+  it("rejects a missing credential triple", async () => {
+    await expect(resolveSetup({ wallet: "metamask" })).rejects.toThrow(
+      /--wallet\/--seed\/--password/v,
+    );
+  });
+
+  it("carries --version through onto the setup", async () => {
+    await expect(
+      resolveSetup({ password: "pw", seed: "a b c", version: "13.0.0", wallet: "metamask" }),
+    ).resolves.toMatchObject({ version: "13.0.0" });
   });
 
   it("applies --cache-dir on the --setup branch", async () => {
@@ -103,5 +129,17 @@ describe("resolveSetup", () => {
     const setup = await resolveSetup({ "cache-dir": "./ci-cache", setup: fixture });
 
     expect(setup.cacheDir).toBe("./ci-cache");
+  });
+
+  it("refuses --setup combined with a flag it would silently discard", async () => {
+    const fixture = path.join(makeTempDir(), "setup.mjs");
+    writeFileSync(
+      fixture,
+      'export default { password: "pw", seedPhrase: "a b c", wallet: "metamask" };\n',
+    );
+
+    await expect(resolveSetup({ setup: fixture, version: "13.0.0" })).rejects.toThrow(
+      /--setup carries the whole setup, so --version would be ignored/v,
+    );
   });
 });

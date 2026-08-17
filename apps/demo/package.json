@@ -7,10 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "clean": "rm -rf dist node_modules .walletwright test-results",
-    "lint": "oxlint src tests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:cache": "tsx scripts/build-cache.ts",
-    "test:cache:one": "tsx scripts/cache-one.ts",
+    "test:cache": "tsx scripts/cache.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -135,11 +135,8 @@ export type WalletDefinition = {
    * rather than returning a page that never rendered. The returned page stays open as `Wallet.home`.
    */
   reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
-  /**
-   * Click the cancel/reject button in an approval popup, the counterpart of `approve`. Optional:
-   * a wallet declares it only once it has been driven against the real extension.
-   */
-  reject?: (popup: Page) => Promise<void>;
+  /** Click the cancel/reject button in an approval popup, the counterpart of `approve`. */
+  reject: (popup: Page) => Promise<void>;
   /** Unlock the wallet on its (already-open) home page. */
   unlock: (page: Page, password: string) => Promise<void>;
 };

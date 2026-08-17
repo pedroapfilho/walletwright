@@ -91,10 +91,10 @@ The same two calls drive every chain. A Phantom test can connect and sign on
 ```ts
 import { launchWallet } from "@walletwright/core";
 
-const { context, wallet } = await launchWallet(metamask);
+const { close, context, wallet } = await launchWallet(metamask);
 const page = await context.newPage();
 // drive the page and the wallet here
-await context.close();
+await close();
 ```
 
 ## Requirements and notes

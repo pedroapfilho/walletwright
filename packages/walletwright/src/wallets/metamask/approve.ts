@@ -65,8 +65,12 @@ const cancelButton = (popup: Page): Locator =>
 export const approvalControls = (popup: Page): Locator =>
   confirmButton(popup).or(cancelButton(popup));
 
-export const approve = async (popup: Page): Promise<void> => {
-  const button = confirmButton(popup);
+/**
+ * Click one of the popup's footer buttons. The third-party notice covers that whole footer, so both
+ * confirm and cancel are intercepted while it is up, and both need the dismiss-then-retry: without it
+ * a click times out against a button that is rendered and enabled, which reads as a stale selector.
+ */
+const clickFooterButton = async (popup: Page, button: Locator): Promise<void> => {
   await acceptThirdPartyNotice(popup);
   try {
     await button.click({ timeout: BUTTON_TIMEOUT_MS });
@@ -78,7 +82,8 @@ export const approve = async (popup: Page): Promise<void> => {
   }
 };
 
-/** The cancel counterparts of `approve`; same union-by-DOM-order resolution, not written order. */
-export const reject = async (popup: Page): Promise<void> => {
-  await cancelButton(popup).click({ timeout: BUTTON_TIMEOUT_MS });
-};
+export const approve = (popup: Page): Promise<void> =>
+  clickFooterButton(popup, confirmButton(popup));
+
+/** The cancel counterpart of `approve`; same union-by-DOM-order resolution, not written order. */
+export const reject = (popup: Page): Promise<void> => clickFooterButton(popup, cancelButton(popup));

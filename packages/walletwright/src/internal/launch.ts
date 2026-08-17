@@ -8,13 +8,40 @@ import { type BrowserContext, chromium, type Page } from "@playwright/test";
 import type { Wallet, WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
+import { restorePreviousProfile } from "./cache";
 import { extensionContextOptions } from "./chromium";
 import { createWallet } from "./controller";
 import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey } from "./utils";
 
 export type LaunchedWallet = {
+  /**
+   * Close the browser and remove the throwaway profile copy, in that order. Prefer this over
+   * `context.close()`: the copy is a full onboarded profile (tens of MB), and awaiting its removal is
+   * the only way to know it is gone before the process exits.
+   */
+  close: () => Promise<void>;
   context: BrowserContext;
   wallet: Wallet;
+};
+
+const closeLaunch = async (context: BrowserContext, runDir: string): Promise<void> => {
+  const closed = await Promise.allSettled([context.close()]);
+  const removed = await Promise.allSettled([rm(runDir, { force: true, recursive: true })]);
+  const closeResult = closed[0];
+  const removeResult = removed[0];
+
+  if (closeResult?.status === "rejected" && removeResult?.status === "rejected") {
+    throw new AggregateError(
+      [closeResult.reason, removeResult.reason],
+      `[walletwright] failed to close the browser and remove ${runDir}`,
+    );
+  }
+  if (closeResult?.status === "rejected") {
+    throw closeResult.reason;
+  }
+  if (removeResult?.status === "rejected") {
+    throw removeResult.reason;
+  }
 };
 
 /**
@@ -42,7 +69,7 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
  * Launch a fresh persistent context from the onboarded cache and return an unlocked wallet
  * controller. Headed by default; `headless` needs the wallet to declare `headlessApprovals`, since
  * some wallets create an approval window headless that is never exposed as a page. Outside
- * Playwright fixtures, `context.close()` is yours.
+ * Playwright fixtures, calling `close()` is yours.
  */
 export const launchWallet = async (
   setup: WalletSetup,
@@ -56,6 +83,7 @@ export const launchWallet = async (
   }
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
   const profileDir = path.join(cacheDir, profileKey(setup));
+  await restorePreviousProfile(profileDir);
   if (!existsSync(profileDir)) {
     throw new Error(
       `[walletwright] no cache for this setup at ${profileDir}. Build it first with buildCache() or \`walletwright cache\`.`,
@@ -64,30 +92,48 @@ export const launchWallet = async (
 
   const extensionPath = await definition.prepareExtension(cacheDir, setup.version);
 
-  const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
-  await cp(profileDir, runDir, { recursive: true });
-
-  const context = await chromium.launchPersistentContext(
-    runDir,
-    extensionContextOptions(extensionPath, headless),
-  );
-
-  context.on("close", async () => {
-    await rm(runDir, { force: true, recursive: true }).catch(() => {});
-  });
-
   const extensionId = extensionIdFromPath(extensionPath);
 
+  /**
+   * Created before anything that can fail, and removed by exactly one owner on every exit path.
+   * Binding cleanup to the context's `close` event alone is not enough: the copy and the launch below
+   * can both throw before any context exists to listen on, and Playwright does not await event
+   * listeners, so a rethrow can outrun the removal.
+   */
+  const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
+  const removeRunDir = (): Promise<void> => rm(runDir, { force: true, recursive: true });
+  const handleContextClose = async (): Promise<void> => {
+    try {
+      await removeRunDir();
+    } catch {
+      // Playwright does not await close-event listeners; `close()` owns strict cleanup.
+    }
+  };
+
+  let context: BrowserContext | undefined;
   try {
-    await definition.prepareContext?.(context);
-    const home = await definition.reachUnlockScreen(context, extensionId);
+    await cp(profileDir, runDir, { recursive: true });
+
+    context = await chromium.launchPersistentContext(
+      runDir,
+      extensionContextOptions(extensionPath, headless),
+    );
+    const launched = context;
+    launched.on("close", handleContextClose);
+
+    await definition.prepareContext?.(launched);
+    const home = await definition.reachUnlockScreen(launched, extensionId);
     await definition.unlock(home, setup.password);
-    await closeStrayPages(context, home);
+    await closeStrayPages(launched, home);
 
     return {
-      context,
+      close: async () => {
+        launched.off("close", handleContextClose);
+        await closeLaunch(launched, runDir);
+      },
+      context: launched,
       wallet: createWallet({
-        context,
+        context: launched,
         definition,
         extensionId,
         home,
@@ -95,7 +141,11 @@ export const launchWallet = async (
       }),
     };
   } catch (error) {
-    await context.close().catch(() => {});
+    context?.off("close", handleContextClose);
+    await context?.close().catch(() => {});
+    await removeRunDir().catch(() => {});
     throw error;
   }
 };
+
+export { closeLaunch };
