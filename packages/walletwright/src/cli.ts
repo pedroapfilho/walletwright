@@ -33,12 +33,7 @@ Options:
 test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
-/**
- * Declared so `strict` parsing can reject an unknown flag, a flag given no value, and a boolean flag
- * handed one. A hand-rolled "does the next token start with --" parser accepted all three silently:
- * `--cache-dirr ./ci` built into the default directory and exited 0, and `--headless false` turned
- * headless on, because the string "false" is truthy.
- */
+/** `parseArgs` schema; strict mode rejects unknown, missing, or misplaced flag values. */
 const OPTIONS = {
   "cache-dir": { type: "string" },
   headless: { type: "boolean" },
@@ -161,12 +156,7 @@ const main = async (): Promise<void> => {
   process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
 };
 
-/**
- * Node resolves `import.meta.url` through symlinks but leaves `process.argv[1]` as the caller
- * typed it, so comparing the two directly is false whenever the CLI is reached through a symlink,
- * which is every pnpm install: `node_modules/.bin/walletwright` execs the package through an
- * `.pnpm` symlink. The command then exits 0 having printed and done nothing.
- */
+/** Resolve the CLI symlink before comparing `process.argv[1]` with `import.meta.url`. */
 const isEntryPoint = (moduleUrl: string, entryPath: string | undefined): boolean =>
   entryPath !== undefined && moduleUrl === pathToFileURL(realpathSync(entryPath)).href;
 

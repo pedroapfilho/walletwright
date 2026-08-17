@@ -14,13 +14,7 @@ const NAVIGATION_TIMEOUT_MS = 15_000;
 const FLUSH_SETTLE_MS = 3000;
 const STATE_WRITE_TIMEOUT_MS = 10_000;
 
-/**
- * Chrome stores an extension's `chrome.storage.local` under `Local Extension Settings/<id>` and its
- * IndexedDB (what some single-page wallets persist their vault to) under
- * `IndexedDB/chrome-extension_<id>_0…`. Bytes in either one mean onboarding actually landed in the
- * profile; bytes in neither mean the "cache" is empty, and every later run would fail at unlock with
- * no hint that the build was the thing that went wrong.
- */
+/** Wallet state may live in `chrome.storage.local` or extension IndexedDB. */
 const hasPersistedState = async (profileDir: string, extensionId: string): Promise<boolean> => {
   const stores = [
     extensionStateDir(profileDir, extensionId),
@@ -111,17 +105,7 @@ const publishProfile = async (staging: string, profileDir: string): Promise<void
   }
 };
 
-/**
- * Import the wallet once and persist an onboarded browser profile to disk (the "cache"), so tests
- * launch a ready-to-unlock wallet instead of re-running onboarding each time. Returns the profile
- * directory. Idempotent per (wallet, version, seed, password).
- *
- * Onboarding runs against a staging directory. Publication keeps the prior profile under a stable
- * recovery path until the staged profile lands, so a failed publish restores it and the next call
- * recovers it after an interrupted process.
- *
- * `headless` only affects this build step; the tests choose their own mode via `launchWallet`.
- */
+/** Build in staging and retain the prior cache until the new profile publishes successfully. */
 const buildCache = async (
   setup: WalletSetup,
   options: { headless?: boolean } = {},

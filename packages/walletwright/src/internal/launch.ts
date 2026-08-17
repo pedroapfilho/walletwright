@@ -44,12 +44,7 @@ const closeLaunch = async (context: BrowserContext, runDir: string): Promise<voi
   }
 };
 
-/**
- * Drop the tabs nobody drives: Chromium's initial `about:blank` and the extension's own auto-opened
- * tab. We navigate a tab of our own to the wallet instead of adopting that one (it's unreliable, see
- * `reachUnlockScreen`), which otherwise leaves a second, still-locked wallet tab open all run.
- * Approval popups are unaffected: they're matched by URL, not by being the only extension page.
- */
+/** Close Chromium's blank tab and the extension's auto-opened tab. */
 const closeStrayPages = async (context: BrowserContext, home: Page): Promise<void> => {
   const isStray = (page: Page): boolean =>
     page !== home &&
@@ -65,12 +60,7 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
   await Promise.allSettled(closing);
 };
 
-/**
- * Launch a fresh persistent context from the onboarded cache and return an unlocked wallet
- * controller. Headed by default; `headless` needs the wallet to declare `headlessApprovals`, since
- * some wallets create an approval window headless that is never exposed as a page. Outside
- * Playwright fixtures, calling `close()` is yours.
- */
+/** Launch and unlock a disposable profile copy. Headless mode requires verified wallet support. */
 export const launchWallet = async (
   setup: WalletSetup,
   { headless = false }: { headless?: boolean } = {},
@@ -94,12 +84,7 @@ export const launchWallet = async (
 
   const extensionId = extensionIdFromPath(extensionPath);
 
-  /**
-   * Created before anything that can fail, and removed by exactly one owner on every exit path.
-   * Binding cleanup to the context's `close` event alone is not enough: the copy and the launch below
-   * can both throw before any context exists to listen on, and Playwright does not await event
-   * listeners, so a rethrow can outrun the removal.
-   */
+  /** Cleanup must cover copy and launch failures that occur before a context exists. */
   const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
   const removeRunDir = (): Promise<void> => rm(runDir, { force: true, recursive: true });
   const handleContextClose = async (): Promise<void> => {

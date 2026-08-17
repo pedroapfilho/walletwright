@@ -20,12 +20,7 @@ const UNLOCK_SETTLE_TIMEOUT_MS = 5000;
 type UnlockScreenOptions = {
   /** Extension-relative page that renders the unlock screen (e.g. `home.html`). */
   entry: string;
-  /**
-   * Resolves true once the wallet's already-unlocked UI is up. Only wallets that can reopen unlocked
-   * (Phantom, Slush) declare it: without a positive signal for that state, a warm launch is
-   * indistinguishable from an extension page that rendered nothing at all, and the run continues
-   * against a dead wallet until some later approval fails for no visible reason.
-   */
+  /** Detect a warm launch that is already unlocked. */
   isUnlocked?: (page: Page) => Promise<boolean>;
   /** Submit the filled password. Defaults to pressing Enter in the field. */
   submit?: (page: Page, field: Locator) => Promise<void>;

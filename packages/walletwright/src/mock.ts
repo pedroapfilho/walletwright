@@ -2,12 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 import type { PrivateKeyAccount } from "viem/accounts";
 import { privateKeyToAccount } from "viem/accounts";
 
-/**
- * A headless injected-wallet fake for dapp tests that don't need a real extension. It announces
- * itself over EIP-6963 and answers the EIP-1193 requests a connect/sign flow makes, signing with a
- * real key so signatures verify. `@walletwright/core/mock` is a separate entry point that needs
- * `viem` (optional peer); the extension-driving core doesn't.
- */
+/** Headless EIP-6963 and EIP-1193 mock that signs with a real key. */
 export type MockWalletOptions = {
   chainId?: number;
   /** Wallet name announced over EIP-6963. */
@@ -57,14 +52,7 @@ const createRpcHandler =
     }
   };
 
-/**
- * Bridge and EIP-6963 identity are per install, not per module. A shared binding name meant a second
- * install with different options hit Playwright's "already registered", swallowed it, and left the
- * page routing to the *first* install's handler while returning the second one's address: a silently
- * wrong signature and chain rather than an error. Installing twice with the same options is still
- * harmless, it just announces twice (init scripts cannot be removed), and `window.ethereum` is
- * last-wins either way.
- */
+/** Each install needs its own Playwright binding and EIP-6963 identity. */
 let installCount = 0;
 
 /**

@@ -57,23 +57,13 @@ export const createWallet = ({
   const match = definition.notificationMatch ?? DEFAULT_NOTIFICATION_MATCH;
   const ctx: WalletActionContext = { context, extensionId, home, password };
 
-  /**
-   * Make the dapp the active tab. While an extension page holds that spot, MetaMask renders a new
-   * approval inline in it rather than opening a notification window, and the window that does open
-   * shows the wallet home instead of the request. The wallet's own page can end up fronted both
-   * after an action and after a previous approval settles.
-   */
+  /** MetaMask opens requests inline while its extension page owns focus. */
   const frontDapp = async (): Promise<void> => {
     const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
     await dapp?.bringToFront().catch(() => {});
   };
 
-  /**
-   * Wait for the approval window the wallet opens for a pending request, and put it somewhere it can
-   * be clicked. Placement is part of acquiring a popup rather than a separate step, so the retry path
-   * below cannot end up driving an unplaced window: a window that opens partly off a small or virtual
-   * display renders fine but refuses clicks, which reads as a confirm-button timeout.
-   */
+  /** Find and place the approval window before its controls are driven. */
   const acquireApproval = async (optional: boolean): Promise<Page | undefined> => {
     const popup = await findNotificationPopup({
       approvalControls: definition.approvalControls,
@@ -108,14 +98,7 @@ export const createWallet = ({
 
     const driven = await settleApproval(settle, popup, acquire);
 
-    /**
-     * The postcondition is the negation of what was acquired: the request we drove is gone. Scanning
-     * the whole context for any URL-matching page instead reported failure whenever a wallet chained
-     * a second popup (MetaMask opening a SIWE request right after connect) or left a notification
-     * window sitting on its home screen, neither of which means the approval failed. Enforced for
-     * optional approvals too: `optional` means "a popup may never appear", not "a popup we drove may
-     * hang", and skipping the check there let `connectToDapp()` report success on a stuck popup.
-     */
+    /** Wait for the exact popup we drove; chained popups may reuse the same URL. */
     const closed = await waitUntil(() => driven.isClosed() || undefined, {
       timeoutMs: POPUP_CLOSE_TIMEOUT_MS,
     });
@@ -135,14 +118,7 @@ export const createWallet = ({
   const reject = (options: ResolveOptions = {}) =>
     resolvePopup((popup) => definition.reject(popup), options);
 
-  /**
-   * Bind an optional capability, or fail loudly naming the wallet and action. A wallet declares only
-   * what has been driven against the real extension, so an undeclared action is a real gap rather
-   * than something to swallow. Extra args (e.g. a network config) forward after the context.
-   *
-   * After the action, focus returns to the dapp (see `frontDapp`), since actions drive the wallet's
-   * own page via `bringToFront`.
-   */
+  /** Bind a verified wallet action and restore focus to the dapp when it finishes. */
   const action =
     <A extends ReadonlyArray<unknown>>(
       fn: ((ctx: WalletActionContext, ...args: A) => Promise<void>) | undefined,

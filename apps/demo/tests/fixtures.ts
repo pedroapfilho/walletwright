@@ -10,12 +10,7 @@ import {
   solflareSetup,
 } from "../wallet-setup";
 
-/**
- * Browser mode is a property of the wallet, not of the spec. `headlessApprovals` says whether a
- * wallet's approval window surfaces as a page headless, and `launchWallet` throws by name for the
- * rest, so deriving it here means a spec cannot claim a mode the wallet cannot drive, and a new spec
- * for a headless-capable wallet cannot silently run headed by omitting a `test.use` line.
- */
+/** Derive browser mode from the wallet's verified headless approval support. */
 const walletTest = (setup: WalletSetup) =>
   createWalletFixtures(setup).extend({
     headless: [wallets[setup.wallet].headlessApprovals === true, { scope: "worker" }],

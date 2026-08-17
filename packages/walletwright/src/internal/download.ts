@@ -14,18 +14,7 @@ const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
  */
 const STAGING_PREFIX = ".staging-";
 
-/**
- * Download an extension archive and extract it to `<cacheDir>/<name>`, returning that path. A `.crx`
- * is a ZIP with a binary header, we slice from the ZIP signature before unzipping. Reuses an
- * existing extraction (so you can pre-place the extension to skip the download).
- *
- * Extraction goes to a staging directory and is published with a single `rename`, so `<name>` only
- * ever exists complete. Extracting in place would make an interrupted run (Ctrl-C, ENOSPC, a CI
- * timeout) leave a partial tree that still holds `manifest.json`, which every later run would then
- * short-circuit on as a valid cache and fail against as a Chrome-side broken extension. This runs on
- * every `launchWallet`, in every Playwright worker, so it is also what keeps one worker from deleting
- * the directory another worker's browser is running from.
- */
+/** Download and validate an extension archive, then publish its extraction atomically from staging. */
 export const downloadAndExtractExtension = async (options: {
   cacheDir: string;
   kind: "zip" | "crx";

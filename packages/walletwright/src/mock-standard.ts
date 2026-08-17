@@ -2,16 +2,7 @@ import { createPrivateKey, createPublicKey, sign } from "node:crypto";
 
 import type { BrowserContext, Page } from "@playwright/test";
 
-/**
- * A headless Wallet-Standard fake for Solana dapp tests that don't need a real extension. It
- * hand-rolls the Wallet-Standard registration protocol (no browser-side library) and answers
- * `standard:connect` plus `solana:signMessage`, signing with a real ed25519 key so signatures
- * verify. Isolated from the EVM `mock.ts`; `@walletwright/core/mock-standard` is its own entry
- * point.
- *
- * ed25519 signing runs Node-side (viem is secp256k1-only), reusing the same exposeFunction bridge
- * pattern as the EVM mock. No extra dependency: Node's built-in `crypto` signs ed25519 natively.
- */
+/** Headless Wallet-Standard Solana mock that signs messages with Node's ed25519 implementation. */
 type MockStandardWalletOptions = {
   /** Wallet name announced over Wallet Standard. */
   name?: string;

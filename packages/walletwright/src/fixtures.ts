@@ -12,19 +12,7 @@ type LaunchFixture = {
   walletLaunch: LaunchedWallet;
 };
 
-/**
- * Build a Playwright `test` whose `context`/`page` run inside a persistent Chromium with the wallet
- * loaded and unlocked, exposing a `wallet` fixture to approve connect/sign popups.
- *
- * ```ts
- * const test = createWalletFixtures(setup);
- * test("connect", async ({ page, wallet }) => {
- *   await page.goto("/");
- *   await page.getByRole("button", { name: "Connect" }).click();
- *   await wallet.connectToDapp();
- * });
- * ```
- */
+/** Create Playwright fixtures backed by one unlocked wallet launch per test. */
 export const createWalletFixtures = (setup: WalletSetup) =>
   base.extend<LaunchFixture & WalletFixtures>({
     context: async ({ walletLaunch }, use) => {

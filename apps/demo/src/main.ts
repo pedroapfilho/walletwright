@@ -41,12 +41,6 @@ const showError = (error: unknown, target = "#error") => {
 
 type SectionSlots = { account: string; sign: string; signature: string };
 
-/**
- * Render a section from its account, on success and on failure alike. Writing these slots only on
- * success left the previous address on screen, and the sign button enabled, beside a fresh rejection;
- * `metamask-solana.spec.ts` and `slush.spec.ts` already assert the opposite and pass only because
- * every test starts from a fresh page load.
- */
 const renderAccount = (slots: SectionSlots, account: string) => {
   $(slots.account).textContent = account;
   $(slots.signature).textContent = "";

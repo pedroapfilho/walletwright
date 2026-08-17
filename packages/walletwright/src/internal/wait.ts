@@ -18,12 +18,7 @@ export const sleep = (ms: number): Promise<void> =>
 /** Render a timeout for an error message, so what a failure claims matches what it waited. */
 export const formatTimeout = (ms: number): string => `${Math.round(ms / 100) / 10}s`;
 
-/**
- * Poll `check` until it yields anything other than `undefined`/`false`, then hand that value back.
- * Returns `undefined` when the budget elapses, so only a caller that can genuinely continue without
- * the condition (an optional approval popup, say) branches on the result; everything else uses
- * `waitUntilOrThrow` and gets a named failure instead of a wallet that looks ready and isn't.
- */
+/** Poll until `check` returns a value, or `undefined` when the timeout expires. */
 export const waitUntil = async <T>(
   check: () => Promise<T | false | undefined> | T | false | undefined,
   { intervalMs = DEFAULT_INTERVAL_MS, timeoutMs }: WaitOptions,

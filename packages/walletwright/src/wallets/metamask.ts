@@ -8,15 +8,7 @@ import { approvalControls, approve, reject } from "./metamask/approve";
 import { importWallet, reachUnlockScreen, unlock } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
 
-/**
- * sha256 of each pinned `metamask-chrome-<version>.zip` release asset, so a pinned download is
- * verified rather than trusted. This is the one place to fill in when bumping `DEFAULT_VERSION`:
- *
- *   curl -sL https://github.com/MetaMask/metamask-extension/releases/download/v<v>/metamask-chrome-<v>.zip | shasum -a 256
- *
- * A version a caller pins through `setup.version` has no entry here and downloads unverified, and
- * the Web-Store wallets can't be pinned at all (that endpoint always serves the current version).
- */
+/** Release hashes for the pinned default. Add an entry before changing `DEFAULT_VERSION`. */
 const RELEASE_SHA256 = {
   "13.35.1": "4e0f8626df0ae9fb15f5f3ad6784a0b518f3ede067b2b0d4f539f9f457c5049c",
 } as const satisfies Readonly<Record<string, string>>;
@@ -40,18 +32,7 @@ export const metamaskDownload = (cacheDir: string, version: string) => ({
   url: `https://github.com/MetaMask/metamask-extension/releases/download/v${version}/metamask-chrome-${version}.zip`,
 });
 
-/**
- * MetaMask's backup-and-sync restores account names for whichever SRP a profile holds, and test
- * seeds are shared (the public `test test … junk` one by thousands), so a synced profile reports a
- * stranger's account names in place of the ones a test just set: CI runs showed accounts called
- * `dev1` and `personal`, holding a real balance, where `Account 2` was expected. It only happens
- * where the sync actually lands, which makes it look like a flake. MetaMask's own e2e suite mocks
- * its external services for the same reason.
- *
- * Just the one host that stores the names. Cutting the auth stack around it (`authentication`,
- * `oidc`) reaches further than intended: other features authenticate through it too, and a wallet
- * that cannot authenticate can leave a request's confirm button disabled with nothing to explain it.
- */
+/** MetaMask's account-name sync mutates shared test-seed profiles, so its own e2e suite blocks this host. */
 const ACCOUNT_SYNC_HOST = "user-storage.api.cx.metamask.io";
 
 export const metamask: WalletDefinition = {

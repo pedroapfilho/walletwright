@@ -64,12 +64,7 @@ export type NetworkActions = WalletActionsFor<NetworkApi>;
 /** Lock and unlock the wallet itself, from its own UI. */
 export type SettingsActions = WalletActionsFor<SettingsApi>;
 
-/**
- * Optional, per-wallet capabilities beyond the universal connect/sign flow. A wallet declares only
- * what has actually been driven against the real extension, so the registry never claims support it
- * doesn't have: `network` is meaningless for Slush (Sui), and Phantom's settings UI has no analogue
- * for much of MetaMask's. Anything undeclared throws a clear error at call time.
- */
+/** Optional wallet capabilities beyond connect and sign. Undeclared actions throw at call time. */
 export type WalletActions = {
   accounts?: AccountActions;
   network?: NetworkActions;
@@ -83,12 +78,7 @@ export type WalletActions = {
 export type WalletDefinition = {
   /** Optional capabilities beyond connect/sign. Omit a group the wallet can't (or doesn't) drive. */
   actions?: WalletActions;
-  /**
-   * Controls that only exist while a request is on screen, used to tell a real approval from the
-   * wallet's idle UI: MetaMask's approval window can render its home screen, buttons and all. A
-   * wallet that doesn't declare this falls back to "any button is visible", which is enough for a
-   * window that only ever opens for a request.
-   */
+  /** Controls that exist only for a pending request, excluding idle wallet UI. */
   approvalControls?: (popup: Page) => Locator;
   /**
    * Click the approve/confirm button in an approval popup (connect or sign). `password` is provided
@@ -104,12 +94,7 @@ export type WalletDefinition = {
    * holding the DB), e.g. forcing `completedOnboarding=true` in MetaMask's leveldb.
    */
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
-  /**
-   * Whether this wallet's approval window surfaces as a page when the browser runs headless, so the
-   * engine can find and drive it. Declared only once verified against the real extension: MetaMask's
-   * window is created but never exposed, and `launchWallet` refuses headless without this rather
-   * than hanging at the first approval.
-   */
+  /** Whether the real wallet exposes approval windows as Playwright pages in headless mode. */
   headlessApprovals?: boolean;
   /** Run the import-from-seed onboarding flow. */
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
@@ -150,12 +135,7 @@ export type SettingsApi = {
 /** Add and switch networks from the wallet's own UI. Throws if the wallet doesn't declare support. */
 export type NetworkApi = {
   add: (config: NetworkConfig) => Promise<void>;
-  /**
-   * No wallet implements this today, so calling it throws. MetaMask 13.x scopes the active chain
-   * per dapp and has no wallet-side network selector, so switching is dapp-initiated: the dapp calls
-   * `wallet_addEthereumChain` (idempotent, adds when missing and switches when present) and
-   * `wallet.approve()` drives the popup. See the network recipe in Examples.
-   */
+  /** MetaMask 13.x switches dapp-scoped networks through `wallet_addEthereumChain` approvals. */
   switch: (chainId: number) => Promise<void>;
 };
 

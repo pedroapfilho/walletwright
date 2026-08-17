@@ -15,12 +15,6 @@ const asKind = (name: string): WalletKind => {
 const headless = process.argv.includes("--headless");
 const named = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 
-/**
- * Named wallets, or all of them. One entrypoint so the list of wallets to onboard lives only in
- * `wallet-setup.ts`, which the compiler keeps exhaustive over `WalletKind`. CI used to hardcode its
- * own copy in a bash loop, so a newly registered wallet would run its spec against a cache CI never
- * built and fail on the runner with "no cache for this setup", which reads as a profile bug.
- */
 const selected = named.length > 0 ? named.map(asKind) : KINDS;
 
 for (const name of selected) {
