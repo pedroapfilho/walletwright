@@ -1,69 +1,36 @@
 @import "tailwindcss";
 
-/*
- * walletwright brand theme: neutral grayscale with a near-ink primary, the same
- * palette as the docs site. Dark mode is driven by the OS via
- * `prefers-color-scheme`, so the landing page needs no theme provider.
- */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Dark enough that `soft` (text-primary on bg-primary/10) clears 4.5:1, not just the solid fill. */
+  --primary: oklch(0.49 0.13 155);
   --primary-foreground: oklch(0.985 0 0);
-  --primary-hover: oklch(0.28 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --border: oklch(0.922 0 0);
-  --ring: oklch(0.205 0 0);
-  --radius: 0.625rem;
+  --muted-foreground: oklch(0.505 0 0);
+  --border: oklch(0.145 0 0 / 10%);
+  --ring: oklch(0.49 0.13 155);
+  --radius: 0.75rem;
 
-  /*
-   * The single accent, echoing the approve check mark in the logo. Green also
-   * avoids every wallet brand mark on the page (MetaMask orange, Phantom
-   * purple, Rabby and Sui blue, Solflare yellow), so tinted chrome never reads
-   * as belonging to one of them.
-   */
-  --brand: oklch(0.52 0.13 155);
-  --brand-foreground: oklch(0.985 0 0);
-
-  /*
-   * Light mode gets a conventional drop shadow. Dark mode cannot: a shadow is
-   * invisible against a near-black ground, so elevation there comes from an
-   * inset top highlight instead. Both directions live behind one token pair so
-   * components never branch on the color scheme.
-   */
   --elevation-card: 0 1px 2px 0 oklch(0.145 0 0 / 5%), 0 1px 3px 0 oklch(0.145 0 0 / 4%);
-  --elevation-card-hover:
-    0 2px 4px 0 oklch(0.145 0 0 / 6%), 0 12px 28px -12px oklch(0.145 0 0 / 14%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
+    --card: oklch(0.185 0 0);
     --card-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
+    --primary: oklch(0.79 0.16 155);
     --primary-foreground: oklch(0.205 0 0);
-    --primary-hover: oklch(0.92 0 0);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
+    --muted: oklch(0.225 0 0);
     --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
     --border: oklch(1 0 0 / 12%);
-    --ring: oklch(0.985 0 0);
-    --brand: oklch(0.79 0.16 155);
-    --brand-foreground: oklch(0.205 0 0);
-    --elevation-card: inset 0 1px 0 0 oklch(1 0 0 / 5%);
-    --elevation-card-hover: inset 0 1px 0 0 oklch(1 0 0 / 9%), 0 12px 28px -12px oklch(0 0 0 / 60%);
+    --ring: oklch(0.79 0.16 155);
+    /* An inset highlight instead of a drop shadow: elevation reads as light, not depth, on dark. */
+    --elevation-card: inset 0 1px 0 0 oklch(1 0 0 / 6%);
   }
 }
 
@@ -74,23 +41,15 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: var(--primary-hover);
-  --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
   --shadow-card: var(--elevation-card);
-  --shadow-card-hover: var(--elevation-card-hover);
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", "Menlo", monospace;
 }
@@ -98,7 +57,6 @@
 html {
   color-scheme: light dark;
   scrollbar-gutter: stable;
-  /* Clears the 4rem sticky header so skip-link and in-page jumps land visibly. */
   scroll-padding-top: 4rem;
 }
 
@@ -107,14 +65,35 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
-  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
   background-color: color-mix(in oklab, var(--foreground) 18%, transparent);
 }
 
-/* Guards every hover transition on the page at once, rather than per call site. */
+@utility grid-backdrop {
+  background-image:
+    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+  background-position: center top;
+  background-size: --spacing(16) --spacing(16);
+  mask-image: linear-gradient(to bottom, black, transparent 60%);
+}
+
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style, normal);
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki,
+  .shiki span {
+    color: var(--shiki-dark);
+    font-style: var(--shiki-dark-font-style, normal);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

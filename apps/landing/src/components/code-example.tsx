@@ -1,5 +1,6 @@
 import { ButtonLink } from "@/components/button-link";
 import { CodeBlock } from "@/components/code-block";
+import { Section } from "@/components/section";
 import { SectionHeading } from "@/components/section-heading";
 import { GETTING_STARTED_URL } from "@/lib/site";
 
@@ -13,23 +14,14 @@ export const metamask: WalletSetup = {
 };`;
 
 const CodeExample = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-center">
+  <Section>
+    <div className="grid grid-cols-1 items-center gap-x-8 gap-y-12 lg:grid-cols-2">
       <div>
-        <SectionHeading
-          eyebrow="Setup"
-          title="Onboard once, reuse everywhere."
-          titleClassName="max-w-[24ch]"
-        >
+        <SectionHeading eyebrow="Setup" title="Onboard once, reuse everywhere.">
           Describe the wallet once, then build the cached profile with{" "}
-          <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono text-[0.9em]">
-            walletwright cache
-          </code>{" "}
-          or{" "}
-          <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono text-[0.9em]">
-            buildCache()
-          </code>
-          . Every test launches from a copy and unlocks in seconds.
+          <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono">walletwright cache</code> or{" "}
+          <code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono">buildCache()</code>. Every
+          test launches from a copy and unlocks in seconds.
         </SectionHeading>
         <div className="mt-8">
           <ButtonLink href={GETTING_STARTED_URL} variant="secondary">
@@ -40,7 +32,7 @@ const CodeExample = () => (
 
       <CodeBlock code={SETUP_CODE} filename="wallet-setup.ts" wrap />
     </div>
-  </section>
+  </Section>
 );
 
 export { CodeExample };

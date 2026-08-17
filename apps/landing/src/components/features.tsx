@@ -1,124 +1,86 @@
-import type { ReactNode } from "react";
+import {
+  BeakerIcon,
+  CircleStackIcon,
+  CubeTransparentIcon,
+  PuzzlePieceIcon,
+  ServerStackIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
+import type { ComponentType, SVGProps } from "react";
 
+import { Section } from "@/components/section";
 import { SectionHeading } from "@/components/section-heading";
 
 type Feature = {
   description: string;
-  icon: ReactNode;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
   title: string;
 };
-
-const ICON_PROPS = {
-  "aria-hidden": true,
-  className: "size-5",
-  fill: "none",
-  stroke: "currentColor",
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  strokeWidth: 1.75,
-  viewBox: "0 0 24 24",
-  xmlns: "http://www.w3.org/2000/svg",
-} as const;
 
 const FEATURES: Array<Feature> = [
   {
     description:
       "The actual MetaMask, Phantom, Rabby, Solflare, and Slush builds, loaded unpacked into Chromium, with no mocked providers.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-        <path d="M16 12h.01" />
-        <path d="M3 9h18" />
-      </svg>
-    ),
+    icon: PuzzlePieceIcon,
     title: "Real extensions",
   },
   {
     description:
       "buildCache imports the seed into a profile on disk once. Tests launch from a copy and only unlock, so every run starts in seconds.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <ellipse cx="12" cy="5" rx="9" ry="3" />
-        <path d="M3 5v14a9 3 0 0 0 18 0V5" />
-        <path d="M3 12a9 3 0 0 0 18 0" />
-      </svg>
-    ),
+    icon: CircleStackIcon,
     title: "Onboard once, cache it",
   },
   {
     description:
       "connectToDapp() and confirmSignature() drive MetaMask, Phantom, Rabby, and Solflare on EVM and Solana, and Slush on Sui, the same way.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="m12 2 9 5-9 5-9-5 9-5Z" />
-        <path d="m3 12 9 5 9-5" />
-        <path d="m3 17 9 5 9-5" />
-      </svg>
-    ),
+    icon: CubeTransparentIcon,
     title: "EVM, Solana, and Sui, one API",
   },
   {
     description:
       "createWalletFixtures returns a @playwright/test test with a wallet fixture. No framework lock-in, you control the Playwright version.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M20 7 9 18l-5-5" />
-      </svg>
-    ),
+    icon: BeakerIcon,
     title: "Plain Playwright fixtures",
   },
   {
     description:
       "Approval popups open headed, so run under xvfb on CI. Cache building can run headless, and a couple of retries keeps runs stable.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <rect height="14" rx="2" width="20" x="2" y="3" />
-        <path d="M8 21h8" />
-        <path d="M12 17v4" />
-      </svg>
-    ),
+    icon: ServerStackIcon,
     title: "CI-ready, headed",
   },
   {
     description:
       "Built on current wallet and Chromium versions, with no fork and no dependency overrides to maintain.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M12 3a12 12 0 0 0 8.5 3A12 12 0 0 1 12 21 12 12 0 0 1 3.5 6 12 12 0 0 0 12 3Z" />
-        <path d="m9 12 2 2 4-4" />
-      </svg>
-    ),
+    icon: ShieldCheckIcon,
     title: "Current versions, no fork",
   },
 ];
 
-const CARD_CLASSES =
-  "border-border bg-card shadow-card hover:shadow-card-hover hover:border-foreground/20 rounded-lg border p-6 transition-[box-shadow,border-color,translate] duration-200 ease-out hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0";
-
 const Features = () => (
-  <section className="border-border bg-muted/40 border-y">
-    <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
-      <SectionHeading eyebrow="Capabilities" title="Everything you need to test a real wallet.">
-        walletwright rebuilds the approach that works: onboard once, cache the profile, drive the
-        popups. Plain @playwright/test, current wallet and Chromium versions, no fork and no patched
-        dependencies.
-      </SectionHeading>
+  <Section className="border-border border-y">
+    <SectionHeading eyebrow="Capabilities" title="Everything you need to test a real wallet.">
+      walletwright rebuilds the approach that works: onboard once, cache the profile, drive the
+      popups. Plain @playwright/test, current wallet and Chromium versions, no fork and no patched
+      dependencies.
+    </SectionHeading>
 
-      <dl className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((feature) => (
-          <div className={CARD_CLASSES} key={feature.title}>
-            <div className="bg-brand/10 text-brand ring-brand/20 flex size-10 items-center justify-center rounded-md ring-1 ring-inset">
-              {feature.icon}
-            </div>
-            <dt className="text-card-foreground mt-4 font-medium">{feature.title}</dt>
-            <dd className="text-muted-foreground mt-2 text-sm text-pretty">
-              {feature.description}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  </section>
+    <dl className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      {FEATURES.map((feature) => (
+        <div
+          className="border-border bg-card shadow-card rounded-lg border p-6"
+          key={feature.title}
+        >
+          <dt className="text-card-foreground font-medium">
+            <feature.icon aria-hidden="true" className="size-6 shrink-0" />
+            <span className="mt-4 block">{feature.title}</span>
+          </dt>
+          <dd className="text-muted-foreground mt-2 text-base text-pretty sm:text-sm">
+            {feature.description}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  </Section>
 );
 
 export { Features };

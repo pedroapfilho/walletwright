@@ -10,10 +10,10 @@ const Page = () => (
   <>
     <SiteHeader />
     {/* tabIndex is required for Safari to actually move focus on the skip link. */}
-    <main className="focus:outline-none" id="main-content" tabIndex={-1}>
+    <main className="isolate focus:outline-none" id="main-content" tabIndex={-1}>
       <Hero />
-      <CodeExample />
       <Wallets />
+      <CodeExample />
       <Features />
       <DocsCta />
     </main>

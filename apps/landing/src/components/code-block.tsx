@@ -14,25 +14,32 @@ type CodeBlockProps = {
   wrap?: boolean;
 };
 
-/** Server-render Shiki as React elements and retain keyboard focus for the scroll region. */
+/**
+ * Shiki exposes dual-theme variables for server-rendered color-mode parity.
+ * Its focusable `<pre>` needs a named wrapper and a visible custom focus ring.
+ */
 const CodeBlock = async ({ code, filename, label, lang = "tsx", wrap = false }: CodeBlockProps) => {
-  const hast = await codeToHast(code, { lang, theme: "github-dark-default" });
+  const hast = await codeToHast(code, {
+    defaultColor: false,
+    lang,
+    themes: { dark: "github-dark-default", light: "github-light-default" },
+  });
 
   return (
     <section
       aria-label={label ?? filename ?? "Code example"}
       className={cn(
-        "overflow-hidden rounded-lg border border-white/10 bg-[#0d1117] font-mono text-sm shadow-lg",
+        "border-border bg-card text-card-foreground shadow-card overflow-hidden rounded-xl border font-mono text-sm",
         "[&_pre]:overflow-x-auto [&_pre]:p-5 [&_pre]:leading-relaxed",
-        "[&_pre:focus-visible]:outline-2 [&_pre:focus-visible]:-outline-offset-2 [&_pre:focus-visible]:outline-white/40",
+        "[&_pre:focus-visible]:outline-ring [&_pre:focus-visible]:outline-2 [&_pre:focus-visible]:-outline-offset-2",
         wrap && "[&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap",
       )}
     >
       {filename !== undefined && filename !== "" ? (
-        <div className="flex items-center gap-2 border-b border-white/10 py-2 pr-2 pl-4">
-          <span className="grow truncate text-white/50">{filename}</span>
+        <div className="border-border flex items-center gap-2 border-b py-2 pr-2 pl-4">
+          <span className="text-muted-foreground grow truncate">{filename}</span>
           <CopyButton
-            className="text-white/50 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
             label={`Copy ${filename}`}
             value={code}
           />

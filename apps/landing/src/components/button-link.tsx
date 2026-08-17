@@ -4,23 +4,22 @@ import { cn } from "@/lib/cn";
 
 type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   size?: "md" | "sm";
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "soft";
 };
 
 const BASE_CLASSES =
-  "relative inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,color,translate] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
+  "relative inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-const VARIANT_CLASSES: Record<NonNullable<ButtonLinkProps["variant"]>, string> = {
-  primary:
-    "bg-primary text-primary-foreground ring-1 ring-inset ring-black/5 hover:bg-primary-hover active:translate-y-px dark:ring-white/10",
-  secondary:
-    "border border-border bg-background text-foreground hover:bg-muted hover:border-foreground/20 active:translate-y-px",
-};
+const VARIANT_CLASSES = {
+  primary: "bg-primary text-primary-foreground hover:bg-primary/90 active:translate-y-px",
+  secondary: "border border-border text-foreground hover:bg-muted active:translate-y-px",
+  soft: "bg-primary/10 text-primary hover:bg-primary/15 active:translate-y-px",
+} satisfies Record<NonNullable<ButtonLinkProps["variant"]>, string>;
 
-const SIZE_CLASSES: Record<NonNullable<ButtonLinkProps["size"]>, string> = {
-  md: "px-4 py-2.5 text-sm",
+const SIZE_CLASSES = {
+  md: "px-3 py-2 text-base sm:text-sm",
   sm: "px-3 py-1.5 text-sm",
-};
+} satisfies Record<NonNullable<ButtonLinkProps["size"]>, string>;
 
 const ButtonLink = ({
   children,
@@ -34,10 +33,10 @@ const ButtonLink = ({
     {...props}
   >
     {children}
-    {/* `sm` renders ~33px tall, under the 44px touch minimum, so coarse pointers get a padded hit area. */}
+    {/* Both sizes render under the 48px touch minimum, so coarse pointers get a padded hit area. */}
     <span
       aria-hidden="true"
-      className="absolute top-1/2 left-1/2 size-[max(100%,2.75rem)] -translate-1/2 pointer-fine:hidden"
+      className="absolute top-1/2 left-1/2 size-[max(100%,3rem)] -translate-1/2 pointer-fine:hidden"
     />
   </a>
 );
