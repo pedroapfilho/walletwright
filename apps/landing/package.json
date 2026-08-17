@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 4100",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint src",
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {

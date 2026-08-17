@@ -34,18 +34,10 @@ apps/
 
 ## Dev workflow
 
-Root scripts run turbo: `build`, `test`, `test:coverage`, `typecheck`, `clean`, `dev`. Root
+Root scripts run turbo: `build`, `test`, `test:coverage`, `lint`, `typecheck`, `clean`, `dev`. Root
 `test` runs only the walletwright unit suite.
-Root-only: `lint` (one repo-wide `oxlint .`, which is also what CI runs), `format`/`format:check`
-(oxfmt), `test:e2e` (the demo's headed specs, via `pnpm --filter demo`),
-`changeset`/`version-packages`/`release`.
-
-`lint` is deliberately **not** a turbo task and no package defines its own. oxlint is type-aware
-here, so its per-directory overrides in `oxlint.config.ts` are written repo-root-relative and only
-match when oxlint runs from the root; per-package invocations silently applied a different rule set
-and skipped every top-level file (`apps/demo/scripts/**`, `wallet-setup.ts`, the config files), which
-read as local-green then CI-red. Type-aware lint resolves workspace imports through built output, so
-run `pnpm build` before `pnpm lint` on a fresh clone.
+Root-only: `format`/`format:check` (oxfmt), `test:e2e` (the demo's headed specs, via
+`pnpm --filter demo`), `changeset`/`version-packages`/`release`.
 
 Run the demo end-to-end from `apps/demo`: `pnpm exec playwright install chromium`, then
 `pnpm test:cache` to onboard the wallets (or `pnpm test:cache slush` for one), then `pnpm test:e2e`
