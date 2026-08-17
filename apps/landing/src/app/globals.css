@@ -71,7 +71,6 @@ body {
   background-color: color-mix(in oklab, var(--foreground) 18%, transparent);
 }
 
-/* The mask fades the rules out before the section edge, so the backdrop never ends on a hard line. */
 @utility grid-backdrop {
   background-image:
     linear-gradient(to right, var(--color-border) 1px, transparent 1px),

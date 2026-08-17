@@ -73,8 +73,6 @@ const Wallets = () => (
       Solana Wallet Standard, and the Sui Wallet Standard, so your tests never branch per chain.
     </SectionHeading>
 
-    {/* The gap doubles as the divider: the parent's border color shows through between cells,
-    so the rules reflow with the column count instead of needing per-breakpoint nth-child math. */}
     <ul
       className="border-border bg-border mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-xl border md:grid-cols-5"
       role="list"
