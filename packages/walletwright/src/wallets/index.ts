@@ -6,13 +6,13 @@ import { rabby } from "./rabby";
 import { slush } from "./slush";
 import { solflare } from "./solflare";
 
-export const wallets: Record<WalletKind, WalletDefinition> = {
+export const wallets = {
   metamask,
   phantom,
   rabby,
   slush,
   solflare,
-};
+} satisfies Record<WalletKind, WalletDefinition>;
 
 /** Narrow an arbitrary string (CLI flag, setup file field) to a supported wallet. */
 export const isWalletKind = (value: string): value is WalletKind => Object.hasOwn(wallets, value);

@@ -3,15 +3,10 @@ import awesomeness from "oxlint-config-awesomeness";
 
 export default defineConfig({
   extends: [awesomeness],
-  options: {
-    typeAware: true,
-    typeCheck: true,
-  },
   overrides: [
     {
       files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
       rules: {
-        "no-sync": "off",
         "number-literal-case": "off",
       },
     },
@@ -20,19 +15,15 @@ export default defineConfig({
       rules: {
         "max-lines": "off",
         "no-await-expression-member": "off",
-        "no-await-in-loop": "off",
         "no-console": "off",
         "no-non-null-assertion": "off",
         "no-promise-executor-return": "off",
         "react-doctor/async-await-in-loop": "off",
-        "require-unicode-regexp": "off",
       },
     },
     {
       files: ["packages/walletwright/**/*.ts"],
       rules: {
-        "no-await-in-loop": "off",
-        "no-sync": "off",
         "react-doctor/async-await-in-loop": "off",
         "react-doctor/async-defer-await": "off",
         "react-doctor/js-index-maps": "off",

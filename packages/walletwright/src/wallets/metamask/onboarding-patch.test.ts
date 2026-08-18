@@ -4,12 +4,16 @@ import path from "node:path";
 
 import { ClassicLevel } from "classic-level";
 import { afterEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { extensionStateDir } from "../../internal/utils";
 
 import { markMetaMaskOnboarded } from "./onboarding-patch";
 
 const EXTENSION_ID = "nkbihfbeogaeaoehlefnkodbefgpgknn";
+const jsonSchema = z.json();
+
+type JsonValue = z.infer<typeof jsonSchema>;
 
 const profileDirs: Array<string> = [];
 
@@ -34,11 +38,11 @@ const seedProfile = async (state: Record<string, unknown>): Promise<string> => {
   return profileDir;
 };
 
-const readState = async (profileDir: string, key: string): Promise<unknown> => {
+const readState = async (profileDir: string, key: string): Promise<JsonValue | undefined> => {
   const db = await openState(profileDir);
   const raw = await db.get(key);
   await db.close();
-  return raw === undefined ? undefined : JSON.parse(raw);
+  return raw === undefined ? undefined : jsonSchema.parse(JSON.parse(raw));
 };
 
 afterEach(async () => {

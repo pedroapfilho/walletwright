@@ -68,6 +68,13 @@ const SVM_CHAINS = ["solana:mainnet", "solana:devnet"] as const;
 
 /** `message` is required: defaulting it would sign the empty message instead of rejecting. */
 type BridgeRequest = { message: Array<number>; method: string };
+type StandardInitInfo = {
+  address: string;
+  chains: ReadonlyArray<string>;
+  icon: string;
+  name: string;
+  publicKeyHex: string;
+};
 
 const createStandardHandler =
   (seed: Buffer) =>
@@ -108,79 +115,81 @@ const installMockStandardWallet = async (
 
   const bindingName = `__walletwrightMockStandardSign_${installCount++}`;
   await target.exposeFunction(bindingName, (rpc: BridgeRequest) => handle(rpc));
-
-  await target.addInitScript(
-    ([binding, info]) => {
-      const call =
-        // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- Playwright's exposeBinding installs `binding` on the page's window after this script's types are fixed
-        (window as unknown as Record<string, (rpc: BridgeRequest) => Promise<Array<number>>>)[
-          binding
-        ];
-      const publicKeyBytes = Uint8Array.from(
-        (info.publicKeyHex.match(/.{2}/gv) ?? []).map((byte) => Number.parseInt(byte, 16)),
-      );
-      const account = {
-        address: info.address,
-        chains: info.chains,
-        features: ["solana:signMessage"],
-        label: info.name,
-        publicKey: publicKeyBytes,
-      };
-      const wallet = {
-        accounts: [account],
-        chains: info.chains,
-        features: {
-          "solana:signMessage": {
-            signMessage: (...inputs: Array<{ message: Uint8Array }>) =>
-              Promise.all(
-                inputs.map(async ({ message }) => ({
-                  signature: Uint8Array.from(
-                    await call({ message: [...message], method: "solana:signMessage" }),
-                  ),
-                  signedMessage: message,
-                })),
-              ),
-            version: "1.0.0",
-          },
-          "standard:connect": {
-            connect: () => Promise.resolve({ accounts: [account] }),
-            version: "1.0.0",
-          },
-          "standard:events": {
-            on: () => () => {},
-            version: "1.0.0",
-          },
-        },
-        icon: info.icon,
-        name: info.name,
-        version: "1.0.0" as const,
-      };
-
-      const callback = (api: { register: (w: typeof wallet) => void }) => {
-        api.register(wallet);
-      };
-      try {
-        window.dispatchEvent(
-          new CustomEvent("wallet-standard:register-wallet", { detail: callback }),
-        );
-      } catch {
-        // The app may not be listening yet; the app-ready handler below covers that case.
-      }
-      window.addEventListener("wallet-standard:app-ready", (event) => {
-        callback((event as CustomEvent<{ register: (w: typeof wallet) => void }>).detail);
-      });
+  const initArgs = [
+    bindingName,
+    {
+      address,
+      chains: [...SVM_CHAINS],
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>",
+      name,
+      publicKeyHex,
     },
-    [
-      bindingName,
-      {
-        address,
-        chains: [...SVM_CHAINS],
-        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>",
-        name,
-        publicKeyHex,
+  ] satisfies readonly [string, StandardInitInfo];
+
+  await target.addInitScript(([binding, info]) => {
+    const hasBinding = <Value extends object>(
+      value: Value,
+    ): value is Value & Record<string, (rpc: BridgeRequest) => Promise<Array<number>>> =>
+      typeof Object.getOwnPropertyDescriptor(value, binding)?.value === "function";
+    if (!hasBinding(window)) {
+      throw new TypeError(`Missing Playwright binding: ${binding}`);
+    }
+    const call = window[binding];
+    const publicKeyBytes = Uint8Array.from(
+      (info.publicKeyHex.match(/.{2}/gv) ?? []).map((byte) => Number.parseInt(byte, 16)),
+    );
+    const account = {
+      address: info.address,
+      chains: info.chains,
+      features: ["solana:signMessage"],
+      label: info.name,
+      publicKey: publicKeyBytes,
+    };
+    const wallet = {
+      accounts: [account],
+      chains: info.chains,
+      features: {
+        "solana:signMessage": {
+          signMessage: (...inputs: Array<{ message: Uint8Array }>) =>
+            Promise.all(
+              inputs.map(async ({ message }) => ({
+                signature: Uint8Array.from(
+                  await call({ message: [...message], method: "solana:signMessage" }),
+                ),
+                signedMessage: message,
+              })),
+            ),
+          version: "1.0.0",
+        },
+        "standard:connect": {
+          connect: () => Promise.resolve({ accounts: [account] }),
+          version: "1.0.0",
+        },
+        "standard:events": {
+          on: () => () => {},
+          version: "1.0.0",
+        },
       },
-    ] as const,
-  );
+      icon: info.icon,
+      name: info.name,
+      version: "1.0.0" as const,
+    };
+
+    const callback = (api: { register: (w: typeof wallet) => void }) => {
+      api.register(wallet);
+    };
+    try {
+      window.dispatchEvent(
+        new CustomEvent("wallet-standard:register-wallet", { detail: callback }),
+      );
+    } catch {
+      // The app may not be listening yet; the app-ready handler below covers that case.
+    }
+    window.addEventListener("wallet-standard:app-ready", (event) => {
+      // SAFETY: Wallet Standard dispatches this named event with the register callback contract.
+      callback((event as CustomEvent<{ register: (w: typeof wallet) => void }>).detail);
+    });
+  }, initArgs);
 
   return { address, publicKeyHex };
 };

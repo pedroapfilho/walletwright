@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+
+import { z } from "zod";
 
 import { buildCache } from "./internal/cache";
 import type { WalletSetup } from "./types";
@@ -61,29 +63,26 @@ const SETUP_CONFLICTS = ["password", "seed", "version", "wallet"] as const;
 
 type Command = { kind: "help" } | { headless: boolean; kind: "cache"; setup: WalletSetup };
 
-const isNonEmptyString = (value: unknown): value is string =>
-  typeof value === "string" && value.length > 0;
+const nonEmptyStringSchema = z.string().min(1);
+const walletSetupSchema = z.object({
+  cacheDir: nonEmptyStringSchema.optional(),
+  password: nonEmptyStringSchema,
+  seedPhrase: nonEmptyStringSchema,
+  version: nonEmptyStringSchema.optional(),
+  wallet: z.enum(["metamask", "phantom", "rabby", "slush", "solflare"]),
+});
+const setupModuleSchema = z.object({ default: walletSetupSchema });
 
-const isWalletSetup = (value: unknown): value is WalletSetup =>
-  typeof value === "object" &&
-  value !== null &&
-  "wallet" in value &&
-  typeof value.wallet === "string" &&
-  isWalletKind(value.wallet) &&
-  "seedPhrase" in value &&
-  isNonEmptyString(value.seedPhrase) &&
-  "password" in value &&
-  isNonEmptyString(value.password);
+const isNonEmptyString = (value: string | undefined): value is string =>
+  value !== undefined && nonEmptyStringSchema.safeParse(value).success;
 
 const loadSetup = async (file: string): Promise<WalletSetup> => {
   const resolved = pathToFileURL(path.resolve(file)).href;
-  const mod: unknown = await import(resolved);
-  const setup =
-    typeof mod === "object" && mod !== null && "default" in mod ? mod.default : undefined;
-  if (!isWalletSetup(setup)) {
+  const result = setupModuleSchema.safeParse(await import(resolved));
+  if (!result.success) {
     throw new Error(`[walletwright] ${file} must default-export a WalletSetup`);
   }
-  return setup;
+  return result.data.default;
 };
 
 const resolveSetup = async (flags: Flags): Promise<WalletSetup> => {
@@ -157,13 +156,13 @@ const main = async (): Promise<void> => {
 };
 
 /** Resolve the CLI symlink before comparing `process.argv[1]` with `import.meta.url`. */
-const isEntryPoint = (moduleUrl: string, entryPath: string | undefined): boolean =>
-  entryPath !== undefined && moduleUrl === pathToFileURL(realpathSync(entryPath)).href;
+const isEntryPoint = async (moduleUrl: string, entryPath: string | undefined): Promise<boolean> =>
+  entryPath !== undefined && moduleUrl === pathToFileURL(await realpath(entryPath)).href;
 
-if (isEntryPoint(import.meta.url, process.argv[1])) {
+if (await isEntryPoint(import.meta.url, process.argv[1])) {
   try {
     await main();
-  } catch (error: unknown) {
+  } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     // Not process.exit(1): writes to a piped stderr are async and exit() does not flush them, so
     // `walletwright cache … 2>&1 | tee build.log` could exit 1 with an empty diagnostic. Nothing runs

@@ -30,10 +30,10 @@ export const slushSetup: WalletSetup = {
   wallet: "slush",
 };
 
-export const walletSetups: Record<WalletKind, WalletSetup> = {
+export const walletSetups = {
   metamask: metamaskSetup,
   phantom: phantomSetup,
   rabby: rabbySetup,
   slush: slushSetup,
   solflare: solflareSetup,
-};
+} satisfies Record<WalletKind, WalletSetup>;

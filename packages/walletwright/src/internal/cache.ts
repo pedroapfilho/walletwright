@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { chromium } from "@playwright/test";
 
-import type { WalletSetup } from "../types";
+import type { WalletDefinition, WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
 import { extensionContextOptions } from "./chromium";
@@ -36,15 +36,12 @@ const hasPersistedState = async (profileDir: string, extensionId: string): Promi
 const BUILD_PREFIX = ".building-";
 const PREVIOUS_SUFFIX = ".previous";
 
-const isErrorCode = (error: unknown, code: string): boolean =>
-  error instanceof Error && "code" in error && error.code === code;
-
 const pathExists = async (target: string): Promise<boolean> => {
   try {
     await stat(target);
     return true;
   } catch (error) {
-    if (isErrorCode(error, "ENOENT")) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return false;
     }
     throw error;
@@ -62,7 +59,7 @@ const restorePreviousProfile = async (profileDir: string): Promise<void> => {
   try {
     await rename(previous, profileDir);
   } catch (error) {
-    if (!isErrorCode(error, "ENOENT")) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
       throw error;
     }
   }
@@ -76,7 +73,7 @@ const publishProfile = async (staging: string, profileDir: string): Promise<void
     await rename(profileDir, previous);
     movedPrevious = true;
   } catch (error) {
-    if (!isErrorCode(error, "ENOENT")) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
       throw error;
     }
   }
@@ -106,13 +103,29 @@ const publishProfile = async (staging: string, profileDir: string): Promise<void
 };
 
 /** Build in staging and retain the prior cache until the new profile publishes successfully. */
-const buildCache = async (
+type BuildCacheDependencies = {
+  launchPersistentContext: typeof chromium.launchPersistentContext;
+  prepareExtension: (
+    definition: WalletDefinition,
+    cacheDir: string,
+    version?: string,
+  ) => Promise<string>;
+};
+
+const defaultBuildCacheDependencies: BuildCacheDependencies = {
+  launchPersistentContext: chromium.launchPersistentContext.bind(chromium),
+  prepareExtension: (definition, cacheDir, version) =>
+    definition.prepareExtension(cacheDir, version),
+};
+
+const buildCacheWithDependencies = async (
   setup: WalletSetup,
   options: { headless?: boolean } = {},
+  dependencies: BuildCacheDependencies = defaultBuildCacheDependencies,
 ): Promise<string> => {
   const definition = wallets[setup.wallet];
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
-  const extensionPath = await definition.prepareExtension(cacheDir, setup.version);
+  const extensionPath = await dependencies.prepareExtension(definition, cacheDir, setup.version);
 
   const profileDir = path.join(cacheDir, profileKey(setup));
   await restorePreviousProfile(profileDir);
@@ -121,12 +134,12 @@ const buildCache = async (
 
   let context;
   try {
-    context = await chromium.launchPersistentContext(
+    context = await dependencies.launchPersistentContext(
       staging,
       extensionContextOptions(extensionPath, options.headless === true),
     );
     await definition.prepareContext?.(context);
-    const extensionId = extensionIdFromPath(extensionPath);
+    const extensionId = await extensionIdFromPath(extensionPath);
 
     const page =
       context.pages().find((candidate) => candidate.url() === "about:blank") ??
@@ -157,4 +170,8 @@ const buildCache = async (
   }
 };
 
-export { buildCache, publishProfile, restorePreviousProfile };
+const buildCache = (setup: WalletSetup, options?: { headless?: boolean }): Promise<string> =>
+  buildCacheWithDependencies(setup, options);
+
+export { buildCache, buildCacheWithDependencies, publishProfile, restorePreviousProfile };
+export type { BuildCacheDependencies };

@@ -1,6 +1,7 @@
 import { PrivyProvider, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { z } from "zod";
 
 import { toErrorMessage } from "./error-message";
 
@@ -8,7 +9,11 @@ import { toErrorMessage } from "./error-message";
 // periodically), enough for clicking the flow by hand. For the automated spec, provide your own app
 // id via VITE_PRIVY_APP_ID (env var or a local apps/demo/.env, see .env.example).
 const PRIVY_TEST_APP_ID = "clpispdty00ycl80fpueukbhl";
-const appId = (import.meta.env.VITE_PRIVY_APP_ID as string | undefined) ?? PRIVY_TEST_APP_ID;
+const appIdResult = z
+  .string()
+  .min(1)
+  .safeParse(import.meta.env.VITE_PRIVY_APP_ID);
+const appId = appIdResult.success ? appIdResult.data : PRIVY_TEST_APP_ID;
 
 const Dapp = () => {
   const { authenticated, ready, user } = usePrivy();
@@ -85,4 +90,8 @@ const App = () => {
   );
 };
 
-createRoot(document.querySelector("#root")!).render(<App />);
+const rootElement = document.querySelector("#root");
+if (rootElement === null) {
+  throw new Error("Missing #root element");
+}
+createRoot(rootElement).render(<App />);

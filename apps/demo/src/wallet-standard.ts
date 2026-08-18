@@ -1,22 +1,17 @@
 import { getWallets } from "@wallet-standard/app";
 
-type StandardAccount = { address: string };
-type StandardWallet = {
-  accounts: ReadonlyArray<StandardAccount>;
-  chains: ReadonlyArray<string>;
-  features: Record<string, unknown>;
-  name: string;
+type StandardWallet = ReturnType<ReturnType<typeof getWallets>["get"]>[number];
+type StandardAccount = StandardWallet["accounts"][number];
+type ConnectFeature = {
+  connect: () => Promise<{ accounts: ReadonlyArray<StandardAccount> }>;
 };
 
 const findStandardWallet = (predicate: (wallet: StandardWallet) => boolean) =>
-  getWallets()
-    .get()
-    .find((wallet) => predicate(wallet as StandardWallet)) as StandardWallet | undefined;
+  getWallets().get().find(predicate);
 
 const connectStandard = async (wallet: StandardWallet): Promise<StandardAccount> => {
-  const feature = wallet.features["standard:connect"] as
-    | { connect: () => Promise<{ accounts: ReadonlyArray<StandardAccount> }> }
-    | undefined;
+  // SAFETY: Wallet Standard identifies this feature by name and requires its connect contract.
+  const feature = wallet.features["standard:connect"] as ConnectFeature | undefined;
   if (!feature) {
     throw new Error(`${wallet.name} lacks standard:connect`);
   }

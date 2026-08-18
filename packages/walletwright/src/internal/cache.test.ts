@@ -4,27 +4,18 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  launchPersistentContext: vi.fn(),
-  prepareExtension: vi.fn(),
-}));
-
-vi.mock("@playwright/test", () => ({
-  chromium: { launchPersistentContext: mocks.launchPersistentContext },
-}));
-
-vi.mock("../wallets/index", () => ({
-  wallets: {
-    metamask: {
-      extensionName: "Fake Wallet",
-      prepareExtension: mocks.prepareExtension,
-    },
-  },
-}));
-
 import type { WalletSetup } from "../types";
 
-import { buildCache, publishProfile, restorePreviousProfile } from "./cache";
+import {
+  type BuildCacheDependencies,
+  buildCacheWithDependencies,
+  publishProfile,
+  restorePreviousProfile,
+} from "./cache";
+
+const launchPersistentContext = vi.fn<BuildCacheDependencies["launchPersistentContext"]>();
+const prepareExtension = vi.fn<BuildCacheDependencies["prepareExtension"]>();
+const dependencies: BuildCacheDependencies = { launchPersistentContext, prepareExtension };
 
 const tempDirs: Array<string> = [];
 const setup: WalletSetup = {
@@ -52,10 +43,12 @@ afterEach(async () => {
 describe("buildCache", () => {
   it("removes staging when Chromium fails to launch", async () => {
     const cacheDir = await makeTempDir();
-    mocks.prepareExtension.mockResolvedValue(path.join(cacheDir, "extension"));
-    mocks.launchPersistentContext.mockRejectedValue(new Error("launch failed"));
+    prepareExtension.mockResolvedValue(path.join(cacheDir, "extension"));
+    launchPersistentContext.mockRejectedValue(new Error("launch failed"));
 
-    await expect(buildCache({ ...setup, cacheDir })).rejects.toThrow("launch failed");
+    await expect(
+      buildCacheWithDependencies({ ...setup, cacheDir }, {}, dependencies),
+    ).rejects.toThrow("launch failed");
 
     expect(await readdir(cacheDir)).toEqual([]);
   });

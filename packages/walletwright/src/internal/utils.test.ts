@@ -48,18 +48,26 @@ describe("profileKey", () => {
 describe("extensionIdFromPath", () => {
   const fakePath = "/tmp/walletwright-does-not-exist-xyz";
 
-  it("returns a 32-character string in a..p for a path with no manifest.json on disk", () => {
-    expect(extensionIdFromPath(fakePath)).toMatch(/^[a-p]{32}$/v);
+  it("returns a 32-character string in a..p for a path with no manifest.json on disk", async () => {
+    await expect(extensionIdFromPath(fakePath)).resolves.toMatch(/^[a-p]{32}$/v);
   });
 
-  it("is deterministic for the same path", () => {
-    expect(extensionIdFromPath(fakePath)).toBe(extensionIdFromPath(fakePath));
-  });
-
-  it("differs for a different path", () => {
-    expect(extensionIdFromPath("/tmp/walletwright-does-not-exist-abc")).not.toBe(
+  it("is deterministic for the same path", async () => {
+    const ids = await Promise.allSettled([
       extensionIdFromPath(fakePath),
-    );
+      extensionIdFromPath(fakePath),
+    ]);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toEqual(ids[1]);
+  });
+
+  it("differs for a different path", async () => {
+    const ids = await Promise.allSettled([
+      extensionIdFromPath("/tmp/walletwright-does-not-exist-abc"),
+      extensionIdFromPath(fakePath),
+    ]);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toEqual(ids[1]);
   });
 });
 

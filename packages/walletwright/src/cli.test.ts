@@ -23,28 +23,28 @@ const makeTempDir = (): string => {
 };
 
 describe("isEntryPoint", () => {
-  it("recognises the entry when it is reached through a symlink", () => {
+  it("recognises the entry when it is reached through a symlink", async () => {
     const dir = makeTempDir();
     const real = path.join(dir, "cli.mjs");
     const link = path.join(dir, "link.mjs");
     writeFileSync(real, "");
     symlinkSync(real, link);
 
-    expect(isEntryPoint(pathToFileURL(real).href, link)).toBe(true);
+    await expect(isEntryPoint(pathToFileURL(real).href, link)).resolves.toBe(true);
   });
 
-  it("rejects an entry that is a different file", () => {
+  it("rejects an entry that is a different file", async () => {
     const dir = makeTempDir();
     const real = path.join(dir, "cli.mjs");
     const other = path.join(dir, "other.mjs");
     writeFileSync(real, "");
     writeFileSync(other, "");
 
-    expect(isEntryPoint(pathToFileURL(real).href, other)).toBe(false);
+    await expect(isEntryPoint(pathToFileURL(real).href, other)).resolves.toBe(false);
   });
 
-  it("rejects a missing entry path", () => {
-    expect(isEntryPoint(import.meta.url, undefined)).toBe(false);
+  it("rejects a missing entry path", async () => {
+    await expect(isEntryPoint(import.meta.url, undefined)).resolves.toBe(false);
   });
 });
 
