@@ -30,5 +30,10 @@ ignoredBuiltDependencies:
   - "@parcel/watcher"
 
 minimumReleaseAgeExclude:
-  - oxlint-config-awesomeness@3.4.2
+  - "@dashfoo/*"
+  - "@easeia/*"
+  - "@usebutr/*"
+  - "@walletwright/*"
+  - astro-awesomeness
+  - oxlint-config-awesomeness
   - oxlint-plugin-react-doctor@0.9.6
