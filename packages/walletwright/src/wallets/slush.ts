@@ -10,9 +10,79 @@ const SLUSH_EXTENSION_ID = "opcgpfmipidbgpenhmajoajpbobppdil";
 const HOME_ROUTE = "#/tokens";
 
 const IMPORT_HOME_TIMEOUT_MS = 30_000;
+const MIGRATION_TIMEOUT_MS = 60_000;
+
+const PREFERENCES_DATABASE = "signaldb-preferences";
+const PREFERENCES_STORE = "items";
 
 const atHome = async (page: Page): Promise<boolean> =>
   (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
+
+const migrationFinished = (page: Page): Promise<boolean> =>
+  page.evaluate(
+    async ({ databaseName, storeName }) => {
+      const databases = await indexedDB.databases();
+      if (!databases.some((database) => database.name === databaseName)) {
+        return false;
+      }
+
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.addEventListener(
+          "success",
+          () => {
+            resolve(request.result);
+          },
+          { once: true },
+        );
+        request.addEventListener(
+          "error",
+          () => {
+            reject(request.error ?? new Error(`Unable to open ${databaseName}`));
+          },
+          { once: true },
+        );
+      });
+
+      try {
+        if (!database.objectStoreNames.contains(storeName)) {
+          return false;
+        }
+
+        const transaction = database.transaction(storeName, "readonly");
+        const request = transaction.objectStore(storeName).getAll();
+        const preferences = await new Promise<Array<unknown>>((resolve, reject) => {
+          request.addEventListener(
+            "success",
+            () => {
+              resolve(request.result);
+            },
+            { once: true },
+          );
+          request.addEventListener(
+            "error",
+            () => {
+              reject(request.error ?? new Error(`Unable to read ${storeName}`));
+            },
+            { once: true },
+          );
+        });
+
+        return preferences.some(
+          (preference) =>
+            typeof preference === "object" &&
+            preference !== null &&
+            "dataLayerMigrated" in preference &&
+            preference.dataLayerMigrated === true &&
+            "dataLayerMigrationStartedAt" in preference &&
+            preference.dataLayerMigrationStartedAt === null,
+        );
+      } finally {
+        database.close();
+      }
+    },
+    { databaseName: PREFERENCES_DATABASE, storeName: PREFERENCES_STORE },
+  );
 
 const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boolean> => {
   const target = page.getByText(text, { exact: true }).first();
@@ -82,6 +152,11 @@ export const slush: WalletDefinition = {
       intervalMs: 1000,
       message: `Slush import never reached the wallet home (${HOME_ROUTE})`,
       timeoutMs: IMPORT_HOME_TIMEOUT_MS,
+    });
+    await waitUntilOrThrow(() => migrationFinished(page), {
+      intervalMs: 1000,
+      message: "Slush data migration did not finish",
+      timeoutMs: MIGRATION_TIMEOUT_MS,
     });
   },
 
