@@ -3,7 +3,7 @@ import type { WalletKind } from "@walletwright/core";
 
 import { walletSetups } from "../wallet-setup";
 
-const KINDS = Object.keys(walletSetups) as Array<WalletKind>;
+const KINDS = Object.keys(walletSetups).filter(isWalletKind);
 
 const asKind = (name: string): WalletKind => {
   if (!isWalletKind(name)) {

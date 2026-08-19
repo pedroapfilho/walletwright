@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -74,15 +73,18 @@ export const launchWallet = async (
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
   const profileDir = path.join(cacheDir, profileKey(setup));
   await restorePreviousProfile(profileDir);
-  if (!existsSync(profileDir)) {
+  try {
+    await stat(profileDir);
+  } catch (error) {
     throw new Error(
       `[walletwright] no cache for this setup at ${profileDir}. Build it first with buildCache() or \`walletwright cache\`.`,
+      { cause: error },
     );
   }
 
   const extensionPath = await definition.prepareExtension(cacheDir, setup.version);
 
-  const extensionId = extensionIdFromPath(extensionPath);
+  const extensionId = await extensionIdFromPath(extensionPath);
 
   /** Cleanup must cover copy and launch failures that occur before a context exists. */
   const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));

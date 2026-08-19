@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 import AdmZip from "adm-zip";
@@ -13,6 +12,18 @@ const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
  * never collide with a wallet's `name`.
  */
 const STAGING_PREFIX = ".staging-";
+
+const pathExists = async (target: string): Promise<boolean> => {
+  try {
+    await stat(target);
+    return true;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+};
 
 /** Download and validate an extension archive, then publish its extraction atomically from staging. */
 export const downloadAndExtractExtension = async (options: {
@@ -32,7 +43,7 @@ export const downloadAndExtractExtension = async (options: {
   if (outDir === cacheRoot || !outDir.startsWith(cacheRoot + path.sep)) {
     throw new Error(`[walletwright] invalid extension name: ${name}`);
   }
-  if (existsSync(path.join(outDir, "manifest.json"))) {
+  if (await pathExists(path.join(outDir, "manifest.json"))) {
     return outDir;
   }
 
@@ -75,11 +86,11 @@ export const downloadAndExtractExtension = async (options: {
     }
     zip.extractAllTo(staging, /* overwrite */ true);
 
-    if (!existsSync(path.join(staging, "manifest.json"))) {
+    if (!(await pathExists(path.join(staging, "manifest.json")))) {
       throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
     }
 
-    if (existsSync(path.join(outDir, "manifest.json"))) {
+    if (await pathExists(path.join(outDir, "manifest.json"))) {
       return outDir; // another worker published while we were downloading
     }
     await rm(outDir, { force: true, recursive: true });

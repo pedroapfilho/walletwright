@@ -1,15 +1,25 @@
-import { existsSync } from "node:fs";
+import { access } from "node:fs/promises";
 
 import { ClassicLevel } from "classic-level";
+import { z } from "zod";
 
 import { extensionStateDir } from "../../internal/utils";
 
-type OnboardingState = Record<string, unknown>;
+const onboardingStateSchema = z.record(z.string(), z.json());
 
-const asState = (value: unknown): OnboardingState | undefined =>
-  typeof value === "object" && value !== null ? { ...value } : undefined;
+type OnboardingState = z.infer<typeof onboardingStateSchema>;
 
-const markOnboarded = (onboarding: OnboardingState): OnboardingState => ({
+const parseState = (text: string, label: string): OnboardingState => {
+  const result = onboardingStateSchema.safeParse(JSON.parse(text));
+  if (!result.success) {
+    throw new Error(`[walletwright] MetaMask's ${label} state is not an object`, {
+      cause: result.error,
+    });
+  }
+  return result.data;
+};
+
+const markOnboarded = (onboarding: OnboardingState) => ({
   ...onboarding,
   completedOnboarding: true,
   firstTimeFlowType:
@@ -23,8 +33,12 @@ export const markMetaMaskOnboarded = async (
   extensionId: string,
 ): Promise<void> => {
   const dbDir = extensionStateDir(profileDir, extensionId);
-  if (!existsSync(dbDir)) {
-    throw new Error(`[walletwright] MetaMask wrote no extension state to ${dbDir}`);
+  try {
+    await access(dbDir);
+  } catch (error) {
+    throw new Error(`[walletwright] MetaMask wrote no extension state to ${dbDir}`, {
+      cause: error,
+    });
   }
 
   const db = new ClassicLevel(dbDir, {
@@ -37,10 +51,7 @@ export const markMetaMaskOnboarded = async (
 
     const perController = await db.get("OnboardingController");
     if (perController !== undefined && perController !== "") {
-      const onboarding = asState(JSON.parse(perController));
-      if (onboarding === undefined) {
-        throw new Error(`[walletwright] MetaMask's OnboardingController state is not an object`);
-      }
+      const onboarding = parseState(perController, "OnboardingController");
       if (onboarding.completedOnboarding !== true) {
         await db.put("OnboardingController", JSON.stringify(markOnboarded(onboarding)));
       }
@@ -53,16 +64,16 @@ export const markMetaMaskOnboarded = async (
         `[walletwright] MetaMask persisted no onboarding state in ${dbDir} (neither an OnboardingController key nor a data key)`,
       );
     }
-    const state = asState(JSON.parse(raw));
-    if (state === undefined) {
-      throw new Error(`[walletwright] MetaMask's "data" state is not an object`);
-    }
-    const nested = asState(state.data);
-    const controller = asState((nested ?? state).OnboardingController);
-    if (controller === undefined) {
+    const state = parseState(raw, '"data"');
+    const nestedResult = onboardingStateSchema.safeParse(state.data);
+    const nested = nestedResult.success ? nestedResult.data : undefined;
+    const controllerResult = onboardingStateSchema.safeParse(
+      (nested ?? state).OnboardingController,
+    );
+    if (!controllerResult.success) {
       throw new Error(`[walletwright] MetaMask's "data" state holds no OnboardingController`);
     }
-    const patched = markOnboarded(controller);
+    const patched = markOnboarded(controllerResult.data);
     await db.put(
       "data",
       JSON.stringify(

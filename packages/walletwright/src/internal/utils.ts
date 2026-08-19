@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import type { BrowserContext, Locator, Page } from "@playwright/test";
+import { z } from "zod";
 
 import type { WalletSetup } from "../types";
 
@@ -21,23 +22,21 @@ export const profileKey = (setup: WalletSetup): string =>
     .slice(0, 20);
 
 /** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
-export const extensionIdFromPath = (extensionPath: string): string => {
+export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {
   const resolved = path.resolve(extensionPath);
-  const abs = (() => {
-    try {
-      return realpathSync(resolved);
-    } catch {
-      return resolved; // path doesn't exist yet, fall back to the literal resolved path
-    }
-  })();
+  let abs = resolved;
+  try {
+    abs = await realpath(resolved);
+  } catch {
+    abs = resolved;
+  }
   let key: string | undefined;
   try {
-    const manifest: unknown = JSON.parse(readFileSync(path.join(abs, "manifest.json"), "utf8"));
-    if (typeof manifest === "object" && manifest !== null && "key" in manifest) {
-      key = typeof manifest.key === "string" ? manifest.key : undefined;
-    }
+    const text = await readFile(path.join(abs, "manifest.json"), "utf8");
+    const manifest = z.object({ key: z.string().optional() }).parse(JSON.parse(text));
+    key = manifest.key;
   } catch {
-    // manifest not present yet, fall back to the path
+    key = undefined;
   }
   const source =
     key === undefined || key === "" ? Buffer.from(abs, "utf8") : Buffer.from(key, "base64");

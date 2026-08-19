@@ -1,9 +1,17 @@
+import { z } from "zod";
+
 import { toErrorMessage } from "./error-message";
 import { connectStandard, findStandardWallet } from "./wallet-standard";
 import type { StandardAccount, StandardWallet } from "./wallet-standard";
 
+const jsonSchema = z.json();
+const stringSchema = z.string();
+const stringArraySchema = z.array(stringSchema);
+
+type JsonValue = z.infer<typeof jsonSchema>;
+
 type Eip1193Provider = {
-  request: (args: { method: string; params?: Array<unknown> }) => Promise<unknown>;
+  request: (args: { method: string; params?: Array<unknown> }) => Promise<JsonValue>;
 };
 
 type SolanaProvider = {
@@ -16,7 +24,34 @@ type PhantomWindow = {
   solana?: SolanaProvider;
 };
 
-const $ = <T extends HTMLElement>(id: string): T => document.querySelector<T>(id)!;
+type WalletBrowserWindow = {
+  ethereum?: Eip1193Provider;
+  phantom?: PhantomWindow;
+};
+
+const getElement = (selector: string): HTMLElement => {
+  const element = document.querySelector(selector);
+  if (!(element instanceof HTMLElement)) {
+    throw new Error(`Missing element: ${selector}`);
+  }
+  return element;
+};
+
+const getButton = (selector: string): HTMLButtonElement => {
+  const element = document.querySelector(selector);
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button: ${selector}`);
+  }
+  return element;
+};
+
+const getInput = (selector: string): HTMLInputElement => {
+  const element = document.querySelector(selector);
+  if (!(element instanceof HTMLInputElement)) {
+    throw new Error(`Missing input: ${selector}`);
+  }
+  return element;
+};
 
 const waitFor = async <T>(get: () => T | undefined): Promise<T> => {
   for (let i = 0; i < 50; i++) {
@@ -32,19 +67,23 @@ const waitFor = async <T>(get: () => T | undefined): Promise<T> => {
 const toHex = (bytes: Uint8Array): string =>
   `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
 
-const getEthereum = () => waitFor(() => (window as { ethereum?: Eip1193Provider }).ethereum);
+const getWalletWindow = (): WalletBrowserWindow => {
+  return window;
+};
+
+const getEthereum = () => waitFor(() => getWalletWindow().ethereum);
 let mmAccount = "";
 
-const showError = (error: unknown, target = "#error") => {
-  $(target).textContent = toErrorMessage(error);
+const showError = <Value>(error: Value, target = "#error") => {
+  getElement(target).textContent = toErrorMessage(error);
 };
 
 type SectionSlots = { account: string; sign: string; signature: string };
 
 const renderAccount = (slots: SectionSlots, account: string) => {
-  $(slots.account).textContent = account;
-  $(slots.signature).textContent = "";
-  $<HTMLButtonElement>(slots.sign).disabled = account === "";
+  getElement(slots.account).textContent = account;
+  getElement(slots.signature).textContent = "";
+  getButton(slots.sign).disabled = account === "";
 };
 
 const MM_SLOTS: SectionSlots = {
@@ -54,31 +93,33 @@ const MM_SLOTS: SectionSlots = {
 };
 
 const handleConnect = async () => {
-  $("#error").textContent = "";
+  getElement("#error").textContent = "";
   try {
-    const accounts = (await (
-      await getEthereum()
-    ).request({ method: "eth_requestAccounts" })) as Array<string>;
+    const accounts = stringArraySchema.parse(
+      await (await getEthereum()).request({ method: "eth_requestAccounts" }),
+    );
     mmAccount = accounts[0] ?? "";
   } catch (error) {
     mmAccount = "";
     showError(error);
   }
   renderAccount(MM_SLOTS, mmAccount);
-  $("#txHash").textContent = "";
+  getElement("#txHash").textContent = "";
 };
 
 const handleSign = async () => {
-  $("#error").textContent = "";
-  $("#signature").textContent = "";
+  getElement("#error").textContent = "";
+  getElement("#signature").textContent = "";
   try {
-    const signature = (await (
-      await getEthereum()
-    ).request({
-      method: "personal_sign",
-      params: [$<HTMLInputElement>("#message").value, mmAccount],
-    })) as string;
-    $("#signature").textContent = signature;
+    const signature = stringSchema.parse(
+      await (
+        await getEthereum()
+      ).request({
+        method: "personal_sign",
+        params: [getInput("#message").value, mmAccount],
+      }),
+    );
+    getElement("#signature").textContent = signature;
   } catch (error) {
     showError(error);
   }
@@ -92,12 +133,14 @@ const LOCAL_CHAIN = {
 };
 
 const refreshChainId = async () => {
-  const chainId = (await (await getEthereum()).request({ method: "eth_chainId" })) as string;
-  $("#chainId").textContent = chainId;
+  const chainId = stringSchema.parse(
+    await (await getEthereum()).request({ method: "eth_chainId" }),
+  );
+  getElement("#chainId").textContent = chainId;
 };
 
 const handleSwitchChain = async () => {
-  $("#error").textContent = "";
+  getElement("#error").textContent = "";
   try {
     await (
       await getEthereum()
@@ -109,29 +152,30 @@ const handleSwitchChain = async () => {
 };
 
 const handleSendTx = async () => {
-  $("#error").textContent = "";
-  $("#txHash").textContent = "";
+  getElement("#error").textContent = "";
+  getElement("#txHash").textContent = "";
   try {
-    const hash = (await (
-      await getEthereum()
-    ).request({
-      method: "eth_sendTransaction",
-      params: [
-        {
-          from: mmAccount,
-          to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-          value: "0x38d7ea4c68000",
-        },
-      ],
-    })) as string;
-    $("#txHash").textContent = hash;
+    const hash = stringSchema.parse(
+      await (
+        await getEthereum()
+      ).request({
+        method: "eth_sendTransaction",
+        params: [
+          {
+            from: mmAccount,
+            to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+            value: "0x38d7ea4c68000",
+          },
+        ],
+      }),
+    );
+    getElement("#txHash").textContent = hash;
   } catch (error) {
     showError(error);
   }
 };
 
-const getPhantomEvm = () =>
-  waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.ethereum);
+const getPhantomEvm = () => waitFor(() => getWalletWindow().phantom?.ethereum);
 let phantomEvmAccount = "";
 
 const PHANTOM_EVM_SLOTS: SectionSlots = {
@@ -141,11 +185,11 @@ const PHANTOM_EVM_SLOTS: SectionSlots = {
 };
 
 const handlePhantomEvmConnect = async () => {
-  $("#phantomEvmError").textContent = "";
+  getElement("#phantomEvmError").textContent = "";
   try {
-    const accounts = (await (
-      await getPhantomEvm()
-    ).request({ method: "eth_requestAccounts" })) as Array<string>;
+    const accounts = stringArraySchema.parse(
+      await (await getPhantomEvm()).request({ method: "eth_requestAccounts" }),
+    );
     phantomEvmAccount = accounts[0] ?? "";
   } catch (error) {
     phantomEvmAccount = "";
@@ -155,23 +199,24 @@ const handlePhantomEvmConnect = async () => {
 };
 
 const handlePhantomEvmSign = async () => {
-  $("#phantomEvmError").textContent = "";
-  $("#phantomEvmSignature").textContent = "";
+  getElement("#phantomEvmError").textContent = "";
+  getElement("#phantomEvmSignature").textContent = "";
   try {
-    const signature = (await (
-      await getPhantomEvm()
-    ).request({
-      method: "personal_sign",
-      params: ["Hello Phantom EVM", phantomEvmAccount],
-    })) as string;
-    $("#phantomEvmSignature").textContent = signature;
+    const signature = stringSchema.parse(
+      await (
+        await getPhantomEvm()
+      ).request({
+        method: "personal_sign",
+        params: ["Hello Phantom EVM", phantomEvmAccount],
+      }),
+    );
+    getElement("#phantomEvmSignature").textContent = signature;
   } catch (error) {
     showError(error, "#phantomEvmError");
   }
 };
 
-const getPhantomSolana = () =>
-  waitFor(() => (window as { phantom?: PhantomWindow }).phantom?.solana);
+const getPhantomSolana = () => waitFor(() => getWalletWindow().phantom?.solana);
 
 const PHANTOM_SVM_SLOTS: SectionSlots = {
   account: "#phantomSvmAccount",
@@ -181,7 +226,7 @@ const PHANTOM_SVM_SLOTS: SectionSlots = {
 let phantomSvmAccount = "";
 
 const handlePhantomSvmConnect = async () => {
-  $("#phantomSvmError").textContent = "";
+  getElement("#phantomSvmError").textContent = "";
   try {
     const { publicKey } = await (await getPhantomSolana()).connect();
     phantomSvmAccount = publicKey.toString();
@@ -193,12 +238,12 @@ const handlePhantomSvmConnect = async () => {
 };
 
 const handlePhantomSvmSign = async () => {
-  $("#phantomSvmError").textContent = "";
-  $("#phantomSvmSignature").textContent = "";
+  getElement("#phantomSvmError").textContent = "";
+  getElement("#phantomSvmSignature").textContent = "";
   try {
     const message = new TextEncoder().encode("Hello Phantom Solana");
     const { signature } = await (await getPhantomSolana()).signMessage(message, "utf8");
-    $("#phantomSvmSignature").textContent = toHex(signature);
+    getElement("#phantomSvmSignature").textContent = toHex(signature);
   } catch (error) {
     showError(error, "#phantomSvmError");
   }
@@ -216,6 +261,7 @@ const signSolanaMessage = async (
   account: StandardAccount,
   message: string,
 ): Promise<string> => {
+  // SAFETY: Solana Wallet Standard identifies this feature by name and fixes its method contract.
   const feature = wallet.features["solana:signMessage"] as {
     signMessage: (input: {
       account: StandardAccount;
@@ -237,6 +283,7 @@ const signSuiMessage = async (
   account: StandardAccount,
   message: string,
 ): Promise<string> => {
+  // SAFETY: Sui Wallet Standard identifies this feature by name and fixes its method contract.
   const feature = wallet.features["sui:signPersonalMessage"] as {
     signPersonalMessage: (input: {
       account: StandardAccount;
@@ -258,7 +305,7 @@ const wireStandardSection = ({ ids, label, match, sign }: StandardSection): void
   let connected: StandardAccount | undefined;
 
   const handleSectionConnect = async () => {
-    $(ids.error).textContent = "";
+    getElement(ids.error).textContent = "";
     try {
       connected = await connectStandard(await getWallet());
     } catch (error) {
@@ -269,31 +316,31 @@ const wireStandardSection = ({ ids, label, match, sign }: StandardSection): void
   };
 
   const handleSectionSign = async () => {
-    $(ids.error).textContent = "";
-    $(ids.signature).textContent = "";
+    getElement(ids.error).textContent = "";
+    getElement(ids.signature).textContent = "";
     try {
       const account = connected;
       if (!account) {
         throw new Error(`connect ${label} before signing`);
       }
-      $(ids.signature).textContent = await sign(await getWallet(), account);
+      getElement(ids.signature).textContent = await sign(await getWallet(), account);
     } catch (error) {
       showError(error, ids.error);
     }
   };
 
-  $(ids.connect).addEventListener("click", handleSectionConnect);
-  $(ids.sign).addEventListener("click", handleSectionSign);
+  getElement(ids.connect).addEventListener("click", handleSectionConnect);
+  getElement(ids.sign).addEventListener("click", handleSectionSign);
 };
 
-$("#connectButton").addEventListener("click", handleConnect);
-$("#signButton").addEventListener("click", handleSign);
-$("#switchChainButton").addEventListener("click", handleSwitchChain);
-$("#sendTxButton").addEventListener("click", handleSendTx);
-$("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
-$("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
-$("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
-$("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
+getElement("#connectButton").addEventListener("click", handleConnect);
+getElement("#signButton").addEventListener("click", handleSign);
+getElement("#switchChainButton").addEventListener("click", handleSwitchChain);
+getElement("#sendTxButton").addEventListener("click", handleSendTx);
+getElement("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
+getElement("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
+getElement("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
+getElement("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
 
 wireStandardSection({
   ids: {
