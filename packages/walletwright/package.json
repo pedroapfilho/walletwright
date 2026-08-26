@@ -77,8 +77,8 @@
     "@types/node": "^26.2.0",
     "prool": "^0.2.14",
     "typescript": "^7.0.2",
-    "viem": "^2.55.11",
-    "vitest": "^4.1.10"
+    "viem": "^2.55.19",
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.48 <2",
