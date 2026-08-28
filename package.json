@@ -5,7 +5,7 @@
   "scripts": {
     "start": "turbo run start",
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "node scripts/dev.mjs",
     "lint": "turbo run lint",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
