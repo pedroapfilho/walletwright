@@ -25,7 +25,7 @@ jobs:
           cache: true
       - run: pnpm build --filter="./packages/*"
       # The extensions are the slow part of a cold run; the onboarded profiles are rebuilt each time.
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/demo/.walletwright
           key: walletwright-${{ runner.os }}-${{ hashFiles('apps/demo/wallet-setup.ts', 'packages/walletwright/src/wallets/**') }}
@@ -59,7 +59,7 @@ jobs:
       # Playwright writes a page snapshot per failure. Without it a red run here can only be read
       # through the log, which says what timed out but not what the wallet was showing at the time.
       - if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-failures
           path: apps/demo/test-results
