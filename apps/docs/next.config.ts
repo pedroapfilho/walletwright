@@ -9,6 +9,7 @@ if (exposeTestingApi) {
 }
 
 const config: NextConfig = {
+  allowedDevOrigins: ["walletwright.docs.localhost", "*.walletwright.docs.localhost"],
   cacheComponents: true,
   experimental: {
     exposeTestingApiInProductionBuild: exposeTestingApi,
