@@ -15,7 +15,7 @@ test("Phantom: connect + sign on EVM and Solana", async ({ page, wallet }) => {
   await expect(page.locator("#phantomEvmSignature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
 
   await page.locator("#phantomSvmConnect").click();
-  await wallet.connectToDapp(); // Phantom may auto-approve an already-trusted site
+  await wallet.connectToDapp({ optional: true });
   await expect(page.locator("#phantomSvmAccount")).not.toBeEmpty();
 
   await page.locator("#phantomSvmSign").click();

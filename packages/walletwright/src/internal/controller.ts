@@ -8,7 +8,7 @@ import { formatTimeout, waitUntil } from "./wait";
 const POPUP_CLOSE_TIMEOUT_MS = 15_000;
 /** Optional approvals keep a short wait: "no popup" is a normal outcome, and the wait is latency. */
 const OPTIONAL_POPUP_TIMEOUT_MS = 10_000;
-/** The MV3 service worker spawns a popup slowly once the wallet's own UI has been driven. */
+/** A popup that has to appear gets the full wait: the MV3 service worker can be slow to spawn it. */
 const REQUIRED_POPUP_TIMEOUT_MS = 30_000;
 type ResolveOptions = { optional?: boolean };
 
@@ -149,7 +149,7 @@ export const createWallet = ({
     approve,
     confirmSignature: () => approve(),
     confirmTransaction: () => approve(),
-    connectToDapp: () => approve({ optional: true }),
+    connectToDapp: (options: ResolveOptions = {}) => approve(options),
     extensionId,
     home,
     network: {
