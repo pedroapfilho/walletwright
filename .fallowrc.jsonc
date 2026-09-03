@@ -12,4 +12,6 @@
       "exports": ["generateStaticParams"],
     },
   ],
+  "typeAware": { "enabled": true, "require": "best-effort" },
+  "rules": { "private-type-leaks": "off" },
 }
