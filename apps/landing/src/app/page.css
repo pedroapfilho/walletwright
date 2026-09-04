@@ -1,0 +1,499 @@
+/*
+ * The landing page: a docs-native world in the viem / wagmi tradition.
+ * Charcoal ground, Geist, hairline cards; the API surface is the content.
+ */
+
+html {
+  background: oklch(0.2 0.008 255);
+  color-scheme: dark;
+}
+
+.ref {
+  --bg: oklch(0.2 0.008 255);
+  --bg-raised: oklch(0.24 0.009 255);
+  --bg-card: oklch(0.22 0.009 255);
+  --fg: oklch(0.95 0.004 255);
+  --fg-muted: oklch(0.72 0.01 255);
+  --fg-faint: oklch(0.56 0.01 255);
+  --line: oklch(1 0 0 / 10%);
+  --line-strong: oklch(1 0 0 / 18%);
+  --green: oklch(0.8 0.17 150);
+  --green-ink: oklch(0.2 0.05 150);
+
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --ring: var(--green);
+  --color-ring: var(--green);
+
+  background: var(--bg);
+  color: var(--fg);
+  color-scheme: dark;
+  font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+.ref ::selection {
+  background: oklch(0.8 0.17 150 / 35%);
+}
+
+.ref :focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.ref-visually-hidden {
+  block-size: 1px;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.ref-measure {
+  margin-inline: auto;
+  max-inline-size: 70rem;
+  padding-inline: 1.5rem;
+}
+
+/* ── Nav ──────────────────────────────────────────────────────────── */
+
+.ref-nav {
+  border-block-end: 1px solid var(--line);
+}
+
+.ref-nav-row {
+  align-items: center;
+  block-size: 3.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ref-brand {
+  display: inline-flex;
+  margin: 0;
+}
+
+.ref-mark {
+  block-size: 1.5rem;
+  color: var(--fg);
+  inline-size: 1.5rem;
+}
+
+.ref-nav-links {
+  display: flex;
+  gap: 1.4rem;
+}
+
+.ref-nav-links a {
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.ref-nav-links a:hover {
+  color: var(--fg);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+
+.ref-hero {
+  align-items: center;
+  display: grid;
+  gap: 2.5rem 4rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  padding-block: 5rem 3rem;
+}
+
+.ref-wordmark {
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0;
+}
+
+.ref-lede {
+  color: var(--fg-muted);
+  font-size: 1.1875rem;
+  margin-block: 1.25rem 0;
+  max-inline-size: 40ch;
+  text-wrap: pretty;
+}
+
+.ref-lede strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.ref-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-block-start: 1.75rem;
+}
+
+.ref-btn {
+  border-radius: 8px;
+  display: inline-block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.6rem 1.15rem;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.ref-btn-primary {
+  background: var(--green);
+  color: var(--green-ink);
+}
+
+.ref-btn-primary:hover {
+  background: oklch(0.85 0.17 150);
+}
+
+.ref-btn-ghost {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  color: var(--fg);
+}
+
+.ref-btn-ghost:hover {
+  border-color: var(--line-strong);
+}
+
+.ref-install {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ref .world-tablist {
+  border-block-end: 1px solid var(--line);
+  display: flex;
+}
+
+.ref .world-tab {
+  background: transparent;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-block-end: -1px;
+  padding: 0.7rem 1rem;
+}
+
+.ref .world-tab[aria-selected="true"] {
+  border-block-end-color: var(--green);
+  color: var(--fg);
+}
+
+.ref-install-code {
+  margin: 0;
+}
+
+.ref-install-code .world-code-body {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+}
+
+.ref-install-code pre {
+  background: transparent;
+  margin: 0;
+  overflow-wrap: break-word;
+  padding: 1.25rem;
+  white-space: pre-wrap;
+}
+
+.ref .shiki,
+.ref .shiki span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style, normal);
+}
+
+.ref-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.ref-badges li {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 0.8125rem;
+  overflow: hidden;
+}
+
+.ref-badges span {
+  background: var(--bg-raised);
+  border-inline-end: 1px solid var(--line);
+  color: var(--fg-muted);
+  padding: 0.3rem 0.6rem;
+}
+
+.ref-badges strong,
+.ref-badges a {
+  color: var(--fg);
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  text-decoration: none;
+}
+
+.ref-badges strong:first-of-type,
+.ref-badges li:nth-child(2) strong {
+  color: var(--green);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+
+.ref-section {
+  border-block-start: 1px solid var(--line);
+  padding-block: 3.5rem;
+}
+
+.ref h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ref-body {
+  color: var(--fg-muted);
+  margin-block: 0.9rem 0;
+  max-inline-size: 52ch;
+  text-wrap: pretty;
+}
+
+.ref-body code {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.ref-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ref-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.ref-card h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ref-card p {
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  margin: 0.5rem 0 0;
+  text-wrap: pretty;
+}
+
+.ref-two-col {
+  align-items: start;
+  display: grid;
+  gap: 2rem 4rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.ref-api {
+  margin: 1.5rem 0 0;
+}
+
+.ref-api-row {
+  border-block-start: 1px solid var(--line);
+  padding-block: 0.9rem;
+}
+
+.ref-api-row dt code {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.ref-api-row dd {
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  margin: 0.25rem 0 0;
+}
+
+.ref-code {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.ref-code .world-code-head {
+  align-items: center;
+  border-block-end: 1px solid var(--line);
+  color: var(--fg-muted);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.5rem 0.6rem 0.5rem 1rem;
+}
+
+.ref-code .world-code-body {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.ref-code pre {
+  background: transparent;
+  margin: 0;
+  overflow-x: auto;
+  padding: 1.1rem 1.25rem;
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.ref-code .world-code-wrap pre {
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.ref-caption {
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  margin: 0.9rem 0 0;
+}
+
+.ref-wallets {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.ref-wallets li {
+  align-items: center;
+  border-block-start: 1px solid var(--line);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto 6rem 7rem minmax(0, 1fr);
+  padding-block: 0.7rem;
+}
+
+.ref-wallet-name {
+  font-weight: 600;
+}
+
+.ref-wallet-chains {
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+.ref-wallet-spec {
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.ref-link {
+  color: var(--green);
+  display: inline-block;
+  font-weight: 500;
+  margin-block-start: 1rem;
+  text-decoration: none;
+}
+
+.ref-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+
+.ref-footer {
+  border-block-start: 1px solid var(--line);
+  padding-block: 2rem;
+}
+
+.ref-footer-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  justify-content: space-between;
+}
+
+.ref-footer p {
+  color: var(--fg-faint);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+
+@media (max-width: 64rem) {
+  .ref-hero,
+  .ref-two-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ref-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 40rem) {
+  .ref-hero {
+    padding-block-start: 3rem;
+  }
+
+  .ref-nav-row {
+    block-size: auto;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding-block: 0.75rem;
+  }
+
+  .ref-nav-links {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .ref-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ref-wallets li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ref-wallet-spec {
+    grid-column: 2;
+  }
+}
