@@ -3,12 +3,6 @@
  * filenames, code samples, and the captured run output live here once.
  */
 
-const HERO_HEADLINE = "Connect and sign real wallets in Playwright.";
-
-const HERO_BODY =
-  "walletwright onboards MetaMask, Phantom, Rabby, Solflare, and Slush from a seed, caches the " +
-  "profile, then unlocks and drives the connect and signature popups against your dapp.";
-
 const HERO_CODE = `import { createWalletFixtures } from "@walletwright/core";
 import { metamask } from "./wallet-setup";
 
@@ -120,31 +114,5 @@ const FEATURES: Array<Feature> = [
   },
 ];
 
-const SETUP_BODY =
-  "Describe the wallet once, then build the cached profile with walletwright cache or " +
-  "buildCache(). Every test launches from a copy and unlocks in seconds.";
-
-const COVERAGE_BODY =
-  "One wallet fixture drives all five. It connects and signs on window.ethereum, the Solana " +
-  "Wallet Standard, and the Sui Wallet Standard, so your tests never branch per chain.";
-
-const CLOSE_HEADLINE = "Write your first connect-and-sign test.";
-
-const CLOSE_BODY =
-  "The getting-started guide covers install, wallet setup, the cache build, and the first spec.";
-
-export {
-  CLOSE_BODY,
-  CLOSE_HEADLINE,
-  COVERAGE_BODY,
-  FEATURES,
-  HERO_BODY,
-  HERO_CODE,
-  HERO_HEADLINE,
-  RUN_CAPTION,
-  RUN_OUTPUT,
-  SETUP_BODY,
-  SETUP_CODE,
-  VERIFIED_PAIRS,
-};
+export { FEATURES, HERO_CODE, RUN_CAPTION, RUN_OUTPUT, SETUP_CODE, VERIFIED_PAIRS };
 export type { Feature, VerifiedPair };
