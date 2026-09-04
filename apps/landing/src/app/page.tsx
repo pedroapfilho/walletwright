@@ -144,7 +144,7 @@ const LandingPage = () => (
             <a className="ref-btn ref-btn-primary" href={GETTING_STARTED_URL}>
               Get started
             </a>
-            <a className="ref-btn ref-btn-ghost" href={`${DOCS_URL}/why`}>
+            <a className="ref-btn ref-btn-ghost" href={`${DOCS_URL}/comparison`}>
               Why walletwright?
             </a>
             <a
