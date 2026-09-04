@@ -1,0 +1,482 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-03T00:00:00Z",
+  "title": "Design System: walletwright",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Charcoal Ground",
+        "canonical": "oklch(0.2 0.008 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 255)",
+          "oklch(0.17 0.008 255)",
+          "oklch(0.2 0.008 255)",
+          "oklch(0.22 0.009 255)",
+          "oklch(0.24 0.009 255)",
+          "oklch(0.4 0.01 255)",
+          "oklch(0.72 0.01 255)",
+          "oklch(0.95 0.004 255)"
+        ]
+      },
+      "ground-card": {
+        "role": "neutral",
+        "displayName": "Charcoal Card",
+        "canonical": "oklch(0.22 0.009 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.009 255)",
+          "oklch(0.26 0.009 255)",
+          "oklch(0.38 0.009 255)",
+          "oklch(0.49 0.009 255)",
+          "oklch(0.61 0.009 255)",
+          "oklch(0.72 0.009 255)",
+          "oklch(0.84 0.009 255)",
+          "oklch(0.95 0.009 255)"
+        ]
+      },
+      "ground-raised": {
+        "role": "neutral",
+        "displayName": "Charcoal Raised",
+        "canonical": "oklch(0.24 0.009 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.009 255)",
+          "oklch(0.26 0.009 255)",
+          "oklch(0.38 0.009 255)",
+          "oklch(0.49 0.009 255)",
+          "oklch(0.61 0.009 255)",
+          "oklch(0.72 0.009 255)",
+          "oklch(0.84 0.009 255)",
+          "oklch(0.95 0.009 255)"
+        ]
+      },
+      "ground-well": {
+        "role": "neutral",
+        "displayName": "Charcoal Well (demo controls)",
+        "canonical": "oklch(0.17 0.008 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 255)",
+          "oklch(0.26 0.008 255)",
+          "oklch(0.38 0.008 255)",
+          "oklch(0.49 0.008 255)",
+          "oklch(0.61 0.008 255)",
+          "oklch(0.72 0.008 255)",
+          "oklch(0.84 0.008 255)",
+          "oklch(0.95 0.008 255)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.95 0.004 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 255)",
+          "oklch(0.26 0.004 255)",
+          "oklch(0.38 0.004 255)",
+          "oklch(0.49 0.004 255)",
+          "oklch(0.61 0.004 255)",
+          "oklch(0.72 0.004 255)",
+          "oklch(0.84 0.004 255)",
+          "oklch(0.95 0.004 255)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "oklch(0.72 0.01 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 255)",
+          "oklch(0.26 0.01 255)",
+          "oklch(0.38 0.01 255)",
+          "oklch(0.49 0.01 255)",
+          "oklch(0.61 0.01 255)",
+          "oklch(0.72 0.01 255)",
+          "oklch(0.84 0.01 255)",
+          "oklch(0.95 0.01 255)"
+        ]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Ink Faint",
+        "canonical": "oklch(0.56 0.01 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 255)",
+          "oklch(0.26 0.01 255)",
+          "oklch(0.38 0.01 255)",
+          "oklch(0.49 0.01 255)",
+          "oklch(0.61 0.01 255)",
+          "oklch(0.72 0.01 255)",
+          "oklch(0.84 0.01 255)",
+          "oklch(0.95 0.01 255)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline (10% white)",
+        "canonical": "oklch(1 0 0 / 10%)",
+        "tonalRamp": [
+          "oklch(1 0 0 / 4%)",
+          "oklch(1 0 0 / 6%)",
+          "oklch(1 0 0 / 10%)",
+          "oklch(1 0 0 / 14%)",
+          "oklch(1 0 0 / 18%)",
+          "oklch(1 0 0 / 28%)",
+          "oklch(1 0 0 / 40%)",
+          "oklch(1 0 0 / 60%)"
+        ]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong (18% white)",
+        "canonical": "oklch(1 0 0 / 18%)",
+        "tonalRamp": [
+          "oklch(1 0 0 / 4%)",
+          "oklch(1 0 0 / 6%)",
+          "oklch(1 0 0 / 10%)",
+          "oklch(1 0 0 / 14%)",
+          "oklch(1 0 0 / 18%)",
+          "oklch(1 0 0 / 28%)",
+          "oklch(1 0 0 / 40%)",
+          "oklch(1 0 0 / 60%)"
+        ]
+      },
+      "pass-green": {
+        "role": "primary",
+        "displayName": "Pass-Check Green",
+        "canonical": "oklch(0.8 0.17 150)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 150)",
+          "oklch(0.2 0.05 150)",
+          "oklch(0.38 0.12 150)",
+          "oklch(0.49 0.15 150)",
+          "oklch(0.61 0.17 150)",
+          "oklch(0.72 0.17 150)",
+          "oklch(0.8 0.17 150)",
+          "oklch(0.95 0.06 150)"
+        ]
+      },
+      "pass-green-hover": {
+        "role": "primary",
+        "displayName": "Pass-Check Green (hover)",
+        "canonical": "oklch(0.85 0.17 150)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 150)",
+          "oklch(0.26 0.08 150)",
+          "oklch(0.38 0.12 150)",
+          "oklch(0.49 0.15 150)",
+          "oklch(0.61 0.17 150)",
+          "oklch(0.72 0.17 150)",
+          "oklch(0.85 0.17 150)",
+          "oklch(0.95 0.06 150)"
+        ]
+      },
+      "pass-green-ink": {
+        "role": "primary",
+        "displayName": "Green Ink (text on green)",
+        "canonical": "oklch(0.2 0.05 150)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 150)",
+          "oklch(0.2 0.05 150)",
+          "oklch(0.38 0.05 150)",
+          "oklch(0.49 0.05 150)",
+          "oklch(0.61 0.05 150)",
+          "oklch(0.72 0.05 150)",
+          "oklch(0.84 0.05 150)",
+          "oklch(0.95 0.05 150)"
+        ]
+      },
+      "pass-green-selection": {
+        "role": "primary",
+        "displayName": "Pass-Check Selection (35% green)",
+        "canonical": "oklch(0.8 0.17 150 / 35%)",
+        "tonalRamp": [
+          "oklch(0.8 0.17 150 / 10%)",
+          "oklch(0.8 0.17 150 / 15%)",
+          "oklch(0.8 0.17 150 / 20%)",
+          "oklch(0.8 0.17 150 / 25%)",
+          "oklch(0.8 0.17 150 / 35%)",
+          "oklch(0.8 0.17 150 / 50%)",
+          "oklch(0.8 0.17 150 / 70%)",
+          "oklch(0.8 0.17 150 / 100%)"
+        ]
+      },
+      "error-red": {
+        "role": "error",
+        "displayName": "Error Red (demo only)",
+        "canonical": "oklch(0.72 0.19 25)",
+        "tonalRamp": [
+          "oklch(0.15 0.06 25)",
+          "oklch(0.26 0.1 25)",
+          "oklch(0.38 0.14 25)",
+          "oklch(0.49 0.17 25)",
+          "oklch(0.61 0.19 25)",
+          "oklch(0.72 0.19 25)",
+          "oklch(0.84 0.12 25)",
+          "oklch(0.95 0.04 25)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The lowercase `walletwright` wordmark in the hero; the only display-size text."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles, sentence case, no kicker above."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Feature-card headings; demo station headings at 1rem."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The hero's one sentence, 40ch max, muted with strong words in full ink."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Section prose, 52ch max, muted. Demo body is 0.9375rem at 1.55."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Nav links, buttons (600), card and API descriptions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, tabs, code heads, captions, and all demo controls, row labels, and values."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Highlighted code blocks (shiki github-dark-default)."
+      },
+      "code-inline": {
+        "displayName": "Code Inline",
+        "purpose": "API names in the definition list and inline code in prose, full ink."
+      },
+      "code-ref": {
+        "displayName": "Code Ref",
+        "purpose": "Spec filenames and chain tags, faint or muted."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease-state",
+        "value": "120ms ease",
+        "purpose": "Background and border colour changes on buttons and demo controls; the only transition in the world."
+      },
+      {
+        "name": "copy-reset",
+        "value": "2000ms",
+        "purpose": "How long the code-block copy button shows the check before reverting to the clipboard icon."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "Under prefers-reduced-motion every animation and transition collapses to 0.01ms (globals.css)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet",
+        "value": "64rem",
+        "purpose": "Hero and two-column sections collapse to one column; card grid drops to two columns."
+      },
+      {
+        "name": "phone",
+        "value": "40rem",
+        "purpose": "Nav wraps, cards go single-column, wallet rows drop chain and spec under the name, demo input goes full width."
+      }
+    ],
+    "measures": [
+      {
+        "name": "landing",
+        "value": "70rem",
+        "purpose": "Landing content measure with 1.5rem inline padding."
+      },
+      {
+        "name": "demo",
+        "value": "52rem",
+        "purpose": "Demo station column with 1.5rem inline padding."
+      },
+      { "name": "lede", "value": "40ch" },
+      { "name": "body", "value": "52ch" },
+      { "name": "aside", "value": "60ch" }
+    ],
+    "focus": {
+      "value": "2px solid oklch(0.8 0.17 150); outline-offset: 2px",
+      "purpose": "Every interactive element in both apps."
+    },
+    "selection": { "value": "oklch(0.8 0.17 150 / 35%)" }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one green object in the hero: Get started.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Get started</a>",
+      "css": ".ds-btn-primary { background: oklch(0.8 0.17 150); border-radius: 8px; color: oklch(0.2 0.05 150); display: inline-block; font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 600; line-height: 1.6; padding: 0.6rem 1.15rem; text-decoration: none; transition: background-color 120ms ease; } .ds-btn-primary:hover { background: oklch(0.85 0.17 150); } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Raised charcoal with a hairline; the border strengthens on hover, the fill stays.",
+      "html": "<a class=\"ds-btn-ghost\" href=\"#\">Why walletwright?</a>",
+      "css": ".ds-btn-ghost { background: oklch(0.24 0.009 255); border: 1px solid oklch(1 0 0 / 10%); border-radius: 8px; color: oklch(0.95 0.004 255); display: inline-block; font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 600; line-height: 1.6; padding: 0.6rem 1.15rem; text-decoration: none; transition: border-color 120ms ease; } .ds-btn-ghost:hover { border-color: oklch(1 0 0 / 18%); } .ds-btn-ghost:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; }"
+    },
+    {
+      "name": "Fact Badge",
+      "kind": "chip",
+      "refersTo": "badge-key",
+      "description": "A key/value capsule; proven facts render their value in green.",
+      "html": "<ul class=\"ds-badges\"><li><span>npm</span><a href=\"#\">@walletwright/core</a></li><li><span>license</span><strong>MIT</strong></li><li><span>wallets</span><strong>5</strong></li></ul>",
+      "css": ".ds-badges { display: flex; flex-wrap: wrap; gap: 0.6rem; list-style: none; margin: 0; padding: 0; font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; } .ds-badges li { align-items: center; background: oklch(0.22 0.009 255); border: 1px solid oklch(1 0 0 / 10%); border-radius: 6px; display: inline-flex; font-size: 0.8125rem; overflow: hidden; } .ds-badges span { background: oklch(0.24 0.009 255); border-right: 1px solid oklch(1 0 0 / 10%); color: oklch(0.72 0.01 255); padding: 0.3rem 0.6rem; } .ds-badges strong, .ds-badges a { color: oklch(0.95 0.004 255); font-weight: 500; padding: 0.3rem 0.6rem; text-decoration: none; } .ds-badges strong { color: oklch(0.8 0.17 150); } .ds-badges a:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; }"
+    },
+    {
+      "name": "Install Tabs",
+      "kind": "nav",
+      "refersTo": "install-tab",
+      "description": "npm / pnpm / bun tab strip over a wrapped mono command; the selected tab underlines in green on the tablist rule.",
+      "html": "<div class=\"ds-install\"><div class=\"ds-tablist\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">npm</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">pnpm</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">bun</button></div><pre class=\"ds-install-code\">npm i -D @walletwright/core @playwright/test</pre></div>",
+      "css": ".ds-install { background: oklch(0.22 0.009 255); border: 1px solid oklch(1 0 0 / 10%); border-radius: 10px; overflow: hidden; } .ds-tablist { border-bottom: 1px solid oklch(1 0 0 / 10%); display: flex; } .ds-tab { background: transparent; border: 0; border-bottom: 2px solid transparent; color: oklch(0.72 0.01 255); cursor: pointer; font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; margin-bottom: -1px; padding: 0.7rem 1rem; } .ds-tab[aria-selected='true'] { border-bottom-color: oklch(0.8 0.17 150); color: oklch(0.95 0.004 255); } .ds-tab:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; } .ds-install-code { color: oklch(0.95 0.004 255); font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 0.9375rem; line-height: 1.6; margin: 0; overflow-wrap: break-word; padding: 1.25rem; white-space: pre-wrap; }"
+    },
+    {
+      "name": "Feature Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A static hairline card: title plus muted paragraph, no icon, no link, no hover.",
+      "html": "<div class=\"ds-card\"><h3>Real extensions</h3><p>The actual MetaMask, Phantom, Rabby, Solflare, and Slush builds, loaded unpacked into Chromium, with no mocked providers.</p></div>",
+      "css": ".ds-card { background: oklch(0.22 0.009 255); border: 1px solid oklch(1 0 0 / 10%); border-radius: 10px; color: oklch(0.95 0.004 255); font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; line-height: 1.6; max-width: 20rem; padding: 1.25rem; } .ds-card h3 { font-size: 1.05rem; font-weight: 600; margin: 0; } .ds-card p { color: oklch(0.72 0.01 255); font-size: 0.9375rem; margin: 0.5rem 0 0; text-wrap: pretty; }"
+    },
+    {
+      "name": "API Row",
+      "kind": "custom",
+      "refersTo": "code-inline",
+      "description": "One entry of the six-call definition list: mono signature over a muted description, hairline above.",
+      "html": "<dl class=\"ds-api\"><div class=\"ds-api-row\"><dt><code>wallet.connectToDapp()</code></dt><dd>Finds the wallet's approval popup and confirms the connection request.</dd></div><div class=\"ds-api-row\"><dt><code>wallet.confirmSignature()</code></dt><dd>Finds the signature popup and confirms it, re-authenticating where the wallet asks.</dd></div></dl>",
+      "css": ".ds-api { color: oklch(0.95 0.004 255); font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; line-height: 1.6; margin: 0; max-width: 28rem; } .ds-api-row { border-top: 1px solid oklch(1 0 0 / 10%); padding: 0.9rem 0; } .ds-api-row dt code { color: oklch(0.95 0.004 255); font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 0.9rem; } .ds-api-row dd { color: oklch(0.72 0.01 255); font-size: 0.9375rem; margin: 0.25rem 0 0; }"
+    },
+    {
+      "name": "Code Block",
+      "kind": "card",
+      "refersTo": "code-block",
+      "description": "Filename head with copy button over a mono body; the frame is a hairline card.",
+      "html": "<figure class=\"ds-code\"><figcaption class=\"ds-code-head\"><span>connect.spec.ts</span><button class=\"ds-copy\" type=\"button\" aria-label=\"Copy connect.spec.ts\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg></button></figcaption><pre class=\"ds-code-body\">const test = createWalletFixtures(metamask);\n\ntest(\"connect and sign\", async ({ page, wallet }) => {\n  await page.getByText(\"Connect\").click();\n  await wallet.connectToDapp();\n});</pre></figure>",
+      "css": ".ds-code { background: oklch(0.22 0.009 255); border: 1px solid oklch(1 0 0 / 10%); border-radius: 10px; margin: 0; overflow: hidden; } .ds-code-head { align-items: center; border-bottom: 1px solid oklch(1 0 0 / 10%); color: oklch(0.72 0.01 255); display: flex; font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 0.8125rem; gap: 0.5rem; justify-content: space-between; padding: 0.5rem 0.6rem 0.5rem 1rem; } .ds-copy { align-items: center; background: transparent; border: 0; border-radius: 6px; color: oklch(0.72 0.01 255); cursor: pointer; display: inline-flex; height: 1.75rem; justify-content: center; padding: 0; width: 1.75rem; } .ds-copy svg { height: 1rem; width: 1rem; } .ds-copy:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; } .ds-code-body { color: oklch(0.95 0.004 255); font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 0.82rem; line-height: 1.65; margin: 0; overflow-x: auto; padding: 1.1rem 1.25rem; scrollbar-color: oklch(1 0 0 / 18%) transparent; scrollbar-width: thin; }"
+    },
+    {
+      "name": "Demo Control Button",
+      "kind": "button",
+      "refersTo": "button-control",
+      "description": "The demo's recessed control: well fill, strong hairline, green border on hover, faint when disabled.",
+      "html": "<button class=\"ds-control\" type=\"button\">Connect Wallet</button> <button class=\"ds-control\" type=\"button\" disabled>Sign Message</button>",
+      "css": ".ds-control { background: oklch(0.17 0.008 255); border: 1px solid oklch(1 0 0 / 18%); border-radius: 6px; color: oklch(0.95 0.004 255); cursor: pointer; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 0.8125rem; font-weight: 600; line-height: 1.55; padding: 0.42rem 0.8rem; transition: border-color 120ms ease; } .ds-control:hover:not(:disabled) { border-color: oklch(0.8 0.17 150); } .ds-control:disabled { border-color: oklch(1 0 0 / 10%); color: oklch(0.56 0.01 255); cursor: not-allowed; } .ds-control:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; }"
+    },
+    {
+      "name": "Demo Input",
+      "kind": "input",
+      "refersTo": "input-control",
+      "description": "The message field: recessed well, mono text, green caret.",
+      "html": "<p class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-message\">Message</label><input class=\"ds-input\" id=\"ds-message\" value=\"Hello walletwright\" /></p>",
+      "css": ".ds-field { align-items: center; color: oklch(0.95 0.004 255); display: flex; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; gap: 0.6rem; margin: 0; } .ds-field-label { color: oklch(0.72 0.01 255); flex-shrink: 0; font-size: 0.8125rem; width: 5rem; } .ds-input { background: oklch(0.17 0.008 255); border: 1px solid oklch(1 0 0 / 18%); border-radius: 6px; caret-color: oklch(0.8 0.17 150); color: oklch(0.95 0.004 255); font-family: 'JetBrains Mono Variable', ui-monospace, monospace; font-size: 0.8125rem; min-width: 16rem; padding: 0.4rem 0.6rem; } .ds-input:focus-visible { outline: 2px solid oklch(0.8 0.17 150); outline-offset: 2px; }"
+    },
+    {
+      "name": "Demo Value Row",
+      "kind": "custom",
+      "refersTo": "station",
+      "description": "A hairline-topped label/value row in its three states: idle (CSS dash), written (green), error (red with bold prefix).",
+      "html": "<div class=\"ds-rows\"><p class=\"ds-row\"><span class=\"ds-row-label\">Account</span><span class=\"ds-value\"></span></p><p class=\"ds-row\"><span class=\"ds-row-label\">Signature</span><span class=\"ds-value\">0x8f3a…c21e</span></p><p class=\"ds-row\"><span class=\"ds-row-label\">Error</span><span class=\"ds-value ds-error\">User rejected the request</span></p></div>",
+      "css": ".ds-rows { background: oklch(0.22 0.009 255); border: 1px solid oklch(1 0 0 / 10%); border-radius: 10px; color: oklch(0.95 0.004 255); font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.55; max-width: 32rem; padding: 0.5rem 1.25rem 0.6rem; } .ds-row { align-items: baseline; border-top: 1px solid oklch(1 0 0 / 10%); display: flex; gap: 0.75rem; margin: 0; padding: 0.4rem 0; } .ds-row:first-child { border-top: 0; } .ds-row-label { color: oklch(0.72 0.01 255); flex-shrink: 0; font-size: 0.8125rem; width: 5rem; } .ds-value { font-family: 'JetBrains Mono Variable', ui-monospace, monospace; font-size: 0.8125rem; overflow-wrap: anywhere; } .ds-value:empty::before { color: oklch(0.56 0.01 255); content: '\\2014'; } .ds-value:not(:empty) { color: oklch(0.8 0.17 150); } .ds-error:not(:empty) { color: oklch(0.72 0.19 25); } .ds-error:not(:empty)::before { content: 'Error: '; font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reference",
+    "overview": "walletwright's surfaces look like the first page of its own documentation, the way viem and wagmi open: a wordmark, one sentence, install tabs, four fact badges, and then the library's six calls set as a definition list. Nothing on screen is decorative; every block is either something you can install, call, or verify. The demo dapp carries the same world as a worked example page, a stack of hairline \"stations\" whose rows read like `Account —`, `Signature —`, `Error —` until a real wallet fills them in.\n\nThe ground is a near-black charcoal with a faint blue cast, never pure black, and every surface above it is a step or two lighter with a 1px, 10%-white hairline. Type is Geist at three weights of grey plus one accent: the pass-check green of a test runner's tick, which appears on the primary button, the selected install tab, the fact-badge values, inline links, and (in the demo) any value a wallet has written. Red exists in the demo only, for the error row. There are no shadows, no gradients, no illustrations, and no eyebrows or kickers above headings; section titles are plain sentence-case Geist Semi Bold.\n\nDensity is documentation density: 15-16px body text, 70rem measure, equal two-column sections where prose sits left and a filenamed code block sits right. The wallet marks (via @web3icons/react) are the only branded colour on the page beyond the green.",
+    "keyCharacteristics": [
+      "Dark only. The world sets color-scheme: dark and pins a single shiki theme; there is no light counterpart.",
+      "One accent. Pass-check green (oklch(0.8 0.17 150)) is the only chromatic colour the design owns; red is a demo-only error state.",
+      "Hairline architecture. Surfaces separate by 1px oklch(1 0 0 / 10%) lines and lightness steps, never by shadow.",
+      "Code is content. Every code block carries a filename or an accessible label, and every claim on the landing page is rendered from apps/landing/src/lib/content.ts.",
+      "Tight display, loose body. Negative tracking scales with size (-0.04em at the wordmark, -0.02em at headlines, normal below), while running text sits at 1.6 line-height."
+    ],
+    "rules": [
+      {
+        "name": "The One Green Rule",
+        "body": "Pass-check green is the only accent. It marks the one primary action, the selected state, a proven fact (badge values, written values), and focus. Never introduce a second hue for emphasis; use weight or a lighter grey instead.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Is An Error Rule",
+        "body": "Red appears only in a value that holds an error message. It is never a decorative or \"danger button\" colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Alpha Hairline Rule",
+        "body": "Borders are white at 10% (18% when interactive), not a solid grey, so the same token reads correctly over every charcoal step.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tracking-Scales-With-Size Rule",
+        "body": "Negative letter-spacing is proportional to size: -0.04em on the display wordmark, -0.02em on headlines, and normal on everything smaller. Do not track body or label text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Literal-Is-Mono Rule",
+        "body": "Anything the reader could paste (a command, a function name, a filename, a hash, a signature) is set in the mono face. Anything they would read is set in the sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Eyebrow Rule",
+        "body": "Headings stand alone. No uppercase kicker, category label, or step number sits above an h2 or h3.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Ledger Rule",
+        "body": "Surfaces are flat at every state. Elevation is expressed by a lightness step plus a hairline, never by a shadow, gradient, or blur.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Recessed-Control Rule",
+        "body": "In the demo, buttons and inputs are darker than the station around them (ground-well inside ground-card), so the instrument's controls read as set into the panel rather than floating on it.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Filename Rule",
+        "body": "A code block carries a filename in its head, or, when there is none to show (an install command, a captured run), an accessible label plus a visible caption. No anonymous code.",
+        "section": "components"
+      },
+      {
+        "name": "The Dash-Idle Rule",
+        "body": "An output that has not been written shows — in faint ink from CSS, not a placeholder string in the DOM. The DOM stays empty so the selector contract sees exactly what the wallet wrote.",
+        "section": "components"
+      },
+      {
+        "name": "The Selector-Contract Rule",
+        "body": "In the demo, element ids, control element types, disabled defaults, and the #message value are Playwright selectors owned by apps/demo/tests. Restyle freely; never rename, retype, re-enable, or re-default them, and never touch src/main.ts for design work.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do keep every surface dark: color-scheme: dark, ground on <html>, and one pinned shiki theme. A new page is never light or auto-switching.",
+      "Do use pass-check green (oklch(0.8 0.17 150)) for exactly the primary action, the selected state, proven facts, focus, and written values; everything else is a grey.",
+      "Do separate surfaces with a 1px hairline and a lightness step; strengthen to hairline-strong (or green in the demo) for hover.",
+      "Do give every code block a filename head with a copy button, or an accessible label and a caption when there is no file.",
+      "Do render every wallet, chain, spec path, sample, and run output from apps/landing/src/lib/content.ts; the page holds no product claims of its own.",
+      "Do set commands, API names, filenames, hashes, and signatures in the mono face at 0.75-0.9375rem.",
+      "Do keep headings Geist 600 at 1.6rem with -0.02em tracking, sentence case, standing alone.",
+      "Do use the three radii by scale: 6px chrome, 8px buttons, 10px containers.",
+      "Do ship a 2px green focus-visible outline with 2px offset on every interactive element."
+    ],
+    "donts": [
+      "Don't add a shadow, gradient, glow, or backdrop blur; the system is flat and tonal.",
+      "Don't introduce a second accent hue, a coloured icon set, or a tinted card. Wallet marks are the only branded colour, and red is reserved for a demo error value.",
+      "Don't put an eyebrow, kicker, step number, or uppercase category label above a heading.",
+      "Don't track body, label, or code text; negative tracking belongs to the wordmark and headlines only.",
+      "Don't fabricate testimonials, user counts, benchmarks, or logos; the fact badges (npm, MIT, 5 wallets, 3 chains) are the full set of proof.",
+      "Don't change a demo element's id, control type, disabled default, or the #message value, and don't write placeholder text into an output span; idle is :empty plus the CSS —.",
+      "Don't hover-lift cards or add links to them; feature cards are static reference entries.",
+      "Don't use a pill radius, a square corner, or a borderless container."
+    ]
+  }
+}

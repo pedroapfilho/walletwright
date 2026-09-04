@@ -4,10 +4,11 @@ import { jsx, jsxs } from "react/jsx-runtime";
 import { codeToHast } from "shiki";
 
 import { CopyButton } from "@/components/copy-button";
-import { cn } from "@/lib/cn";
 
 type CodeBlockProps = {
+  className?: string;
   code: string;
+  copyLabel?: string;
   filename?: string;
   label?: string;
   lang?: string;
@@ -15,10 +16,19 @@ type CodeBlockProps = {
 };
 
 /**
- * Shiki exposes dual-theme variables for server-rendered color-mode parity.
- * Its focusable `<pre>` needs a named wrapper and a visible custom focus ring.
+ * Shiki highlighting without the incumbent card chrome, so each variant's
+ * stylesheet owns the frame. A world that is fixed light or dark pins one
+ * shiki theme in its own CSS.
  */
-const CodeBlock = async ({ code, filename, label, lang = "tsx", wrap = false }: CodeBlockProps) => {
+const CodeBlock = async ({
+  className,
+  code,
+  copyLabel,
+  filename,
+  label,
+  lang = "tsx",
+  wrap = false,
+}: CodeBlockProps) => {
   const hast = await codeToHast(code, {
     defaultColor: false,
     lang,
@@ -26,27 +36,17 @@ const CodeBlock = async ({ code, filename, label, lang = "tsx", wrap = false }: 
   });
 
   return (
-    <section
-      aria-label={label ?? filename ?? "Code example"}
-      className={cn(
-        "border-border bg-card text-card-foreground shadow-card overflow-hidden rounded-xl border font-mono text-sm",
-        "[&_pre]:overflow-x-auto [&_pre]:p-5 [&_pre]:leading-relaxed",
-        "[&_pre:focus-visible]:outline-ring [&_pre:focus-visible]:outline-2 [&_pre:focus-visible]:-outline-offset-2",
-        wrap && "[&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap",
-      )}
-    >
+    <figure aria-label={label ?? filename ?? "Code example"} className={className}>
       {filename !== undefined && filename !== "" ? (
-        <div className="border-border flex items-center gap-2 border-b py-2 pr-2 pl-4">
-          <span className="text-muted-foreground grow truncate">{filename}</span>
-          <CopyButton
-            className="text-muted-foreground hover:text-foreground"
-            label={`Copy ${filename}`}
-            value={code}
-          />
-        </div>
+        <figcaption className="world-code-head">
+          <span className="world-code-filename">{filename}</span>
+          <CopyButton label={copyLabel ?? `Copy ${filename}`} value={code} />
+        </figcaption>
       ) : null}
-      {toJsxRuntime(hast, { Fragment, jsx, jsxs })}
-    </section>
+      <div className={wrap ? "world-code-body world-code-wrap" : "world-code-body"}>
+        {toJsxRuntime(hast, { Fragment, jsx, jsxs })}
+      </div>
+    </figure>
   );
 };
 

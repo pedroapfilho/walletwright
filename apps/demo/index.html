@@ -4,78 +4,186 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>walletwright Test Dapp</title>
+    <link rel="stylesheet" href="/src/styles/demo.css" />
   </head>
   <body>
-    <h1>walletwright Test Dapp</h1>
+    <!--
+    Every element id, control type, disabled default, and the #message value
+    is a Playwright selector contract with tests/ (see AGENTS.md).
+    -->
+    <header class="masthead">
+      <h1>walletwright Test Dapp</h1>
+    </header>
 
-    <section>
-      <h2>MetaMask (EVM)</h2>
-      <button id="connectButton">Connect Wallet</button>
-      <p>Account: <span id="accounts"></span></p>
-      <input id="message" value="Hello walletwright" />
-      <button id="signButton" disabled>Sign Message</button>
-      <p>Signature: <span id="signature"></span></p>
-      <button id="switchChainButton">Switch to Local Chain</button>
-      <p>Chain: <span id="chainId"></span></p>
-      <button id="sendTxButton">Send Transaction</button>
-      <p>Tx: <span id="txHash"></span></p>
-      <p>Error: <span id="error"></span></p>
-    </section>
+    <main class="floor">
+      <section aria-labelledby="station-mm-evm" class="station">
+        <header class="station-head">
+          <h2 id="station-mm-evm">MetaMask <span class="chain">EVM</span></h2>
+          <p class="spec-ref">tests/metamask*.spec.ts · tests/fixtures.ts</p>
+        </header>
 
-    <hr />
+        <div class="controls">
+          <button id="connectButton">Connect Wallet</button>
+          <p class="row" aria-live="polite">
+            <span class="row-label">Account</span>
+            <span class="value" id="accounts"></span>
+          </p>
+        </div>
 
-    <section>
-      <h2>Phantom — EVM</h2>
-      <button id="phantomEvmConnect">Connect Phantom (EVM)</button>
-      <p>Account: <span id="phantomEvmAccount"></span></p>
-      <button id="phantomEvmSign" disabled>Sign Message</button>
-      <p>Signature: <span id="phantomEvmSignature"></span></p>
-      <p>Error: <span id="phantomEvmError"></span></p>
-    </section>
+        <div class="controls">
+          <p class="field">
+            <label class="row-label" for="message">Message</label>
+            <input id="message" value="Hello walletwright" />
+          </p>
+          <button id="signButton" disabled>Sign Message</button>
+          <p class="row" aria-live="polite">
+            <span class="row-label">Signature</span>
+            <span class="value" id="signature"></span>
+          </p>
+        </div>
 
-    <hr />
+        <div class="controls">
+          <button id="switchChainButton">Switch to Local Chain</button>
+          <p class="row" aria-live="polite">
+            <span class="row-label">Chain</span>
+            <span class="value" id="chainId"></span>
+          </p>
+          <button id="sendTxButton">Send Transaction</button>
+          <p class="row" aria-live="polite">
+            <span class="row-label">Tx</span>
+            <span class="value" id="txHash"></span>
+          </p>
+          <p class="aside">
+            Chain and transaction requests need a local chain on 127.0.0.1:8545 (anvil, chain id
+            31337).
+          </p>
+        </div>
 
-    <section>
-      <h2>Phantom — Solana (SVM)</h2>
-      <button id="phantomSvmConnect">Connect Phantom (Solana)</button>
-      <p>Account: <span id="phantomSvmAccount"></span></p>
-      <button id="phantomSvmSign" disabled>Sign Message</button>
-      <p>Signature: <span id="phantomSvmSignature"></span></p>
-      <p>Error: <span id="phantomSvmError"></span></p>
-    </section>
+        <p class="row row-error" aria-live="polite">
+          <span class="row-label">Error</span>
+          <span class="value error" id="error"></span>
+        </p>
+      </section>
 
-    <hr />
+      <section aria-labelledby="station-phantom-evm" class="station">
+        <header class="station-head">
+          <h2 id="station-phantom-evm">Phantom <span class="chain">EVM</span></h2>
+          <p class="spec-ref">tests/phantom.spec.ts</p>
+        </header>
+        <div class="controls">
+          <button id="phantomEvmConnect">Connect Phantom (EVM)</button>
+          <button id="phantomEvmSign" disabled>Sign Message</button>
+        </div>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Account</span>
+          <span class="value" id="phantomEvmAccount"></span>
+        </p>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Signature</span>
+          <span class="value" id="phantomEvmSignature"></span>
+        </p>
+        <p class="row row-error" aria-live="polite">
+          <span class="row-label">Error</span>
+          <span class="value error" id="phantomEvmError"></span>
+        </p>
+      </section>
 
-    <section>
-      <h2>MetaMask (Solana, SVM)</h2>
-      <button id="mmSvmConnect">Connect MetaMask (Solana)</button>
-      <p>Account: <span id="mmSvmAccount"></span></p>
-      <button id="mmSvmSign" disabled>Sign Message</button>
-      <p>Signature: <span id="mmSvmSignature"></span></p>
-      <p>Error: <span id="mmSvmError"></span></p>
-    </section>
+      <section aria-labelledby="station-phantom-svm" class="station">
+        <header class="station-head">
+          <h2 id="station-phantom-svm">Phantom <span class="chain">Solana</span></h2>
+          <p class="spec-ref">tests/phantom.spec.ts</p>
+        </header>
+        <div class="controls">
+          <button id="phantomSvmConnect">Connect Phantom (Solana)</button>
+          <button id="phantomSvmSign" disabled>Sign Message</button>
+        </div>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Account</span>
+          <span class="value" id="phantomSvmAccount"></span>
+        </p>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Signature</span>
+          <span class="value" id="phantomSvmSignature"></span>
+        </p>
+        <p class="row row-error" aria-live="polite">
+          <span class="row-label">Error</span>
+          <span class="value error" id="phantomSvmError"></span>
+        </p>
+      </section>
 
-    <hr />
+      <section aria-labelledby="station-mm-svm" class="station">
+        <header class="station-head">
+          <h2 id="station-mm-svm">MetaMask <span class="chain">Solana</span></h2>
+          <p class="spec-ref">tests/metamask-solana.spec.ts</p>
+        </header>
+        <div class="controls">
+          <button id="mmSvmConnect">Connect MetaMask (Solana)</button>
+          <button id="mmSvmSign" disabled>Sign Message</button>
+        </div>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Account</span>
+          <span class="value" id="mmSvmAccount"></span>
+        </p>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Signature</span>
+          <span class="value" id="mmSvmSignature"></span>
+        </p>
+        <p class="row row-error" aria-live="polite">
+          <span class="row-label">Error</span>
+          <span class="value error" id="mmSvmError"></span>
+        </p>
+      </section>
 
-    <section>
-      <h2>Mock (Solana, SVM)</h2>
-      <button id="mockSvmConnect">Connect Mock (Solana)</button>
-      <p>Account: <span id="mockSvmAccount"></span></p>
-      <button id="mockSvmSign" disabled>Sign Message</button>
-      <p>Signature: <span id="mockSvmSignature"></span></p>
-      <p>Error: <span id="mockSvmError"></span></p>
-    </section>
+      <section aria-labelledby="station-standard-svm" class="station">
+        <header class="station-head">
+          <h2 id="station-standard-svm">Wallet Standard <span class="chain">Solana</span></h2>
+          <p class="spec-ref">tests/solflare.spec.ts · tests/mock-standard.spec.ts</p>
+        </header>
+        <p class="aside">
+          Connects the first non-MetaMask Solana wallet: Solflare in the headed spec, the ed25519
+          mock in CI.
+        </p>
+        <div class="controls">
+          <button id="mockSvmConnect">Connect Mock (Solana)</button>
+          <button id="mockSvmSign" disabled>Sign Message</button>
+        </div>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Account</span>
+          <span class="value" id="mockSvmAccount"></span>
+        </p>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Signature</span>
+          <span class="value" id="mockSvmSignature"></span>
+        </p>
+        <p class="row row-error" aria-live="polite">
+          <span class="row-label">Error</span>
+          <span class="value error" id="mockSvmError"></span>
+        </p>
+      </section>
 
-    <hr />
-
-    <section>
-      <h2>Slush — Sui (SUI)</h2>
-      <button id="suiConnect">Connect Slush (Sui)</button>
-      <p>Account: <span id="suiAccount"></span></p>
-      <button id="suiSign" disabled>Sign Message</button>
-      <p>Signature: <span id="suiSignature"></span></p>
-      <p>Error: <span id="suiError"></span></p>
-    </section>
+      <section aria-labelledby="station-sui" class="station">
+        <header class="station-head">
+          <h2 id="station-sui">Slush <span class="chain">Sui</span></h2>
+          <p class="spec-ref">tests/slush.spec.ts</p>
+        </header>
+        <div class="controls">
+          <button id="suiConnect">Connect Slush (Sui)</button>
+          <button id="suiSign" disabled>Sign Message</button>
+        </div>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Account</span>
+          <span class="value" id="suiAccount"></span>
+        </p>
+        <p class="row" aria-live="polite">
+          <span class="row-label">Signature</span>
+          <span class="value" id="suiSignature"></span>
+        </p>
+        <p class="row row-error" aria-live="polite">
+          <span class="row-label">Error</span>
+          <span class="value error" id="suiError"></span>
+        </p>
+      </section>
+    </main>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

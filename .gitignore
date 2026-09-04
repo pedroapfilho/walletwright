@@ -37,3 +37,9 @@ playwright/.cache/
 
 # claude code local
 .claude/
+
+# impeccable session artifacts (design.json and critique snapshots are tracked)
+.impeccable/review/
+.impeccable/reference/
+.impeccable/build/
+.impeccable/config.local.json
