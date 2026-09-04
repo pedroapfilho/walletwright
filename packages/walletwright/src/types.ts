@@ -158,8 +158,11 @@ export type Wallet = {
   confirmSignature: () => Promise<void>;
   /** Approve a pending transaction request popup. */
   confirmTransaction: () => Promise<void>;
-  /** Approve a pending connection request popup. Resolves quietly if the wallet auto-approved. */
-  connectToDapp: () => Promise<void>;
+  /**
+   * Approve a pending connection request popup. Pass `{ optional: true }` for a site the wallet may
+   * already trust, where connecting produces no popup at all.
+   */
+  connectToDapp: (options?: { optional?: boolean }) => Promise<void>;
   /** The loaded extension id. */
   readonly extensionId: string;
   /**

@@ -67,18 +67,18 @@
   "dependencies": {
     "adm-zip": "^0.6.0",
     "classic-level": "^3.0.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
     "@repo/config-vitest": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/adm-zip": "^0.5.7",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "prool": "^0.2.14",
     "typescript": "^7.0.2",
-    "viem": "^2.55.11",
-    "vitest": "^4.1.10"
+    "viem": "^2.56.0",
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.48 <2",
