@@ -31,7 +31,14 @@ export default defineConfig({
   retries: 2,
   testDir: "./tests",
   timeout: 300_000,
-  use: { baseURL: demoUrl, headless: false, trace: "off" },
+  // A wallet failure on CI can only be read after the fact, and the line reporter says what timed
+  // out but not what the dapp or the wallet was showing. Keep the trace for a failure there; stay
+  // off locally, where the browser is in front of you.
+  use: {
+    baseURL: demoUrl,
+    headless: false,
+    trace: process.env.CI ? "retain-on-failure" : "off",
+  },
   webServer: process.env.CI
     ? [
         {
