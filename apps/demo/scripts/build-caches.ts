@@ -4,9 +4,14 @@ const buildCaches = async (
   names: ReadonlyArray<WalletKind>,
   build: (name: WalletKind) => Promise<void>,
 ): Promise<void> => {
+  const selected = new Set(names);
+  // Slush's headed onboarding needs the display to itself on the Linux CI runner.
+  if (selected.delete("slush")) {
+    await build("slush");
+  }
   // Each wallet owns a separate profile; duplicate selections must never race on that profile.
   const results = await Promise.allSettled(
-    [...new Set(names)].map(async (name) => {
+    [...selected].map(async (name) => {
       await build(name);
     }),
   );

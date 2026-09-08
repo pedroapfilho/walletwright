@@ -51,3 +51,31 @@ void test("waits for other wallets to clean up before reporting a failure", asyn
   gate.resolve();
   await rejected;
 });
+
+void test("isolates Slush before starting other wallets and deduplicates its profile", async () => {
+  const gate = createGate();
+  const started: Array<WalletKind> = [];
+  const work = buildCaches(["metamask", "slush", "phantom", "slush"], async (name) => {
+    started.push(name);
+    if (name === "slush") {
+      await gate.promise;
+    }
+  });
+  assert.deepEqual(started, ["slush"]);
+  gate.resolve();
+  await work;
+  assert.deepEqual(started, ["slush", "metamask", "phantom"]);
+});
+
+void test("propagates isolated onboarding failure before any other browser opens", async () => {
+  const failure = new Error("Slush onboarding failed");
+  const started: Array<WalletKind> = [];
+  await assert.rejects(
+    buildCaches(["metamask", "slush"], (name) => {
+      started.push(name);
+      return Promise.reject(failure);
+    }),
+    failure,
+  );
+  assert.deepEqual(started, ["slush"]);
+});
