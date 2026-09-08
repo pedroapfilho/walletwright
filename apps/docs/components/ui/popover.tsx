@@ -7,23 +7,19 @@ import { createContext, use, useId } from "react";
 
 import { cn } from "../../lib/cn";
 
-type PopoverContextValue = {
-  popoverId: string;
-};
-
-const PopoverContext = createContext<PopoverContextValue | null>(null);
+const PopoverContext = createContext<string | null>(null);
 
 const Popover = ({ children }: { children: ReactNode }) => {
   const rawId = useId();
   const popoverId = `fd-popover-${rawId.replaceAll(":", "")}`;
-  return <PopoverContext value={{ popoverId }}>{children}</PopoverContext>;
+  return <PopoverContext value={popoverId}>{children}</PopoverContext>;
 };
 
 type PopoverTriggerProps = ComponentPropsWithRef<"button">;
 
 const PopoverTrigger = ({ children, className, ref, ...props }: PopoverTriggerProps) => {
   const ctx = use(PopoverContext);
-  if (!ctx) {
+  if (ctx === null) {
     throw new Error("PopoverTrigger must be used inside Popover");
   }
   return (
@@ -32,7 +28,7 @@ const PopoverTrigger = ({ children, className, ref, ...props }: PopoverTriggerPr
       type="button"
       {...props}
       className={cn("[anchor-name:--fd-popover-anchor]", className)}
-      popoverTarget={ctx.popoverId}
+      popoverTarget={ctx}
     >
       {children}
     </button>
@@ -43,7 +39,7 @@ type PopoverContentProps = ComponentPropsWithRef<"div">;
 
 const PopoverContent = ({ children, className, ref, ...props }: PopoverContentProps) => {
   const ctx = use(PopoverContext);
-  if (!ctx) {
+  if (ctx === null) {
     throw new Error("PopoverContent must be used inside Popover");
   }
   return (
@@ -56,7 +52,7 @@ const PopoverContent = ({ children, className, ref, ...props }: PopoverContentPr
         "mt-1 [position-anchor:--fd-popover-anchor] [position-area:block-end_span-inline] [position-try-fallbacks:flip-block]",
         className,
       )}
-      id={ctx.popoverId}
+      id={ctx}
       popover="auto"
     >
       {children}

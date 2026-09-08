@@ -8,6 +8,7 @@
     "build": "vite build",
     "clean": "rm -rf dist node_modules .walletwright test-results",
     "lint": "oxlint src tests",
+    "test": "tsx --test scripts/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:cache": "tsx scripts/cache.ts",
     "test:e2e": "playwright test"
