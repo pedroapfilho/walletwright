@@ -310,3 +310,7 @@ Each item below cost real debugging time. Don't "simplify" them away.
   build, MIT.
 - Build artifacts emit `.mjs`/`.d.mts`, so package.json `exports`/`bin`/`types` must match.
 - Publishing goes through changesets; `@repo/*` configs stay `private`.
+
+## Design-system linting
+
+Run `pnpm lint` after changes and fix every error. `oxlint.config.ts` registers `@shadcn/lint` and enforces component contracts, known Tailwind classes, and readable component class names. Use component variants for appearance and layout classes at call sites. The config lists the primitive directories that own their internal styles; unknown-class checking stays enabled there. Keep theme discovery local to each app. Exact class-merging fixture allowances apply only to the named test files.

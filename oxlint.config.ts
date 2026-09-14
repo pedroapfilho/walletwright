@@ -3,7 +3,84 @@ import awesomeness from "oxlint-config-awesomeness";
 
 export default defineConfig({
   extends: [awesomeness],
+  jsPlugins: ["@shadcn/lint"],
   overrides: [
+    // Custom selectors are defined in the landing page.css side-effect import.
+    {
+      files: ["apps/landing/src/components/code-tabs.tsx"],
+      rules: {
+        "shadcn/no-unknown-classes": [
+          "error",
+          {
+            allow: ["world-tab", "world-tablist"],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/landing/src/components/code-block.tsx"],
+      rules: {
+        "shadcn/no-unknown-classes": [
+          "error",
+          {
+            allow: ["world-code-body", "world-code-head", "world-code-wrap"],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/landing/src/app/page.tsx"],
+      rules: {
+        "shadcn/no-unknown-classes": [
+          "error",
+          {
+            allow: [
+              "ref",
+              "ref-actions",
+              "ref-api",
+              "ref-api-row",
+              "ref-badges",
+              "ref-body",
+              "ref-brand",
+              "ref-btn",
+              "ref-btn-ghost",
+              "ref-btn-primary",
+              "ref-caption",
+              "ref-card",
+              "ref-cards",
+              "ref-code",
+              "ref-footer",
+              "ref-footer-row",
+              "ref-hero",
+              "ref-install",
+              "ref-install-code",
+              "ref-lede",
+              "ref-link",
+              "ref-mark",
+              "ref-measure",
+              "ref-nav",
+              "ref-nav-links",
+              "ref-nav-row",
+              "ref-section",
+              "ref-two-col",
+              "ref-visually-hidden",
+              "ref-wallet-chains",
+              "ref-wallet-name",
+              "ref-wallet-spec",
+              "ref-wallets",
+              "ref-wordmark",
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/docs/components/ui/**"],
+      rules: {
+        "shadcn/no-restyle": "off",
+        "shadcn/require-static-classes": "off",
+      },
+    },
     {
       files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
       rules: {
@@ -64,4 +141,20 @@ export default defineConfig({
       },
     },
   ],
+  rules: {
+    "shadcn/no-restyle": [
+      "error",
+      {
+        allow: ["layout"],
+        contracts: [
+          {
+            allow: ["layout", "gap-*"],
+            pattern: "^PopoverTrigger$",
+          },
+        ],
+      },
+    ],
+    "shadcn/no-unknown-classes": "error",
+    "shadcn/require-static-classes": "error",
+  },
 });

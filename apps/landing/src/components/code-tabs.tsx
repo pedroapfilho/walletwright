@@ -71,7 +71,7 @@ const CodeTabs = ({ className, label, tabs }: CodeTabsProps) => {
       {tabs.map((tab, index) => (
         <div
           aria-labelledby={`${id}-tab-${String(index)}`}
-          className="world-tabpanel"
+
           hidden={index !== active}
           id={`${id}-panel-${String(index)}`}
           key={tab.label}
