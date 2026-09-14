@@ -104,3 +104,8 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+@utility size-touch-target {
+  width: max(100%, 2.75rem);
+  height: max(100%, 2.75rem);
+}

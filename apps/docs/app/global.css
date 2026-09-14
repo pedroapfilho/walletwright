@@ -42,3 +42,27 @@ html {
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
 }
+
+@utility popover-anchor {
+  anchor-name: --fd-popover-anchor;
+}
+
+@utility max-w-popover-viewport {
+  max-width: 98vw;
+}
+
+@utility popover-position-anchor {
+  position-anchor: --fd-popover-anchor;
+}
+
+@utility popover-position-area {
+  position-area: block-end span-inline;
+}
+
+@utility popover-position-flip {
+  position-try-fallbacks: flip-block;
+}
+
+@utility reading-progress-range {
+  animation-range: 0% 100%;
+}
