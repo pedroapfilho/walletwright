@@ -75,13 +75,6 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/docs/components/ui/**"],
-      rules: {
-        "shadcn/no-restyle": "off",
-        "shadcn/require-static-classes": "off",
-      },
-    },
-    {
       files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
       rules: {
         "number-literal-case": "off",
