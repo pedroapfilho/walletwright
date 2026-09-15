@@ -39,7 +39,7 @@ const CodeBlock = async ({
     <figure aria-label={label ?? filename ?? "Code example"} className={className}>
       {filename !== undefined && filename !== "" ? (
         <figcaption className="world-code-head">
-          <span className="world-code-filename">{filename}</span>
+          <span>{filename}</span>
           <CopyButton label={copyLabel ?? `Copy ${filename}`} value={code} />
         </figcaption>
       ) : null}
