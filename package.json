@@ -22,7 +22,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "turbo run build && changeset publish",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check:shadcn": "node scripts/check-shadcn.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.2",
