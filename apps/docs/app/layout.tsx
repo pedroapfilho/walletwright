@@ -4,10 +4,12 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { SITE_ORIGIN } from "@/lib/site";
+
 export const metadata: Metadata = {
   description:
     "Documentation for walletwright: Playwright wallet automation for MetaMask (EVM + Solana), Phantom (EVM + Solana), Rabby (EVM), Solflare (Solana), and Slush (Sui). Connect and sign in real browser extensions.",
-  metadataBase: new URL("https://walletwright.dev"),
+  metadataBase: new URL(SITE_ORIGIN),
   title: {
     default: "walletwright: Playwright wallet automation",
     template: "%s · walletwright docs",

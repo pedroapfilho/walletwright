@@ -28,10 +28,17 @@ html {
   background: var(--bg);
   color: var(--fg);
   color-scheme: dark;
+  display: flex;
+  flex-direction: column;
   font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   font-size: 1rem;
   line-height: 1.6;
   min-height: 100dvh;
+}
+
+.ref > main {
+  flex: 1;
+  inline-size: 100%;
 }
 
 .ref ::selection {
