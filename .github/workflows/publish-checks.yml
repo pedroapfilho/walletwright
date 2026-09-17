@@ -68,9 +68,9 @@ jobs:
       - run: node .github/ci/ci.mjs run packaging -- pnpm build --filter="./packages/*"
       # Packaging hygiene for the published packages (ESM-only).
       - name: publint
-        run: node .github/ci/ci.mjs run packaging -- (cd packages/walletwright && pnpm dlx publint --strict)
+        run: node .github/ci/ci.mjs run packaging -- bash -e -o pipefail -c '(cd packages/walletwright && pnpm dlx publint --strict)'
       - name: are-the-types-wrong
-        run: node .github/ci/ci.mjs run packaging -- (cd packages/walletwright && pnpm dlx @arethetypeswrong/cli --pack --profile esm-only)
+        run: node .github/ci/ci.mjs run packaging -- bash -e -o pipefail -c '(cd packages/walletwright && pnpm dlx @arethetypeswrong/cli --pack --profile esm-only)'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         name: Upload CI evidence
         if: ${{ !cancelled() }}
