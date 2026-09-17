@@ -29,7 +29,11 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/landing/src/app/page.tsx"],
+      files: [
+        "apps/landing/src/app/layout.tsx",
+        "apps/landing/src/app/not-found.tsx",
+        "apps/landing/src/app/page.tsx",
+      ],
       rules: {
         "shadcn/no-unknown-classes": [
           "error",

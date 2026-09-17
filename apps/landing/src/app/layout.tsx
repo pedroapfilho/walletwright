@@ -1,9 +1,12 @@
 import "@fontsource-variable/geist/index.css";
 import "@fontsource-variable/geist-mono/index.css";
 import "./globals.css";
+import "./page.css";
 
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+
+import { DEMO_TESTS_URL, DOCS_URL, GITHUB_URL, NPM_URL } from "@/lib/site";
 
 const DESCRIPTION =
   "walletwright drives real MetaMask, Phantom, Rabby, Solflare, and Slush extensions in Playwright tests. Connect and sign on EVM, Solana, and Sui, with no mocks.";
@@ -58,6 +61,19 @@ const viewport: Viewport = {
   themeColor: "#1c1d21",
 };
 
+const Mark = () => (
+  <svg aria-hidden="true" className="ref-mark" fill="none" viewBox="0 0 24 24">
+    <rect height="19" rx="5.5" stroke="currentColor" strokeWidth="1.8" width="19" x="2.5" y="2.5" />
+    <path
+      d="M7 12.3l3.2 3.2 6-6.4"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    />
+  </svg>
+);
+
 const RootLayout = ({ children }: { children: ReactNode }) => (
   <html className="antialiased" lang="en">
     <body>
@@ -70,7 +86,38 @@ const RootLayout = ({ children }: { children: ReactNode }) => (
       >
         Skip to content
       </a>
-      {children}
+      <div className="ref">
+        <header className="ref-nav">
+          <div className="ref-measure ref-nav-row">
+            <p className="ref-brand">
+              <Mark />
+            </p>
+            <nav aria-label="Site" className="ref-nav-links">
+              <a href={DOCS_URL}>Docs</a>
+              <a href={`${DOCS_URL}/wallets`}>Wallets</a>
+              <a href={DEMO_TESTS_URL} rel="noopener noreferrer" target="_blank">
+                Examples
+              </a>
+              <a href={GITHUB_URL} rel="noopener noreferrer" target="_blank">
+                GitHub
+              </a>
+            </nav>
+          </div>
+        </header>
+        {children}
+        <footer className="ref-footer">
+          <div className="ref-measure ref-footer-row">
+            <p>Released under the MIT License.</p>
+            <nav aria-label="Footer" className="ref-nav-links">
+              <a href={DOCS_URL}>Docs</a>
+              <a href={GITHUB_URL} rel="noopener noreferrer" target="_blank">
+                GitHub
+              </a>
+              <a href={NPM_URL}>npm</a>
+            </nav>
+          </div>
+        </footer>
+      </div>
     </body>
   </html>
 );

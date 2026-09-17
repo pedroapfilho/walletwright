@@ -1,5 +1,3 @@
-import "./page.css";
-
 import {
   WalletMetamask,
   WalletPhantom,
@@ -19,7 +17,7 @@ import {
   SETUP_CODE,
   VERIFIED_PAIRS,
 } from "@/lib/content";
-import { DEMO_TESTS_URL, DOCS_URL, GETTING_STARTED_URL, GITHUB_URL, NPM_URL } from "@/lib/site";
+import { DOCS_URL, GETTING_STARTED_URL, GITHUB_URL, NPM_URL } from "@/lib/site";
 
 const CONTRACT = `
 THESIS: the landing page is the first page of the docs, the way viem and
@@ -96,41 +94,10 @@ const INSTALLS = [
   { command: "bun add -d @walletwright/core @playwright/test", label: "bun" },
 ];
 
-const Mark = () => (
-  <svg aria-hidden="true" className="ref-mark" fill="none" viewBox="0 0 24 24">
-    <rect height="19" rx="5.5" stroke="currentColor" strokeWidth="1.8" width="19" x="2.5" y="2.5" />
-    <path
-      d="M7 12.3l3.2 3.2 6-6.4"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    />
-  </svg>
-);
-
 const LandingPage = () => (
-  <div className="ref">
+  <>
     {/* oxlint-disable-next-line react/no-danger -- emits the impeccable direction contract as an HTML comment that survives the production build */}
     <div dangerouslySetInnerHTML={{ __html: `<!--${CONTRACT}-->` }} hidden />
-
-    <header className="ref-nav">
-      <div className="ref-measure ref-nav-row">
-        <p className="ref-brand">
-          <Mark />
-        </p>
-        <nav aria-label="Site" className="ref-nav-links">
-          <a href={DOCS_URL}>Docs</a>
-          <a href={`${DOCS_URL}/wallets`}>Wallets</a>
-          <a href={DEMO_TESTS_URL} rel="noopener noreferrer" target="_blank">
-            Examples
-          </a>
-          <a href={GITHUB_URL} rel="noopener noreferrer" target="_blank">
-            GitHub
-          </a>
-        </nav>
-      </div>
-    </header>
 
     <main className="ref-measure" id="main-content" tabIndex={-1}>
       <section aria-label="Introduction" className="ref-hero">
@@ -276,20 +243,7 @@ const LandingPage = () => (
         <CodeBlock className="ref-code" code={SETUP_CODE} filename="wallet-setup.ts" wrap />
       </section>
     </main>
-
-    <footer className="ref-footer">
-      <div className="ref-measure ref-footer-row">
-        <p>Released under the MIT License.</p>
-        <nav aria-label="Footer" className="ref-nav-links">
-          <a href={DOCS_URL}>Docs</a>
-          <a href={GITHUB_URL} rel="noopener noreferrer" target="_blank">
-            GitHub
-          </a>
-          <a href={NPM_URL}>npm</a>
-        </nav>
-      </div>
-    </footer>
-  </div>
+  </>
 );
 
 export default LandingPage;
