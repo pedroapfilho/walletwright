@@ -43,3 +43,6 @@ playwright/.cache/
 .impeccable/reference/
 .impeccable/build/
 .impeccable/config.local.json
+
+# CI selection and execution reports
+.ci-results/

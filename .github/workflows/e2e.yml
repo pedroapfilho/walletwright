@@ -6,57 +6,55 @@ on:
   # Dispatched by release.yml for the changeset-release/main PR, whose
   # pull_request runs are parked unexecuted behind an approval gate.
   workflow_dispatch:
+  schedule:
+    - cron: 30 4 * * 1
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
   pull-requests: read
 jobs:
-  changes:
+  ci-plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      run: ${{ steps.diff.outputs.run }}
+      run: ${{ steps.plan.outputs.run }}
+      scope: ${{ steps.plan.outputs.scope }}
     steps:
-      - name: Check whether E2E inputs changed
-        id: diff
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
-            echo 'run=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          gh api "repos/$GH_REPO/pulls/$PR_NUMBER" > "$RUNNER_TEMP/e2e-pr.json"
-          gh api --paginate --slurp "repos/$GH_REPO/pulls/$PR_NUMBER/files?per_page=100" > "$RUNNER_TEMP/e2e-files.json"
-          node <<'NODE'
-          const fs = require('node:fs');
-          const pr = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/e2e-pr.json'));
-          const files = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/e2e-files.json')).flat();
-          const docsOnly = (p) => /^(?:README|CHANGELOG|CONTRIBUTING|CODE_OF_CONDUCT|AGENTS|CLAUDE)\.md$/.test(p)
-            || /^docs\/.*\.md$/.test(p) || /^\.changeset\/[^/]+\.md$/.test(p);
-          const complete = pr.head.sha === process.env.PR_HEAD && files.length === pr.changed_files && files.length < 3000;
-          const run = !complete || files.length === 0 || files.some(f => !docsOnly(f.filename) || (f.previous_filename && !docsOnly(f.previous_filename)));
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'run=' + run + '\n');
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, run ? 'E2E inputs changed (or diff is uncertain): run the complete suite.\n' : 'Only standalone documentation changed: E2E is skipped.\n');
-          NODE
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Plan validation
+        id: plan
+        run: node .github/ci/ci.mjs plan e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        name: Upload CI evidence
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-selection-${{ github.workflow }}-${{ github.job }}-${{ github.run_attempt }}
+          path: .ci-results/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
   wallets:
-    needs: changes
-    if: ${{ always() && (needs.changes.result != 'success' || needs.changes.outputs.run != 'false') }}
+    needs:
+      - ci-plan
+    if: ${{ always() && (needs.ci-plan.result != 'success' || needs.ci-plan.outputs.run != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Require a successful change check
+      - name: Require a successful CI plan
         env:
-          RESULT: ${{ needs.changes.result }}
+          RESULT: ${{ needs.ci-plan.result }}
         run: test "$RESULT" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Record validation inputs
+        run: node .github/ci/ci.mjs plan e2e
       - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
           runtime: node@24
@@ -108,10 +106,11 @@ jobs:
       # Solana reject spec still runs. See plans/031.
       #
       # The Slush specs are excluded here and run in the step below instead.
-      - run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+      - run: |-
+          node .github/ci/ci.mjs run e2e -- bash -e -o pipefail -c 'xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
             pnpm --filter demo exec playwright test \
               --grep-invert "MetaMask: connect and sign on Solana|Slush:"
+          '
       # Slush's connect is flaky (roughly one run in five) in a way nobody has pinned down yet: the
       # approval popup opens, takes the confirm click and closes, so walletwright reports a
       # successful approval, but the dapp's `standard:connect` never yields an account and the spec
@@ -121,9 +120,10 @@ jobs:
       # Until it is diagnosed it must not gate the branch. Drop `continue-on-error` once it is.
       - id: slush
         continue-on-error: true
-        run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+        run: |-
+          node .github/ci/ci.mjs run e2e -- bash -e -o pipefail -c 'xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
             pnpm --filter demo exec playwright test --grep "Slush:"
+          '
       # Playwright writes a page snapshot and a trace per failure. Without them a red run here can
       # only be read through the log, which says what timed out but not what the wallet was showing
       # at the time. Uploaded for a Slush-only failure too, since that is the evidence it needs.
@@ -133,3 +133,12 @@ jobs:
           name: playwright-failures
           path: apps/demo/test-results
           retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        name: Upload CI evidence
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-execution-${{ github.workflow }}-${{ github.job }}-${{ github.run_attempt }}
+          path: .ci-results/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
