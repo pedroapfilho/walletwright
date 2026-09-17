@@ -8,6 +8,8 @@
     "apps/demo/src/privy.tsx",
   ],
   // Consumed by `vitest run --coverage` via the v8 provider, referenced by name not import.
+  // Generated runtime is tested and byte-verified by the control plane.
+  "ignorePatterns": [".github/ci/*.mjs"],
   "ignoreDependencies": ["@vitest/coverage-v8"],
   // Next.js calls this route export at build time.
   "ignoreExports": [

@@ -35,6 +35,7 @@
     ".superpowers/**",
     "**/.walletwright/**",
     "**/test-results/**",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    ".github/ci/*.mjs"
   ]
 }
