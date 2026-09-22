@@ -299,8 +299,8 @@ Each item below cost real debugging time. Don't "simplify" them away.
 
 ## Conventions
 
-- TypeScript ESM, `.ts` import extensions, exports at the end of public modules, arrow functions,
-  `type` over `interface`. Strict mode, zero TS/lint/format errors.
+- TypeScript ESM, extensionless relative imports, exports at the end of public modules, arrow
+  functions, `type` over `interface`. Strict mode, zero TS/lint/format errors.
 - Lint with oxlint (the `oxlint-config-awesomeness` preset), format with oxfmt. `oxlint.config.ts`
   turns off rules that don't fit a Node browser-driver: `no-await-in-loop` (the polling loops are
   intentional) and the React/Next/doctor presets (for example `rules-of-hooks` false-positives on
