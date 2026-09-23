@@ -310,6 +310,11 @@ Each item below cost real debugging time. Don't "simplify" them away.
   build, MIT.
 - Build artifacts emit `.mjs`/`.d.mts`, so package.json `exports`/`bin`/`types` must match.
 - Publishing goes through changesets; `@repo/*` configs stay `private`.
+- `apps/docs/turbo.json` and `apps/landing/turbo.json` disable Turbo caching for the Next builds.
+  Next.js file traces (`.nft.json`) record pnpm paths such as `node_modules/.pnpm/node_modules/...`
+  that differ between dependency installs, so a Vercel build that restores cached traces fails
+  packaging with ENOENT. Every Next app that deploys retraces against the current install; the demo
+  and package builds stay cached.
 
 ## Design-system linting
 
