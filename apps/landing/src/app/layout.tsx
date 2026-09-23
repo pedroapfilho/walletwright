@@ -6,7 +6,7 @@ import "./page.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
-import { DEMO_TESTS_URL, DOCS_URL, GITHUB_URL, NPM_URL } from "@/lib/site";
+import { DEMO_TESTS_URL, DOCS_URL, GITHUB_URL, NPM_URL, SITE_URL } from "@/lib/site";
 
 const DESCRIPTION =
   "walletwright drives real MetaMask, Phantom, Rabby, Solflare, and Slush extensions in Playwright tests. Connect and sign on EVM, Solana, and Sui, with no mocks.";
@@ -36,7 +36,7 @@ const metadata: Metadata = {
     "Synpress alternative",
     "walletwright",
   ],
-  metadataBase: new URL("https://walletwright.dev"),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     description: DESCRIPTION,
     locale: "en_US",
