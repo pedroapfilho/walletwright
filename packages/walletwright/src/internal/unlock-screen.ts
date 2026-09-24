@@ -1,4 +1,6 @@
-import type { BrowserContext, Locator, Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
+
+import type { WalletDefinition } from "../types";
 
 import { formatTimeout, gotoWithRetry, waitUntil } from "./wait";
 
@@ -17,32 +19,20 @@ const PASSWORD_CLEARED_TIMEOUT_MS = 15_000;
  */
 const UNLOCK_SETTLE_TIMEOUT_MS = 5000;
 
-type UnlockScreenOptions = {
-  /** Extension-relative page that renders the unlock screen (e.g. `home.html`). */
-  entry: string;
-  /** Detect a warm launch that is already unlocked. */
-  isUnlocked?: (page: Page) => Promise<boolean>;
-  /** Submit the filled password. Defaults to pressing Enter in the field. */
-  submit?: (page: Page, field: Locator) => Promise<void>;
-  wallet: string;
-};
-
-type UnlockScreen = {
+type UnlockFlow = {
   reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
   unlock: (page: Page, password: string) => Promise<void>;
 };
 
 /**
  * The shared unlock flow: open the wallet's own page, wait for it to settle into a state we can
- * name, and type the password. Every wallet differs only in its entry page, how it submits, and
- * whether it can come back already unlocked.
+ * name, and type the password. Every wallet differs only in its `unlockScreen`: the entry page, how
+ * it submits, and whether it can come back already unlocked.
  */
 export const createUnlockScreen = ({
-  entry,
-  isUnlocked,
-  submit,
-  wallet,
-}: UnlockScreenOptions): UnlockScreen => {
+  extensionName: wallet,
+  unlockScreen: { entry, isUnlocked, submit },
+}: Pick<WalletDefinition, "extensionName" | "unlockScreen">): UnlockFlow => {
   const settled = async (page: Page): Promise<"locked" | "unlocked" | undefined> => {
     const locked = await page
       .locator(PASSWORD_FIELD)

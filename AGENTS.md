@@ -23,7 +23,8 @@ packages/
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
     src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts, solflare.ts) + registry
-    src/internal/        engine: cache (build), launch, controller, download, onboarding-patch, utils
+    src/internal/        engine: cache (build), launch, browser, profile, extension, download,
+                         unlock-screen, controller, popup
   config-typescript/   @repo/typescript-config (tsconfig presets)
   config-vitest/        @repo/config-vitest (node vitest preset)
 apps/
@@ -53,25 +54,32 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
 - `buildCache(setup)` (`internal/cache.ts`) launches with the extension, navigates to onboarding,
   runs `importWallet`, closes, then runs `finalizeCache` while the browser is closed.
 - `launchWallet(setup)` (`internal/launch.ts`) copies the cache to a throwaway profile,
-  launches headed with the extension, resolves the id, runs `reachUnlockScreen` then `unlock`, and
-  returns a `Wallet`.
+  launches with the extension, resolves the id, reaches the definition's `unlockScreen` and unlocks
+  it (`internal/unlock-screen.ts`), and returns a `Wallet`.
+- Both start Chromium through `openWalletContext` (`internal/browser.ts`), which also applies
+  `prepareContext`, so the build and the run cannot load the wallet differently. Profile paths and
+  atomic publish live in `internal/profile.ts`; the archive a setup runs (`source`, plus the
+  refusal of `version` for Web Store wallets) in `internal/extension.ts`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
-  `approve` by finding the approval popup and clicking the wallet's confirm button.
+  `approve` by finding the approval popup and clicking the wallet's confirm button. Every public
+  method goes through one naming helper and a step runner: the fixtures report each call as a boxed
+  `test.step`, while `launchWallet` runs it directly.
 - `wallets/{metamask,phantom,rabby,slush}.ts` hold the per-wallet definitions. A wallet with more than a
   file's worth of flow keeps its helpers in a folder of the same name, so the definition file stays
   the import site: `metamask.ts` assembles, `metamask/onboarding.ts` and `metamask/approve.ts` and
   `metamask/actions/*.ts` implement.
 
 Beyond connect and sign, capabilities are **optional and per-wallet**. `WalletDefinition.actions`
-groups them (`settings`, and later `network`/`accounts`/`tokens`), and `reject` is optional too. The
-engine mirrors what a wallet declares onto `Wallet` and throws
+groups them (`accounts`, `network`, `settings`, and later `tokens`). The engine mirrors what a wallet declares onto `Wallet` and throws
 `[walletwright] <wallet> does not support <action>()` for the rest. This keeps the registry honest:
 `addNetwork` is meaningless for Slush (Sui), and a wallet only declares an action once it has been
 driven end-to-end.
 
 To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register it in
-`src/wallets/index.ts`. Each definition declares its `ecosystems` (`evm`/`svm`/`sui`/`dot`/`btc`), and
-`walletKindsByEcosystem(eco)` lists the wallets that drive a chain.
+`src/wallets/index.ts`. Its download `source` and `unlockScreen` are declared data the engine drives;
+onboarding, approve, and reject are functions. Each definition declares its `ecosystems`
+(`evm`/`svm`/`sui`/`dot`/`btc`), and `walletKindsByEcosystem(eco)` lists the wallets that drive a
+chain.
 
 ## Supported wallets and roadmap
 
@@ -145,7 +153,8 @@ window, which is what `notificationMatch` keys on. Worth knowing:
   (`#mockSvmConnect` / `#mockSvmSign`); the spec is `tests/solflare.spec.ts`.
 - **Headed only.** Headless, the dapp gets `Connection rejected` about two seconds after the connect
   click, before any approval UI exists and whether or not the engine opens `confirm_popup.html`, so
-  the rejection is Solflare's own. The spec pins itself with `test.use({ headless: false })`.
+  the rejection is Solflare's own. It does not declare `headlessApprovals`, so the fixtures always
+  launch it headed.
 
 ### Rabby (EVM), verified
 
@@ -184,11 +193,16 @@ Each item below cost real debugging time. Don't "simplify" them away.
 
 1. **Headless is per-wallet, and the engine never opens an approval itself.** Two things. First,
    Playwright's default headless build is the headless _shell_, which cannot load an extension at
-   all, so `launchPersistentContext` passes `channel: "chromium"` (the full browser) in both
-   `internal/launch.ts` and `internal/cache.ts`. Second, **whether a wallet's approval window
-   surfaces as a page headless is a property of that wallet**: Phantom's and Rabby's do, MetaMask's
-   is created but never exposed. So a wallet declares `headlessApprovals: true` once verified, and
+   all, so `openWalletContext` (`internal/browser.ts`) passes `channel: "chromium"` (the full
+   browser) for both the build and the run. Second, **whether a wallet's approval window surfaces
+   as a page headless is a property of that wallet**: Phantom's and Rabby's do, MetaMask's is
+   created but never exposed. So a wallet declares `headlessApprovals: true` once verified, and
    `launchWallet` refuses headless for the rest rather than hanging at the first approval.
+   The fixtures instead launch with `headless && headlessApprovals`, so a suite runs on Playwright's
+   default `headless: true`. They cannot just change the built-in option's default: Playwright
+   re-applies the config's `use` only after a fixture list that declares the key `{ option: true }`,
+   and its types forbid `option` when overriding a built-in, so a plain override silently beats the
+   user's config and `--headed`.
    An earlier version had the engine open the wallet's approval URL in a tab when no window
    surfaced, which did work for MetaMask on a developer machine. It is gone, and the reason is worth
    keeping: on a CI runner that same URL renders MetaMask's **home screen**, buttons and all, so the
@@ -208,7 +222,7 @@ Each item below cost real debugging time. Don't "simplify" them away.
    and the suite a Playwright `timeout` of 300s.
 2. **Derive the extension id; don't query it.** `chrome://extensions` is blocked headless and the MV3
    service worker starts lazily, so `getExtensionId` would race. Compute it instead
-   (`internal/utils.ts`, `extensionIdFromPath`): sha256 of the manifest's public `key` if present
+   (`internal/extension.ts`, `extensionIdFromPath`): sha256 of the manifest's public `key` if present
    (Phantom uses its fixed Web Store id), otherwise of the absolute load path (MetaMask has no key),
    first 16 bytes mapped `0-f → a-p`.
 3. **Navigate to the onboarding page; don't wait for it.** The extension's auto-opened tab is
@@ -216,11 +230,11 @@ Each item below cost real debugging time. Don't "simplify" them away.
    Right after launch the URL fails with `ERR_BLOCKED_BY_CLIENT` until the extension registers.
 4. **Poll for the popup; `waitForEvent('page')` misses it.** Approval popups open as `about:blank` and
    then navigate, so a URL predicate is false at creation. Poll `context.pages()` instead
-   (`internal/utils.ts`, `findNotificationPopup`).
+   (`internal/popup.ts`, `findNotificationPopup`).
 5. **MetaMask gets stuck on "wallet is ready".** After import, the "Open wallet" step goes through the
    MV3 service worker and hangs under automation, leaving `completedOnboarding=false`, so the cached
    wallet ignores dapp requests. The fix writes `completedOnboarding=true` straight into the leveldb
-   (`internal/onboarding-patch.ts`, via `classic-level`) as MetaMask's `finalizeCache`.
+   (`wallets/metamask/onboarding-patch.ts`, via `classic-level`) as MetaMask's `finalizeCache`.
 6. **Phantom and Slush block the famous public test seed.** Phantom flags `test test … junk` as
    malicious and drops the connection. Use a fresh, unfunded mnemonic for both.
 7. **Confirm-button selectors differ.** MetaMask: connect `confirm-btn`, sign `confirm-footer-button`
@@ -296,6 +310,14 @@ Each item below cost real debugging time. Don't "simplify" them away.
     (`authentication`, `oidc`) reaches further than intended, since other features authenticate
     through it and a wallet that cannot authenticate can leave a confirm button disabled with
     nothing on screen to explain it.
+23. **A boxed step reports at the caller of the function that awaits `test.step`.** Playwright
+    builds a boxed step's location from the async stack at `test.step`, drops Playwright's own
+    frames, then drops one more. So the controller's `named` wrapper is `async` and awaits the step
+    runner itself, and the fixtures' `reportAsStep` is a plain pass-through. Returning the promise
+    unawaited left the boxed stack empty (no location at all); an extra awaiting layer puts the
+    location inside this package. Either way the failure loses its code frame at the spec line.
+    There is no public way to register a library's frames as internal (`setBoxedStackPrefixes` is
+    Playwright-only).
 
 ## Conventions
 

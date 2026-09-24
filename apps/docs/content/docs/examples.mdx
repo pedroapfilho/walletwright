@@ -678,22 +678,22 @@ tests/
 ## Without fixtures: `launchWallet`
 
 For a one-off script or a custom runner, `launchWallet(setup)` returns `{ close, context, wallet }`
-directly. You open the pages and call `close()` yourself.
+directly. Bind it with `await using` and it closes the browser and removes its throwaway profile when
+the scope exits, even if something throws; otherwise call `close()` yourself.
 
 ```ts
 // scripts/manual-check.ts
 import { launchWallet } from "@walletwright/core";
 import { metamask } from "../wallet-setup";
 
-const { close, context, wallet } = await launchWallet(metamask);
+await using launched = await launchWallet(metamask);
+const { context, wallet } = launched;
 const page = await context.newPage();
 await page.goto("http://localhost:3000");
 
 await page.getByTestId("connect").click();
 await wallet.connectToDapp();
 console.log("connected; extension id:", wallet.extensionId);
-
-await close();
 ```
 
 <Callout type="warn">

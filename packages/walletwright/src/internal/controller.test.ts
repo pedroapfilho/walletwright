@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { WalletDefinition } from "../types";
 
-import { createWallet } from "./controller";
+import { createWallet, runDirectly, type StepRunner } from "./controller";
 
 const stubContext = { pages: () => [] } as unknown as BrowserContext;
 const stubHome = {
@@ -18,13 +18,21 @@ const makeDefinition = (actions?: WalletDefinition["actions"]): WalletDefinition
     extensionName: "Fake Wallet",
   }) as unknown as WalletDefinition;
 
-const makeWallet = (actions?: WalletDefinition["actions"], home: Page = stubHome) =>
+const stubUnlock = () => Promise.resolve();
+
+const makeWallet = (
+  actions?: WalletDefinition["actions"],
+  home: Page = stubHome,
+  step: StepRunner = runDirectly,
+) =>
   createWallet({
     context: stubContext,
     definition: makeDefinition(actions),
     extensionId: "fake-extension-id",
     home,
     password: "pw",
+    step,
+    unlock: stubUnlock,
   });
 
 type ActionGroup = keyof NonNullable<WalletDefinition["actions"]>;
@@ -82,7 +90,13 @@ describe("createWallet", () => {
 
     expect(networkAdd).toHaveBeenCalledOnce();
     expect(networkAdd).toHaveBeenCalledWith(
-      { context: stubContext, extensionId: "fake-extension-id", home: stubHome, password: "pw" },
+      {
+        context: stubContext,
+        extensionId: "fake-extension-id",
+        home: stubHome,
+        password: "pw",
+        unlock: stubUnlock,
+      },
       config,
     );
   });
@@ -124,6 +138,35 @@ describe("createWallet", () => {
 
     await expect(wallet.settings.lock()).rejects.toThrow("home page is closed");
     expect(settingsLock).not.toHaveBeenCalled();
+  });
+
+  it("runs every capability call as a step named after its path", async () => {
+    const titles: Array<string> = [];
+    const wallet = makeWallet(recordingActions([]), stubHome, async (title, body) => {
+      titles.push(title);
+      await body();
+    });
+
+    for (const group of GROUPS) {
+      for (const [method, call] of Object.entries(methodsOf(wallet, group))) {
+        titles.length = 0;
+        await call();
+        expect(titles).toEqual([`wallet.${group}.${method}`]);
+      }
+    }
+  });
+
+  it("reports an approval alias under its own name, not the call it delegates to", async () => {
+    const titles: Array<string> = [];
+    const wallet = makeWallet({}, stubHome, (title) => {
+      titles.push(title);
+      return Promise.resolve();
+    });
+
+    await wallet.confirmSignature();
+    await wallet.rejectTransaction();
+
+    expect(titles).toEqual(["wallet.confirmSignature", "wallet.rejectTransaction"]);
   });
 
   it("exposes the extensionId and home it was constructed with", () => {

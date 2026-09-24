@@ -16,7 +16,10 @@ export type WalletSetup = {
   password: string;
   /** 12/24-word seed phrase. Avoid the famous public test seed for Phantom, it blocks connections. */
   seedPhrase: string;
-  /** Pin a specific extension version (defaults to a known-good version per wallet). */
+  /**
+   * Pin an extension version. Only wallets downloaded from versioned releases (MetaMask) accept one;
+   * the Web Store wallets refuse it rather than silently running whatever build they have.
+   */
   version?: string;
   wallet: WalletKind;
 };
@@ -31,6 +34,8 @@ export type WalletActionContext = {
   /** The wallet's own extension page, kept open after unlock. */
   home: Page;
   password: string;
+  /** Unlock `home` through the wallet's unlock screen, with the setup's password. */
+  unlock: () => Promise<void>;
 };
 
 /**
@@ -58,7 +63,7 @@ export type NetworkConfig = {
   symbol: string;
 };
 
-/** Add a custom network and switch the active one, from the wallet's own UI. */
+/** Add a custom network from the wallet's own UI. */
 export type NetworkActions = WalletActionsFor<NetworkApi>;
 
 /** Lock and unlock the wallet itself, from its own UI. */
@@ -69,6 +74,42 @@ export type WalletActions = {
   accounts?: AccountActions;
   network?: NetworkActions;
   settings?: SettingsActions;
+};
+
+/** A downloadable extension archive, and the cache directory it unpacks into. */
+export type ExtensionArchive = {
+  format: "crx" | "zip";
+  /** Directory name inside the cache; must differ per version, since a cached one is reused. */
+  name: string;
+  /**
+   * Expected sha256 of the downloaded bytes. Required, and `undefined` only where the bytes genuinely
+   * cannot be pinned, so adding a download site forces a decision instead of quietly trusting it.
+   */
+  sha256: string | undefined;
+  url: string;
+};
+
+/** Where a wallet's unpacked extension comes from. */
+export type ExtensionSource =
+  /**
+   * A versioned release: `WalletSetup.version` picks one, `defaultVersion` otherwise. `release`
+   * returns that version's archive.
+   */
+  | { defaultVersion: string; kind: "release"; release: (version: string) => ExtensionArchive }
+  /**
+   * The Chrome Web Store build current at first download, reused from then on. Its bytes cannot be
+   * pinned, so a setup that asks for a `version` is refused.
+   */
+  | { id: string; kind: "webStore" };
+
+/** How the wallet's own page asks for its password, for the shared unlock flow. */
+export type UnlockScreen = {
+  /** Extension-relative page that renders the unlock screen (e.g. `home.html`). */
+  entry: string;
+  /** Detect a warm launch that is already unlocked. */
+  isUnlocked?: (page: Page) => Promise<boolean>;
+  /** Submit the filled password. Defaults to pressing Enter in the field. */
+  submit?: (page: Page, field: Locator) => Promise<void>;
 };
 
 /**
@@ -87,7 +128,7 @@ export type WalletDefinition = {
   approve: (popup: Page, password: string) => Promise<void>;
   /** Ecosystems this wallet can drive (e.g. `["evm", "svm"]` for Phantom). */
   ecosystems: ReadonlyArray<Ecosystem>;
-  /** Name as it appears in `chrome://extensions` (used to resolve the loaded extension id). */
+  /** Display name, used in step titles and error messages (e.g. `MetaMask`). */
   extensionName: string;
   /**
    * Optional fix applied to the persisted profile *after* the build context closes (browser not
@@ -112,18 +153,12 @@ export type WalletDefinition = {
    * rather than a page driven.
    */
   prepareContext?: (context: BrowserContext) => Promise<void>;
-  /** Download + extract the unpacked extension into `cacheDir`; returns its absolute path. */
-  prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
-  /**
-   * Open the wallet's home/unlock page and return it once it has settled into a known state (its
-   * password screen, or an already-unlocked wallet for the wallets that can reopen that way). Throws
-   * rather than returning a page that never rendered. The returned page stays open as `Wallet.home`.
-   */
-  reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
   /** Click the cancel/reject button in an approval popup, the counterpart of `approve`. */
   reject: (popup: Page) => Promise<void>;
-  /** Unlock the wallet on its (already-open) home page. */
-  unlock: (page: Page, password: string) => Promise<void>;
+  /** Where the extension is downloaded from. */
+  source: ExtensionSource;
+  /** The wallet's password screen. Its page stays open after unlock as `Wallet.home`. */
+  unlockScreen: UnlockScreen;
 };
 
 /** Lock and unlock the wallet from its own UI. Throws if the wallet doesn't declare support. */
@@ -132,11 +167,12 @@ export type SettingsApi = {
   unlock: () => Promise<void>;
 };
 
-/** Add and switch networks from the wallet's own UI. Throws if the wallet doesn't declare support. */
+/**
+ * Add networks from the wallet's own UI. Throws if the wallet doesn't declare support. Switching is
+ * dapp-initiated: the dapp calls `wallet_addEthereumChain` and `wallet.approve()` confirms it.
+ */
 export type NetworkApi = {
   add: (config: NetworkConfig) => Promise<void>;
-  /** MetaMask 13.x switches dapp-scoped networks through `wallet_addEthereumChain` approvals. */
-  switch: (chainId: number) => Promise<void>;
 };
 
 /** Manage accounts from the wallet's own UI. Throws if the wallet doesn't declare support. */
@@ -149,7 +185,11 @@ export type AccountsApi = {
   switch: (index: number) => Promise<void>;
 };
 
-/** Drives an unlocked wallet against a dapp under test. */
+/**
+ * Drives an unlocked wallet against a dapp under test. The request-named methods
+ * (`connectToDapp`, `confirmSignature`, …) are aliases of `approve`/`reject` that read well in a spec
+ * and match Synpress's vocabulary; none of them checks what kind of request the popup holds.
+ */
 export type Wallet = {
   accounts: AccountsApi;
   /** Approve whatever approval popup is currently pending (connect, sign, tx…). */

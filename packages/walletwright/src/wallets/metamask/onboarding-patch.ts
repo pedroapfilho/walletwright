@@ -3,7 +3,7 @@ import { access } from "node:fs/promises";
 import { ClassicLevel } from "classic-level";
 import { z } from "zod";
 
-import { extensionStateDir } from "../../internal/utils";
+import { extensionStateDir } from "../../internal/profile";
 
 const onboardingStateSchema = z.record(z.string(), z.json());
 

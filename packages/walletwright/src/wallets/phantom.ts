@@ -1,28 +1,5 @@
-import { prepareWebStoreExtension } from "../internal/download";
-import { createUnlockScreen } from "../internal/unlock-screen";
 import { sleep } from "../internal/wait";
 import type { WalletDefinition } from "../types";
-
-const PHANTOM_EXTENSION_ID = "bfnaelmomeimhlpmgjnjophhpkkoljpa";
-
-const { reachUnlockScreen, unlock } = createUnlockScreen({
-  entry: "popup.html",
-  isUnlocked: async (page) => {
-    const rendered = await page
-      .locator("button")
-      .first()
-      .isVisible()
-      .catch(() => false);
-    return rendered;
-  },
-  submit: async (page, field) => {
-    const unlockButton = page.getByRole("button", { name: /unlock/iv });
-    await ((await unlockButton.isVisible().catch(() => false))
-      ? unlockButton.click()
-      : field.press("Enter"));
-  },
-  wallet: "Phantom",
-});
 
 export const phantom: WalletDefinition = {
   approve: async (popup) => {
@@ -66,18 +43,27 @@ export const phantom: WalletDefinition = {
 
   onboardingPage: "onboarding.html",
 
-  prepareExtension: (cacheDir) =>
-    prepareWebStoreExtension({
-      cacheDir,
-      extensionId: PHANTOM_EXTENSION_ID,
-      name: "phantom-chrome-latest",
-    }),
-
-  reachUnlockScreen,
-
   reject: async (popup) => {
     await popup.getByTestId("secondary-button").click({ timeout: 15_000 });
   },
 
-  unlock,
+  source: { id: "bfnaelmomeimhlpmgjnjophhpkkoljpa", kind: "webStore" },
+
+  unlockScreen: {
+    entry: "popup.html",
+    isUnlocked: async (page) => {
+      const rendered = await page
+        .locator("button")
+        .first()
+        .isVisible()
+        .catch(() => false);
+      return rendered;
+    },
+    submit: async (page, field) => {
+      const unlockButton = page.getByRole("button", { name: /unlock/iv });
+      await ((await unlockButton.isVisible().catch(() => false))
+        ? unlockButton.click()
+        : field.press("Enter"));
+    },
+  },
 };

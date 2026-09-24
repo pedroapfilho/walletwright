@@ -10,8 +10,8 @@ wallets that drive a chain. The roadmap is the top 3 wallets per ecosystem, and 
 once its connect and sign are verified end-to-end.
 
 Whether a wallet runs headless is also per wallet, noted in each section below and covered in
-[Continuous integration](/continuous-integration). `launchWallet` throws by name for a wallet that
-has not declared it, rather than hanging at the first approval.
+[Continuous integration](/continuous-integration). The fixtures launch a wallet that has not declared
+it headed; `launchWallet` throws by name for it instead of hanging at the first approval.
 
 ## MetaMask (EVM + Solana)
 
@@ -51,7 +51,8 @@ export const phantom: WalletSetup = {
 
 - Drives both `window.phantom.ethereum` (EVM) and `window.phantom.solana` (Solana). The same
   `connectToDapp()` and `confirmSignature()` calls handle both chains.
-- Always uses the current Chrome Web Store build, so `version` is ignored for Phantom.
+- Uses the Chrome Web Store build current at its first download, which cannot be pinned, so a
+  `version` is refused.
 - Runs headless: its approval window surfaces as a page, verified on Linux CI and macOS.
 
 <Callout type="warn">
@@ -104,7 +105,8 @@ export const rabby: WalletSetup = {
 
 - Drives `window.ethereum`: connect and `personal_sign`, with the same `connectToDapp()` and
   `confirmSignature()` calls as MetaMask.
-- Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+- Downloaded from the Chrome Web Store (the build current at first download), so a `version` is
+  refused.
 - The public `test … junk` seed is fine here, giving the usual `0xf39F…2266` first account.
 - Runs headless: its approval window surfaces as a page, verified on Linux CI and macOS.
 
@@ -129,7 +131,8 @@ export const solflare: WalletSetup = {
 
 - Drives Solana through the Wallet Standard (`standard:connect`, `solana:signMessage`), so your dapp
   connects with `@wallet-standard/app` exactly as it would for any other Solana wallet.
-- Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+- Downloaded from the Chrome Web Store (the build current at first download), so a `version` is
+  refused.
 - Approvals open in Solflare's own `confirm_popup.html` window; `connectToDapp()` and
   `confirmSignature()` drive it unchanged.
 - Headed only. Solflare rejects a headless connection outright, in about two seconds, before any
@@ -156,7 +159,8 @@ export const slush: WalletSetup = {
 - Drives the Sui ecosystem through the Wallet Standard. Your dapp connects with
   `@mysten/wallet-standard` or `@wallet-standard/app` and signs with the `sui:signPersonalMessage`
   feature.
-- Downloaded from the Chrome Web Store (latest), so `version` is ignored.
+- Downloaded from the Chrome Web Store (the build current at first download), so a `version` is
+  refused.
 - Headed only: its headless approval flow has not been verified, so it is not declared.
 
 <Callout type="info">
@@ -166,11 +170,14 @@ export const slush: WalletSetup = {
 
 ## Pinning versions
 
-`version` pins the extension build for reproducible runs (MetaMask only; Phantom, Rabby, Solflare,
-and Slush track the Web Store). Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct cached
-profile, so bumping a version re-onboards automatically on the next `buildCache`.
+`version` pins the extension build for reproducible runs. Only MetaMask, downloaded from its GitHub
+releases, accepts one. Phantom, Rabby, Solflare, and Slush come from the Chrome Web Store, whose
+builds cannot be pinned, so a `version` on their setup is an error rather than a setting that
+silently does nothing. They keep the build from their first download until you delete its directory
+under `.walletwright/`. Changing `wallet`, `seedPhrase`, `password`, or `version` produces a distinct
+cached profile, so bumping a version re-onboards automatically on the next `buildCache`.
 
 ## Adding a wallet
 
-A wallet is a `WalletDefinition`: download, onboarding flow, unlock, and the confirm-button selectors,
-registered in the wallet registry. See [How it works](/how-it-works) for the shape.
+A wallet is a `WalletDefinition`: its download source, onboarding flow, unlock screen, and the
+confirm-button selectors, registered in the wallet registry. See [How it works](/how-it-works) for the shape.

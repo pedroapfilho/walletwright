@@ -1,7 +1,5 @@
 import type { Page } from "@playwright/test";
 
-import { prepareWebStoreExtension } from "../internal/download";
-import { createUnlockScreen } from "../internal/unlock-screen";
 import { sleep, waitUntil, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
@@ -9,11 +7,7 @@ const ROUTE_TIMEOUT_MS = 30_000;
 const SEED_PASTE_TIMEOUT_MS = 3000;
 const APPROVAL_TIMEOUT_MS = 30_000;
 
-const RABBY_EXTENSION_ID = "acmacodkjbdgmoleebolmdjonilkdbch";
-
 const ONBOARDING_ROUTE = "index.html#/new-user/guide";
-
-const { reachUnlockScreen, unlock } = createUnlockScreen({ entry: "index.html", wallet: "Rabby" });
 
 const clickText = async (page: Page, text: string, timeoutMs = 30_000): Promise<void> => {
   const target = page.getByText(text, { exact: true }).first();
@@ -140,20 +134,13 @@ export const rabby: WalletDefinition = {
 
   onboardingPage: ONBOARDING_ROUTE,
 
-  prepareExtension: (cacheDir) =>
-    prepareWebStoreExtension({
-      cacheDir,
-      extensionId: RABBY_EXTENSION_ID,
-      name: "rabby-chrome-latest",
-    }),
-
-  reachUnlockScreen,
-
   reject: async (popup) => {
     if (!(await clickApprovalButton(popup, CANCEL_LABELS))) {
       throw new Error("[walletwright] Rabby reject: no cancel button became actionable");
     }
   },
 
-  unlock,
+  source: { id: "acmacodkjbdgmoleebolmdjonilkdbch", kind: "webStore" },
+
+  unlockScreen: { entry: "index.html" },
 };

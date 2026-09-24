@@ -17,7 +17,8 @@ export const wallets = {
 /** Narrow an arbitrary string (CLI flag, setup file field) to a supported wallet. */
 export const isWalletKind = (value: string): value is WalletKind => Object.hasOwn(wallets, value);
 
-const walletKinds = Object.keys(wallets).filter(isWalletKind);
+/** Every supported wallet, in registry order. */
+export const walletKinds: ReadonlyArray<WalletKind> = Object.keys(wallets).filter(isWalletKind);
 
 /** Wallet kinds that can drive the given ecosystem (e.g. `"evm"` → MetaMask, Phantom). */
 export const walletKindsByEcosystem = (ecosystem: Ecosystem): Array<WalletKind> =>

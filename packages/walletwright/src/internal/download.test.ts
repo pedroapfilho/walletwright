@@ -55,7 +55,7 @@ describe("downloadAndExtractExtension", () => {
     const cacheDir = await makeCacheDir();
     const outDir = await downloadAndExtractExtension({
       cacheDir,
-      kind: "zip",
+      format: "zip",
       name: "fake-extension",
       sha256: undefined,
       url,
@@ -74,7 +74,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: "../escape",
         sha256: undefined,
         url,
@@ -87,7 +87,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: ".",
         sha256: undefined,
         url: "http://127.0.0.1:1/unused.zip",
@@ -108,7 +108,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: "evil-extension",
         sha256: undefined,
         url,
@@ -126,7 +126,7 @@ describe("downloadAndExtractExtension", () => {
     const cacheDir = await makeCacheDir();
     const outDir = await downloadAndExtractExtension({
       cacheDir,
-      kind: "zip",
+      format: "zip",
       name: "hashed-extension",
       sha256: createHash("sha256").update(bytes).digest("hex"),
       url,
@@ -145,7 +145,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: "wrong-hash-extension",
         sha256: "0".repeat(64),
         url,
@@ -162,7 +162,7 @@ describe("downloadAndExtractExtension", () => {
     const cacheDir = await makeCacheDir();
     const outDir = await downloadAndExtractExtension({
       cacheDir,
-      kind: "zip",
+      format: "zip",
       name: "no-hash-extension",
       sha256: undefined,
       url,
@@ -181,7 +181,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: "pre-placed",
         sha256: undefined,
         url: "http://127.0.0.1:1/unused.zip",
@@ -199,7 +199,7 @@ describe("downloadAndExtractExtension", () => {
     const cacheDir = await makeCacheDir();
     await downloadAndExtractExtension({
       cacheDir,
-      kind: "zip",
+      format: "zip",
       name: "staged-extension",
       sha256: undefined,
       url,
@@ -220,7 +220,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: "aborted-extension",
         sha256: undefined,
         url,
@@ -244,7 +244,7 @@ describe("downloadAndExtractExtension", () => {
     await expect(
       downloadAndExtractExtension({
         cacheDir,
-        kind: "zip",
+        format: "zip",
         name: "kept-extension",
         sha256: undefined,
         url,

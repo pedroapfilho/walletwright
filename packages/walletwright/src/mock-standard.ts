@@ -91,14 +91,14 @@ const createStandardHandler =
     }
   };
 
+/** Per install, for the same reason as the EVM mock: see the note on `installCount` in `mock.ts`. */
+let installCount = 0;
+
 /**
  * Install the headless Wallet-Standard mock for Solana connect + sign on a context (every page) or a
  * single page. Call before `goto`, so the wallet is registered when the dapp discovers wallets.
  * Returns the account it announces so a test can verify signatures against the public key.
  */
-/** Per install, for the same reason as the EVM mock: see the note on `installCount` in `mock.ts`. */
-let installCount = 0;
-
 const installMockStandardWallet = async (
   target: BrowserContext | Page,
   options: MockStandardWalletOptions = {},

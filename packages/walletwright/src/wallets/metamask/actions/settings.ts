@@ -1,5 +1,4 @@
 import type { SettingsActions } from "../../../types";
-import { unlock as unlockScreen } from "../onboarding";
 
 export const settings: SettingsActions = {
   lock: async ({ home }) => {
@@ -8,7 +7,7 @@ export const settings: SettingsActions = {
     await home.locator('input[type="password"]').waitFor({ state: "visible", timeout: 15_000 });
   },
 
-  unlock: async ({ home, password }) => {
-    await unlockScreen(home, password);
+  unlock: async ({ unlock }) => {
+    await unlock();
   },
 };

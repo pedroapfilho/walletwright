@@ -6,7 +6,7 @@ import { ClassicLevel } from "classic-level";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { extensionStateDir } from "../../internal/utils";
+import { extensionStateDir } from "../../internal/profile";
 
 import { markMetaMaskOnboarded } from "./onboarding-patch";
 

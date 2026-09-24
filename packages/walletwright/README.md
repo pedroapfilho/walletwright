@@ -39,7 +39,8 @@ export const metamask: WalletSetup = {
 ## 2. Build the cache (once)
 
 ```sh
-walletwright cache --setup ./wallet-setup.ts
+walletwright cache --setup ./wallet-setup.ts                    # every WalletSetup it exports
+walletwright cache --setup ./wallet-setup.ts --wallet metamask  # just one
 # or: walletwright cache --wallet metamask --seed "YOUR_SEED_HERE" --password "YOUR_PASSWORD_HERE"
 ```
 
@@ -75,12 +76,15 @@ test("connect and sign", async ({ page, wallet }) => {
 
 The `wallet` fixture:
 
-| Method                  | Description                                                                       |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `connectToDapp()`       | Approve a pending connection popup. Resolves quietly if the wallet auto-approved. |
-| `confirmSignature()`    | Approve a pending signature popup.                                                |
-| `approve({ optional })` | Approve any pending popup, whether connect, sign, or a transaction.               |
-| `extensionId`           | The loaded extension id.                                                          |
+| Method                  | Description                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `connectToDapp()`       | Approve a pending connection popup. Pass `{ optional: true }` for an already-trusted site. |
+| `confirmSignature()`    | Approve a pending signature popup.                                                         |
+| `approve({ optional })` | Approve any pending popup, whether connect, sign, or a transaction.                        |
+| `extensionId`           | The loaded extension id.                                                                   |
+
+Each call shows up as its own step in the Playwright report and trace (`wallet.confirmSignature`),
+and a failing call points at the line in your spec that made it.
 
 The same two calls drive every chain. A Phantom test can connect and sign on
 `window.phantom.ethereum` and then on `window.phantom.solana`; a Slush test does the same on Sui. See
@@ -91,19 +95,19 @@ The same two calls drive every chain. A Phantom test can connect and sign on
 ```ts
 import { launchWallet } from "@walletwright/core";
 
-const { close, context, wallet } = await launchWallet(metamask);
-const page = await context.newPage();
-// drive the page and the wallet here
-await close();
+await using launched = await launchWallet(metamask);
+const page = await launched.context.newPage();
+// drive the page and launched.wallet here; the browser closes when the scope exits
 ```
 
 ## Requirements and notes
 
-- **Headless works for Phantom and Rabby**, whose approval windows surface as pages that way.
-  MetaMask, Solflare and Slush need a real window, so default those suites to headed and give CI a
-  virtual display: `xvfb-run --auto-servernum pnpm exec playwright test`.
+- **Headless works for Phantom and Rabby**, whose approval windows surface as pages that way. The
+  fixtures open a real window for MetaMask, Solflare and Slush whatever `headless` says, so give CI
+  a virtual display: `xvfb-run --auto-servernum pnpm exec playwright test`.
 - MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom,
-  Rabby, Solflare, and Slush always use the current Web Store build.
+  Rabby, Solflare, and Slush use the Web Store build current at their first download, which cannot
+  be pinned, so they refuse a `version`.
 - The cache lives in `.walletwright/` (override it with `WalletSetup.cacheDir`). Add that directory to
   `.gitignore`.
 

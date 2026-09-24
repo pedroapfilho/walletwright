@@ -2,7 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
-import { DEFAULT_NOTIFICATION_MATCH, findNotificationPopup, placeApprovalWindow } from "./utils";
+import { DEFAULT_NOTIFICATION_MATCH, findNotificationPopup, placeApprovalWindow } from "./popup";
 import { formatTimeout, waitUntil } from "./wait";
 
 const POPUP_CLOSE_TIMEOUT_MS = 15_000;
@@ -11,6 +11,14 @@ const OPTIONAL_POPUP_TIMEOUT_MS = 10_000;
 /** A popup that has to appear gets the full wait: the MV3 service worker can be slow to spawn it. */
 const REQUIRED_POPUP_TIMEOUT_MS = 30_000;
 type ResolveOptions = { optional?: boolean };
+
+/**
+ * Runs one named wallet call. The Playwright fixtures report each call as a boxed `test.step`;
+ * `launchWallet` has no test to report into, so it runs the call directly.
+ */
+export type StepRunner = (title: string, body: () => Promise<void>) => Promise<void>;
+
+export const runDirectly: StepRunner = (_title, body) => body();
 
 /**
  * Drive `popup` with `settle` and return the page that actually took the approval. A popup that
@@ -44,6 +52,9 @@ type CreateWalletOptions = {
   /** The wallet's own page, left open after unlock, that the actions drive. */
   home: Page;
   password: string;
+  step: StepRunner;
+  /** Unlock `home` again through the wallet's unlock screen. */
+  unlock: () => Promise<void>;
 };
 
 /** Build the runtime controller that drives an unlocked wallet against the dapp under test. */
@@ -53,9 +64,11 @@ export const createWallet = ({
   extensionId,
   home,
   password,
+  step,
+  unlock,
 }: CreateWalletOptions): Wallet => {
   const match = definition.notificationMatch ?? DEFAULT_NOTIFICATION_MATCH;
-  const ctx: WalletActionContext = { context, extensionId, home, password };
+  const ctx: WalletActionContext = { context, extensionId, home, password, unlock };
 
   /** MetaMask opens requests inline while its extension page owns focus. */
   const frontDapp = async (): Promise<void> => {
@@ -109,8 +122,16 @@ export const createWallet = ({
     }
   };
 
-  const unsupported = (name: string): Error =>
-    new Error(`[walletwright] ${definition.extensionName} does not support ${name}()`);
+  /**
+   * Every public call goes through here, so each one reaches `step` under its own name. It awaits
+   * `step` itself because Playwright reports a boxed step at the caller of the function awaiting it,
+   * which makes that the spec line; another async layer in between would move it into this package.
+   */
+  const named =
+    <Args extends ReadonlyArray<unknown>>(name: string, fn: (...args: Args) => Promise<void>) =>
+    async (...args: Args): Promise<void> => {
+      await step(`wallet.${name}`, () => fn(...args));
+    };
 
   const approve = (options: ResolveOptions = {}) =>
     resolvePopup((popup) => definition.approve(popup, password), options);
@@ -119,14 +140,13 @@ export const createWallet = ({
     resolvePopup((popup) => definition.reject(popup), options);
 
   /** Bind a verified wallet action and restore focus to the dapp when it finishes. */
-  const action =
-    <A extends ReadonlyArray<unknown>>(
-      fn: ((ctx: WalletActionContext, ...args: A) => Promise<void>) | undefined,
-      name: string,
-    ) =>
-    async (...args: A): Promise<void> => {
+  const action = <Args extends ReadonlyArray<unknown>>(
+    name: string,
+    fn: ((ctx: WalletActionContext, ...args: Args) => Promise<void>) | undefined,
+  ) =>
+    named(name, async (...args: Args): Promise<void> => {
       if (!fn) {
-        throw unsupported(name);
+        throw new Error(`[walletwright] ${definition.extensionName} does not support ${name}()`);
       }
       if (home.isClosed()) {
         throw new Error(`[walletwright] wallet home page is closed; cannot run ${name}()`);
@@ -134,35 +154,33 @@ export const createWallet = ({
       await home.bringToFront().catch(() => {});
       await fn(ctx, ...args);
       await frontDapp();
-    };
+    });
+
+  const { accounts, network, settings } = definition.actions ?? {};
 
   return {
     accounts: {
-      add: action(definition.actions?.accounts?.add, "accounts.add"),
-      importPrivateKey: action(
-        definition.actions?.accounts?.importPrivateKey,
-        "accounts.importPrivateKey",
-      ),
-      rename: action(definition.actions?.accounts?.rename, "accounts.rename"),
-      switch: action(definition.actions?.accounts?.switch, "accounts.switch"),
+      add: action("accounts.add", accounts?.add),
+      importPrivateKey: action("accounts.importPrivateKey", accounts?.importPrivateKey),
+      rename: action("accounts.rename", accounts?.rename),
+      switch: action("accounts.switch", accounts?.switch),
     },
-    approve,
-    confirmSignature: () => approve(),
-    confirmTransaction: () => approve(),
-    connectToDapp: (options: ResolveOptions = {}) => approve(options),
+    approve: named("approve", approve),
+    confirmSignature: named("confirmSignature", () => approve()),
+    confirmTransaction: named("confirmTransaction", () => approve()),
+    connectToDapp: named("connectToDapp", approve),
     extensionId,
     home,
     network: {
-      add: action(definition.actions?.network?.add, "network.add"),
-      switch: action(definition.actions?.network?.switch, "network.switch"),
+      add: action("network.add", network?.add),
     },
-    reject,
-    rejectConnection: () => reject(),
-    rejectSignature: () => reject(),
-    rejectTransaction: () => reject(),
+    reject: named("reject", reject),
+    rejectConnection: named("rejectConnection", () => reject()),
+    rejectSignature: named("rejectSignature", () => reject()),
+    rejectTransaction: named("rejectTransaction", () => reject()),
     settings: {
-      lock: action(definition.actions?.settings?.lock, "settings.lock"),
-      unlock: action(definition.actions?.settings?.unlock, "settings.unlock"),
+      lock: action("settings.lock", settings?.lock),
+      unlock: action("settings.unlock", settings?.unlock),
     },
   };
 };

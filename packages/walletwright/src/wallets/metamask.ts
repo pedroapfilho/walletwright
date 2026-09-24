@@ -1,11 +1,10 @@
-import { downloadAndExtractExtension } from "../internal/download";
-import type { WalletDefinition } from "../types";
+import type { ExtensionArchive, WalletDefinition } from "../types";
 
 import { accounts } from "./metamask/actions/accounts";
 import { network } from "./metamask/actions/network";
 import { settings } from "./metamask/actions/settings";
 import { approvalControls, approve, reject } from "./metamask/approve";
-import { importWallet, reachUnlockScreen, unlock } from "./metamask/onboarding";
+import { importWallet } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
 
 /** Release hashes for the pinned default. Add an entry before changing `DEFAULT_VERSION`. */
@@ -23,10 +22,9 @@ export const DEFAULT_VERSION: keyof typeof RELEASE_SHA256 = "13.35.1";
 const releaseSha256 = (version: string): string | undefined =>
   Object.entries(RELEASE_SHA256).find(([pinned]) => pinned === version)?.[1];
 
-/** Download inputs for a MetaMask release, split out so the integrity wiring is unit-testable. */
-export const metamaskDownload = (cacheDir: string, version: string) => ({
-  cacheDir,
-  kind: "zip" as const,
+/** The archive for a MetaMask release, split out so the integrity wiring is unit-testable. */
+export const metamaskRelease = (version: string): ExtensionArchive => ({
+  format: "zip",
   name: `metamask-chrome-${version}`,
   sha256: releaseSha256(version),
   url: `https://github.com/MetaMask/metamask-extension/releases/download/v${version}/metamask-chrome-${version}.zip`,
@@ -41,19 +39,13 @@ export const metamask: WalletDefinition = {
   approve,
   ecosystems: ["evm", "svm"],
   extensionName: "MetaMask",
-
   finalizeCache: markMetaMaskOnboarded,
-
   importWallet,
-
   onboardingPage: "home.html",
-
   prepareContext: async (context) => {
     await context.route(`**://${ACCOUNT_SYNC_HOST}/**`, (route) => route.abort());
   },
-  prepareExtension: (cacheDir, version = DEFAULT_VERSION) =>
-    downloadAndExtractExtension(metamaskDownload(cacheDir, version)),
-  reachUnlockScreen,
   reject,
-  unlock,
+  source: { defaultVersion: DEFAULT_VERSION, kind: "release", release: metamaskRelease },
+  unlockScreen: { entry: "home.html" },
 };
