@@ -12,6 +12,8 @@ Make the fixtures work on Playwright's defaults, report every wallet call as a s
 
 **The CLI reads the setup file the docs show.** `walletwright cache --setup <file>` builds every `WalletSetup` the module exports, named or default, one after another, instead of requiring a default export. `--wallet` narrows it to one wallet's setups. A setup-shaped export that fails validation is reported by name; the list of valid wallets now comes from the registry.
 
+**MetaMask's Solana connect no longer flakes.** MetaMask could render the connect page before it had enabled the Solana network, leaving Connect disabled for good, so `connectToDapp()` timed out in roughly one run in three. The request is still pending when that happens, so MetaMask's `approve` now reloads a connect page whose Connect stays disabled, and the page renders again with the network in place.
+
 **Breaking:**
 
 - `WalletSetup.version` is refused for Phantom, Rabby, Solflare, and Slush. They run their Chrome Web Store build, which cannot be pinned; `version` was silently ignored for the download while still forking the profile cache.

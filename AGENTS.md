@@ -293,13 +293,15 @@ Each item below cost real debugging time. Don't "simplify" them away.
     (`internal/controller.ts`). Even then the MV3 worker can take 10s+ to spawn the popup, so
     required popups wait 30s, and `findNotificationPopup` returns a popup only once a button is
     visible, since the window opens as a bare shell and routes later.
-21. **MetaMask's Solana connect does not bind to its popup on a GitHub runner.** The window opens and
-    renders the wallet home with a **disabled** `confirm-btn`, so the snap-routed request has nothing
-    to confirm. It passes locally every time, its reject sibling passes on CI, and every other
-    MetaMask spec passes on CI, so it is excluded from the E2E gate as a MetaMask-on-CI problem. A
-    missing Solana account is ruled out: the failure snapshot lists Solana in the token list with a
-    balance. What is still unknown is whether the popup routed to the request and rendered the wrong
-    thing, or never routed at all, which needs the popup's URL captured next to the snapshot.
+21. **MetaMask can render a connect page before it enables the requested network.** Seen with the
+    Solana connect, roughly one run in three on a developer machine and more on a runner: the popup
+    routes to `#/connect/<id>` and shows the right account, but Permissions → "Use your enabled
+    networks" lists nothing, so Connect stays disabled and the page never recomputes (the failure
+    snapshot showing the wallet home was the `home` tab, not the popup). The request is still
+    pending in the background, so reloading the popup renders it from current state with the network
+    in place. MetaMask's `approve` does that once, on the connect route only, after Connect stays
+    disabled for 3s (`reloadStaleConnectPage`). Its Edit-networks dialog lists every network
+    unchecked in that state, so picking one would mean guessing what the dapp asked for.
 22. **MetaMask renames the accounts of a shared SRP behind your back.** Its backup-and-sync restores
     account names keyed to the seed, and the public test seed is used by thousands, so on a network
     where that sync lands the wallet reports names like `dev1` and `personal` in place of
