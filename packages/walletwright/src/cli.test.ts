@@ -111,6 +111,7 @@ export const metamask = { password: "pw", seedPhrase: "a b c", wallet: "metamask
 export const phantom = { password: "pw", seedPhrase: "d e f", wallet: "phantom" };
 export const walletSetups = { metamask, phantom };
 export const helper = () => metamask;
+export const nothing = null;
 export default metamask;
 `;
 
@@ -161,6 +162,19 @@ describe("resolveSetups", () => {
       /export "broken" is not a valid WalletSetup/v,
     );
   });
+
+  it.each(["undefined", "null", "42"])(
+    "rejects a setup with wallet: %s even alongside valid setups",
+    async (wallet) => {
+      const file = writeSetupModule(`${NAMED_SETUPS}
+export const broken = { password: "pw", seedPhrase: "a b c", wallet: ${wallet} };
+`);
+
+      await expect(resolveSetups({ setup: file })).rejects.toThrow(
+        /export "broken" is not a valid WalletSetup/v,
+      );
+    },
+  );
 
   it("refuses a module that exports no setup at all", async () => {
     await expect(

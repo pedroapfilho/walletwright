@@ -73,8 +73,6 @@ const walletSetupSchema = z.object({
   wallet: z.enum(walletKinds),
 });
 const moduleSchema = z.record(z.string(), z.unknown());
-/** An export that means to be a setup; it is validated strictly, and every other export skipped. */
-const setupCandidateSchema = z.object({ wallet: z.string() });
 
 const isNonEmptyString = (value: string | undefined): value is string =>
   value !== undefined && nonEmptyStringSchema.safeParse(value).success;
@@ -85,7 +83,8 @@ const loadSetups = async (file: string): Promise<Array<WalletSetup>> => {
   const seen = new Set<unknown>();
   const setups: Array<WalletSetup> = [];
   for (const [name, value] of Object.entries(exported)) {
-    if (seen.has(value) || !setupCandidateSchema.safeParse(value).success) {
+    // The field's presence marks a candidate; the full schema validates its value below.
+    if (seen.has(value) || typeof value !== "object" || value === null || !("wallet" in value)) {
       continue;
     }
     seen.add(value);
