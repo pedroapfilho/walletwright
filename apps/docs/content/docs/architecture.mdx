@@ -50,13 +50,16 @@ packages/walletwright/src/
   internal/
     cache.ts          buildCache(): onboard once, persist a profile
     launch.ts         launchWallet(): copy the profile, launch, unlock
-    controller.ts     createWallet(): the runtime that drives popups and actions
-    utils.ts          extension-id derivation, popup polling, profile keys
+    browser.ts        openWalletContext(): the one way both phases start Chromium
+    profile.ts        profile keys and paths, atomic publish and recovery
+    extension.ts      the extension archive a setup runs, extension-id derivation
     download.ts       fetch + extract an extension archive
-    onboarding-patch.ts  MetaMask completedOnboarding LevelDB fix
+    unlock-screen.ts  the shared unlock flow every wallet's unlockScreen drives
+    controller.ts     createWallet(): the runtime that drives popups and actions
+    popup.ts          approval-popup polling and placement
   wallets/
     index.ts          the registry + walletKindsByEcosystem()
-    metamask.ts       MetaMask definition (+ metamask/ for its actions)
+    metamask.ts       MetaMask definition (+ metamask/ for its flows, actions, LevelDB fix)
     phantom.ts        Phantom definition
     rabby.ts          Rabby definition
     solflare.ts       Solflare definition
@@ -69,8 +72,8 @@ Three phases, each owned by one engine module. A test touches only the first (on
 
 ```
 buildCache(setup)                       once, ahead of the tests (headless ok)
-  prepareExtension  ─ download + extract the extension into .walletwright/
-  launchPersistentContext(profileDir)   channel: "chromium"; headed by default
+  prepareExtension  ─ download + extract the definition's source into .walletwright/
+  openWalletContext(staging)            channel: "chromium", then prepareContext
   goto onboarding, retry until registered
   importWallet(seed, password)          the wallet's own onboarding flow
   close, then finalizeCache             e.g. MetaMask's LevelDB completedOnboarding
@@ -79,9 +82,9 @@ buildCache(setup)                       once, ahead of the tests (headless ok)
         │
 launchWallet(setup, { headless }) per test worker
   copy profileDir ─▶ os.tmpdir()/walletwright-XXXX   throwaway, cache stays pristine
-  launchPersistentContext(runDir)
+  openWalletContext(runDir)             same launch, same prepareContext
   extensionIdFromPath                   derive the id, do not query the browser
-  reachUnlockScreen + unlock
+  unlockScreen: reach it, type the password
   closeStrayPages                       drop about:blank and the auto-opened tab
         │
         ▼   { context, wallet }
@@ -92,7 +95,7 @@ createWallet(...)                       the Wallet you drive in the test
 ```
 
 `buildCache` is idempotent per `(wallet, version, seedPhrase, password)`: that tuple hashes to the
-profile directory name (`profileKey` in `internal/utils.ts`), so re-running with the same setup
+profile directory name (`profileKey` in `internal/profile.ts`), so re-running with the same setup
 reuses the profile. Each `launchWallet` copies that profile to a throwaway directory, so
 parallel workers never share a profile and the cache is never mutated. The copy is removed by the
 returned `close()`, on every failure path inside `launchWallet`, and as a fallback when the context
@@ -101,29 +104,38 @@ closes.
 <Callout type="info">
   Both phases launch the `chromium` channel, because Playwright's default headless build is the
   headless shell, which cannot load an extension. `buildCache` takes `{headless}` and works that way
-  for every wallet; `launchWallet` takes it too, and the fixtures pass Playwright's own `headless`
-  option through, so `--headed` and `use: {headless}` reach the wallet. Only Phantom and Rabby can
-  run headless. See [Continuous integration](/continuous-integration).
+  for every wallet; `launchWallet` takes it too and refuses it for a wallet that cannot be driven
+  headless. The fixtures apply Playwright's own `headless` option only where the wallet supports it,
+  which is Phantom and Rabby. See [Continuous integration](/continuous-integration).
 </Callout>
 
-## The WalletDefinition extension point
+## The WalletDefinition
 
-One object per wallet describes everything the engine cannot know generically. The engine calls
-these members at the right moments; the wallet author never touches the engine.
+One object per wallet describes everything the engine cannot know generically. Where the engine can
+drive a step itself (downloading, unlocking), the definition declares data and the engine does the
+work; the rest are functions the engine calls at the right moments. The wallet author never touches
+the engine. The registry is internal: a setup names one of these built-in wallets, and adding one
+means adding a definition here.
 
 ```ts
 type WalletDefinition = {
   ecosystems: Ecosystem[]; // ["evm"], ["evm", "svm"], ["sui"], ...
-  extensionName: string; // used in error messages, e.g. "MetaMask"
-  prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
+  extensionName: string; // display name for step titles and errors, e.g. "MetaMask"
+  source:
+    // where the extension comes from
+    | { kind: "webStore"; id: string } // the Web Store build; `version` is refused
+    | { kind: "release"; defaultVersion: string; release: (version: string) => ExtensionArchive };
   onboardingPage: string; // extension-relative entry, e.g. "home.html"
   prepareContext?: (context: BrowserContext) => Promise<void>; // adjust the browser before it navigates
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
-  reachUnlockScreen: (context: BrowserContext, extensionId: string) => Promise<Page>;
-  unlock: (page: Page, password: string) => Promise<void>;
+  unlockScreen: {
+    entry: string; // extension-relative page with the password field, e.g. "home.html"
+    isUnlocked?: (page: Page) => Promise<boolean>; // a warm launch that comes back unlocked
+    submit?: (page: Page, field: Locator) => Promise<void>; // defaults to pressing Enter
+  };
   approve: (popup: Page, password: string) => Promise<void>;
-  reject?: (popup: Page) => Promise<void>;
+  reject: (popup: Page) => Promise<void>;
   notificationMatch?: string; // popup URL token; defaults to "notification.html"
   headlessApprovals?: boolean; // its approval window surfaces as a page headless
   approvalControls?: (popup: Page) => Locator; // what "a request is on screen" looks like
@@ -131,20 +143,19 @@ type WalletDefinition = {
 };
 ```
 
-| Member               | When the engine calls it                                                          |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `prepareExtension`   | in `buildCache`, to fetch and extract the extension into the cache dir            |
-| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                              |
-| `prepareContext`     | in both, right after the browser starts and before anything navigates             |
-| `importWallet`       | in `buildCache`, to run the import-from-seed flow                                 |
-| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)                  |
-| `reachUnlockScreen`  | in `launchWallet`, to open and return the wallet's home page                      |
-| `unlock`             | in `launchWallet`, to type the password                                           |
-| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup                  |
-| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL            |
-| `headlessApprovals`  | in `launchWallet`, to refuse headless for a wallet that cannot be driven that way |
-| `approvalControls`   | in the popup poller, to tell a pending request from the wallet's idle UI          |
-| `actions`            | in the controller, to expose optional capabilities on the `Wallet`                |
+| Member               | When the engine calls it                                                       |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `source`             | in both phases, to fetch and extract the extension into the cache dir          |
+| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                           |
+| `prepareContext`     | in both, right after the browser starts and before anything navigates          |
+| `importWallet`       | in `buildCache`, to run the import-from-seed flow                              |
+| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)               |
+| `unlockScreen`       | in `launchWallet` (and `settings.unlock`), to open the home page and unlock it |
+| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup               |
+| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL         |
+| `headlessApprovals`  | in the fixtures and `launchWallet`, to keep a wallet headed when it must be    |
+| `approvalControls`   | in the popup poller, to tell a pending request from the wallet's idle UI       |
+| `actions`            | in the controller, to expose optional capabilities on the `Wallet`             |
 
 ### Adding a wallet
 
@@ -155,40 +166,28 @@ extension, never guessed.
 ```ts
 // src/wallets/rabby.ts
 import type { WalletDefinition } from "../types.ts";
-import { downloadAndExtractExtension } from "../internal/download.ts";
 
 export const rabby: WalletDefinition = {
   ecosystems: ["evm"],
   extensionName: "Rabby",
 
-  prepareExtension: (cacheDir, version) =>
-    downloadAndExtractExtension({
-      cacheDir,
-      kind: "crx",
-      name: `rabby-${version ?? "latest"}`,
-      url: RABBY_CRX_URL,
-    }),
+  source: { kind: "webStore", id: "acmacodkjbdgmoleebolmdjonilkdbch" },
 
-  onboardingPage: "index.html",
+  onboardingPage: "index.html#/new-user/guide",
 
   importWallet: async (page, seedPhrase, password) => {
     // drive Rabby's import-from-seed screens here
   },
 
-  reachUnlockScreen: async (context, extensionId) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/index.html`);
-    // wait for the password field, retrying past ERR_BLOCKED_BY_CLIENT
-    return page;
-  },
-
-  unlock: async (page, password) => {
-    await page.locator('input[type="password"]').fill(password);
-    await page.getByRole("button", { name: "Unlock" }).click();
-  },
+  // The engine opens this page, waits past ERR_BLOCKED_BY_CLIENT, and types the password.
+  unlockScreen: { entry: "index.html" },
 
   approve: async (popup) => {
     await popup.getByRole("button", { name: "Confirm" }).click();
+  },
+
+  reject: async (popup) => {
+    await popup.getByRole("button", { name: "Cancel" }).click();
   },
 };
 ```
@@ -215,7 +214,7 @@ is optional and declared per wallet through `WalletDefinition.actions`.
 ```ts
 type WalletActions = {
   accounts?: AccountActions; // add, switch, rename, importPrivateKey
-  network?: NetworkActions; //  add, switch
+  network?: NetworkActions; //  add
   settings?: SettingsActions; // lock, unlock
 };
 ```
@@ -229,6 +228,7 @@ type WalletActionContext = {
   extensionId: string;
   home: Page; // the wallet's own extension page, kept open after unlock
   password: string;
+  unlock: () => Promise<void>; // unlock `home` through the wallet's unlockScreen
 };
 ```
 
@@ -252,9 +252,9 @@ A capability method touches three places that must stay in sync:
 2. the runtime signature on the `Wallet`, in the `*Api` types (`types.ts`)
 3. the binding in `createWallet` (`internal/controller.ts`)
 
-TypeScript catches a mismatch between (2) and (3). `capability-wiring.test.ts` guards the binding to
-the definition function, so a method wired to the wrong action or left unwired fails in CI rather
-than at call time.
+TypeScript catches a mismatch between (2) and (3). `controller.test.ts` guards the binding to the
+definition function, so a method wired to the wrong action or left unwired fails in CI rather than at
+call time.
 
 ### Adding a capability to a wallet
 
@@ -264,20 +264,18 @@ Implement the action against the wallet's own `home` page and attach it to the d
 ```ts
 // src/wallets/metamask/actions/settings.ts
 import type { SettingsActions } from "../../../types.ts";
-import { unlock as unlockScreen } from "../onboarding.ts";
 
 export const settings: SettingsActions = {
   lock: async ({ home }) => {
-    await home.bringToFront();
     await home.getByTestId("account-options-menu-button").click();
     // The menu renders the item several times (responsive variants), only one of which is visible.
     await home.getByTestId("global-menu-lock").filter({ visible: true }).first().click();
     await home.locator('input[type="password"]').waitFor({ state: "visible", timeout: 15_000 });
   },
 
-  unlock: async ({ home, password }) => {
-    await home.bringToFront();
-    await unlockScreen(home, password);
+  // The engine's own unlock flow, through the definition's `unlockScreen`.
+  unlock: async ({ unlock }) => {
+    await unlock();
   },
 };
 ```
@@ -304,22 +302,21 @@ load-bearing:
 
 - **Poll, do not wait for an event.** A popup opens as `about:blank` and then navigates, so
   `context.waitForEvent('page', { url })` misses it. The engine polls `context.pages()` for a page
-  whose URL matches the wallet's `notificationMatch` (`findNotificationPopup` in `utils.ts`).
+  whose URL matches the wallet's `notificationMatch` (`findNotificationPopup` in `popup.ts`).
 - **"Found" means "usable".** The window opens before it renders (a bare URL with no buttons) and
   routes to the request later, sometimes tens of seconds later under a busy MV3 service worker. The
   poller only returns a popup once a button is visible, so the caller never clicks a blank shell.
-- **Required vs optional.** `confirmSignature` waits up to 30 seconds for a wallet-spawned popup (60
-  when walletwright has to open the approval page itself) and throws if none appears.
-  `connectToDapp` and `approve({ optional: true })` tolerate no popup, because a wallet may
-  auto-approve a site it already trusts.
+- **Required vs optional.** An approval waits up to 30 seconds for the wallet-spawned popup and
+  throws if none appears. `connectToDapp({ optional: true })` and `approve({ optional: true })`
+  tolerate no popup, because a wallet may auto-approve a site it already trusts.
 - **Re-front the dapp after a wallet-UI action.** While an extension page is the active tab, MetaMask
   renders new approvals inline there instead of opening the popup the engine drives, so the
   controller brings the dapp page back to the front when an action finishes.
 - **Retry a popup that closed under us.** The poller can grab the previous popup in its final moments
   (a window closes right after its own approval resolves), so a failed settle re-finds once.
 - **Headless support is per-wallet.** MetaMask's approval window is created without ever being
-  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `headlessApprovals` can
-  run headless, and `launchWallet` refuses the rest by name. walletwright never opens an approval
+  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `headlessApprovals` runs
+  headless: the fixtures launch the rest headed, and `launchWallet` refuses them by name. walletwright never opens an approval
   URL itself: a page the wallet did not open for a request shows its home screen, not the request.
 - **"Found" means settleable, not merely rendered.** A wallet can declare `approvalControls`, the
   controls that exist only while a request is on screen, and the poller waits for those instead of
@@ -329,7 +326,9 @@ load-bearing:
 
 ### Action binding
 
-Each capability method is bound through one helper that either forwards to the declared function
+Every public method, approvals included, goes through one naming helper, so each call reaches a step
+runner under its own name (`wallet.accounts.add`). The fixtures report it as a boxed Playwright step;
+`launchWallet` runs it directly. Each capability method then either forwards to the declared function
 (with the action context and any extra arguments) or throws a named "does not support" error. This
 is why the `Wallet` surface is honest: `wallet.network.add` exists as a method on every wallet for
 typing, but calling it on a wallet that did not declare `network.add` throws immediately.
@@ -338,7 +337,7 @@ typing, but calling it on a wallet that did not declare `network.add` throws imm
 
 The engine never asks the browser for the extension id (`chrome://extensions` is blocked headless
 and the MV3 worker races); it computes the id from the manifest's public `key` or the absolute load
-path with `extensionIdFromPath` in `utils.ts`. The derivation and the symlink caveat are covered in
+path with `extensionIdFromPath` in `extension.ts`. The derivation and the symlink caveat are covered in
 [How it works](/how-it-works); what matters architecturally is that every engine module receives the
 id as a plain string, so nothing downstream depends on browser state.
 

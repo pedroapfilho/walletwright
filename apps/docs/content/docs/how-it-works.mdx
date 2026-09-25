@@ -25,15 +25,21 @@ and register it.
 ```ts
 type WalletDefinition = {
   ecosystems: Ecosystem[]; // e.g. ["evm"], ["evm", "svm"], ["sui"]
-  extensionName: string;
-  prepareExtension: (cacheDir: string, version?: string) => Promise<string>;
+  extensionName: string; // display name for step titles and errors
+  source:
+    // where the extension is downloaded from
+    | { kind: "webStore"; id: string } // the Web Store build; cannot pin a version
+    | { kind: "release"; defaultVersion: string; release: (version) => ExtensionArchive };
   onboardingPage: string; // e.g. "home.html"
   importWallet: (page, seedPhrase, password) => Promise<void>;
   finalizeCache?: (profileDir, extensionId) => Promise<void>;
-  reachUnlockScreen: (context, extensionId) => Promise<Page>;
-  unlock: (page, password) => Promise<void>;
+  unlockScreen: {
+    entry: string;
+    isUnlocked?: (page) => Promise<boolean>;
+    submit?: (page, field) => Promise<void>;
+  };
   approve: (popup, password) => Promise<void>;
-  reject?: (popup) => Promise<void>; // the cancel counterpart of approve
+  reject: (popup) => Promise<void>; // the cancel counterpart of approve
   notificationMatch?: string; // popup URL token; defaults to "notification.html"
   actions?: WalletActions; // optional capabilities: accounts, network, settings
 };
@@ -49,8 +55,8 @@ Each of these is load-bearing. Drop one and the wallet either drives the dapp or
 - **Headless needs the `chromium` channel, and works per wallet.** Playwright's default headless
   build cannot load an extension at all, so walletwright launches the `chromium` channel (the full
   browser). Even then, a wallet's approval window may be created without ever being exposed as a
-  page (MetaMask's is not; Phantom's and Rabby's are), so only those two run headless and
-  `launchWallet` refuses the others by name. See [Continuous integration](/continuous-integration).
+  page (MetaMask's is not; Phantom's and Rabby's are), so only those two run headless. The fixtures
+  launch the others headed, and `launchWallet` refuses them headless by name. See [Continuous integration](/continuous-integration).
 - **The extension id is derived, not queried.** `chrome://extensions` is blocked headless and the MV3
   service worker starts lazily, so querying races. walletwright computes the id from the manifest's
   public `key` if present (Phantom uses its fixed Web Store id) or from the absolute load path

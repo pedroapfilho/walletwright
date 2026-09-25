@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { isEntryPoint, parseArgv, resolveSetup } from "./cli";
+import { isEntryPoint, parseArgv, resolveSetups } from "./cli";
 
 const tempDirs: Array<string> = [];
 
@@ -61,14 +61,14 @@ describe("parseArgv", () => {
     await expect(parseArgv(["cache", ...CREDENTIALS])).resolves.toEqual({
       headless: false,
       kind: "cache",
-      setup: { password: "pw", seedPhrase: "a b c", wallet: "metamask" },
+      setups: [{ password: "pw", seedPhrase: "a b c", wallet: "metamask" }],
     });
   });
 
   it("accepts the --flag=value spelling", async () => {
     await expect(
       parseArgv(["cache", "--wallet=metamask", "--seed=a b c", "--password=pw"]),
-    ).resolves.toMatchObject({ setup: { wallet: "metamask" } });
+    ).resolves.toMatchObject({ setups: [{ wallet: "metamask" }] });
   });
 
   it("rejects an unknown flag instead of ignoring it", async () => {
@@ -100,46 +100,100 @@ describe("parseArgv", () => {
   });
 });
 
-describe("resolveSetup", () => {
+const writeSetupModule = (source: string): string => {
+  const file = path.join(makeTempDir(), "setup.mjs");
+  writeFileSync(file, source);
+  return file;
+};
+
+const NAMED_SETUPS = `
+export const metamask = { password: "pw", seedPhrase: "a b c", wallet: "metamask" };
+export const phantom = { password: "pw", seedPhrase: "d e f", wallet: "phantom" };
+export const walletSetups = { metamask, phantom };
+export const helper = () => metamask;
+export const nothing = null;
+export default metamask;
+`;
+
+describe("resolveSetups", () => {
   it("rejects an unknown --wallet and lists the valid kinds", async () => {
-    await expect(resolveSetup({ password: "pw", seed: "a b c", wallet: "foo" })).rejects.toThrow(
+    await expect(resolveSetups({ password: "pw", seed: "a b c", wallet: "foo" })).rejects.toThrow(
       /unknown --wallet "foo"\. Expected one of: metamask, phantom, rabby, slush, solflare\./v,
     );
   });
 
   it("rejects a missing credential triple", async () => {
-    await expect(resolveSetup({ wallet: "metamask" })).rejects.toThrow(
+    await expect(resolveSetups({ wallet: "metamask" })).rejects.toThrow(
       /--wallet\/--seed\/--password/v,
     );
   });
 
   it("carries --version through onto the setup", async () => {
     await expect(
-      resolveSetup({ password: "pw", seed: "a b c", version: "13.0.0", wallet: "metamask" }),
-    ).resolves.toMatchObject({ version: "13.0.0" });
+      resolveSetups({ password: "pw", seed: "a b c", version: "13.0.0", wallet: "metamask" }),
+    ).resolves.toMatchObject([{ version: "13.0.0" }]);
+  });
+
+  it("builds every setup a module exports, once each, skipping its other exports", async () => {
+    const setups = await resolveSetups({ setup: writeSetupModule(NAMED_SETUPS) });
+
+    expect(setups.map((setup) => setup.wallet)).toEqual(["metamask", "phantom"]);
+  });
+
+  it("narrows a --setup module to the wallet --wallet names", async () => {
+    const setups = await resolveSetups({
+      setup: writeSetupModule(NAMED_SETUPS),
+      wallet: "phantom",
+    });
+
+    expect(setups).toEqual([{ password: "pw", seedPhrase: "d e f", wallet: "phantom" }]);
+  });
+
+  it("refuses a --wallet the --setup module has no setup for", async () => {
+    await expect(
+      resolveSetups({ setup: writeSetupModule(NAMED_SETUPS), wallet: "slush" }),
+    ).rejects.toThrow(/exports no slush WalletSetup/v);
+  });
+
+  it("names a setup-shaped export that fails validation instead of skipping it", async () => {
+    const file = writeSetupModule('export const broken = { password: "pw", wallet: "metamsk" };\n');
+
+    await expect(resolveSetups({ setup: file })).rejects.toThrow(
+      /export "broken" is not a valid WalletSetup/v,
+    );
+  });
+
+  it.each(["undefined", "null", "42"])(
+    "rejects a setup with wallet: %s even alongside valid setups",
+    async (wallet) => {
+      const file = writeSetupModule(`${NAMED_SETUPS}
+export const broken = { password: "pw", seedPhrase: "a b c", wallet: ${wallet} };
+`);
+
+      await expect(resolveSetups({ setup: file })).rejects.toThrow(
+        /export "broken" is not a valid WalletSetup/v,
+      );
+    },
+  );
+
+  it("refuses a module that exports no setup at all", async () => {
+    await expect(
+      resolveSetups({ setup: writeSetupModule("export const n = 1;\n") }),
+    ).rejects.toThrow(/exports no WalletSetup/v);
   });
 
   it("applies --cache-dir on the --setup branch", async () => {
-    const fixture = path.join(makeTempDir(), "setup.mjs");
-    writeFileSync(
-      fixture,
-      'export default { password: "pw", seedPhrase: "a b c", wallet: "metamask" };\n',
-    );
+    const [setup] = await resolveSetups({
+      "cache-dir": "./ci-cache",
+      setup: writeSetupModule(NAMED_SETUPS),
+    });
 
-    const setup = await resolveSetup({ "cache-dir": "./ci-cache", setup: fixture });
-
-    expect(setup.cacheDir).toBe("./ci-cache");
+    expect(setup?.cacheDir).toBe("./ci-cache");
   });
 
   it("refuses --setup combined with a flag it would silently discard", async () => {
-    const fixture = path.join(makeTempDir(), "setup.mjs");
-    writeFileSync(
-      fixture,
-      'export default { password: "pw", seedPhrase: "a b c", wallet: "metamask" };\n',
-    );
-
-    await expect(resolveSetup({ setup: fixture, version: "13.0.0" })).rejects.toThrow(
-      /--setup carries the whole setup, so --version would be ignored/v,
-    );
+    await expect(
+      resolveSetups({ setup: writeSetupModule(NAMED_SETUPS), version: "13.0.0" }),
+    ).rejects.toThrow(/--setup carries the credentials, so --version would be ignored/v);
   });
 });

@@ -1,18 +1,22 @@
-import { cp, mkdtemp, rm, stat } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { type BrowserContext, chromium, type Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
-import { restorePreviousProfile } from "./cache";
-import { extensionContextOptions } from "./chromium";
-import { createWallet } from "./controller";
-import { DEFAULT_CACHE_DIR, extensionIdFromPath, profileKey } from "./utils";
+import { openWalletContext } from "./browser";
+import { createWallet, runDirectly, type StepRunner } from "./controller";
+import { prepareExtension } from "./extension";
+import { pathExists } from "./fs";
+import { locateProfile } from "./profile";
+import { createUnlockScreen } from "./unlock-screen";
 
 export type LaunchedWallet = {
+  /** `close()`, so `await using launched = await launchWallet(setup)` cleans up on any exit. */
+  [Symbol.asyncDispose]: () => Promise<void>;
   /**
    * Close the browser and remove the throwaway profile copy, in that order. Prefer this over
    * `context.close()`: the copy is a full onboarded profile (tens of MB), and awaiting its removal is
@@ -23,23 +27,28 @@ export type LaunchedWallet = {
   wallet: Wallet;
 };
 
+/** Close the browser, then remove the profile copy, even when closing fails; report every failure. */
 const closeLaunch = async (context: BrowserContext, runDir: string): Promise<void> => {
-  const closed = await Promise.allSettled([context.close()]);
-  const removed = await Promise.allSettled([rm(runDir, { force: true, recursive: true })]);
-  const closeResult = closed[0];
-  const removeResult = removed[0];
+  const errors: Array<unknown> = [];
+  try {
+    await context.close();
+  } catch (error) {
+    errors.push(error);
+  }
+  try {
+    await rm(runDir, { force: true, recursive: true });
+  } catch (error) {
+    errors.push(error);
+  }
 
-  if (closeResult?.status === "rejected" && removeResult?.status === "rejected") {
+  if (errors.length > 1) {
     throw new AggregateError(
-      [closeResult.reason, removeResult.reason],
+      errors,
       `[walletwright] failed to close the browser and remove ${runDir}`,
     );
   }
-  if (closeResult?.status === "rejected") {
-    throw closeResult.reason;
-  }
-  if (removeResult?.status === "rejected") {
-    throw removeResult.reason;
+  if (errors.length === 1) {
+    throw errors[0];
   }
 };
 
@@ -59,10 +68,10 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
   await Promise.allSettled(closing);
 };
 
-/** Launch and unlock a disposable profile copy. Headless mode requires verified wallet support. */
-export const launchWallet = async (
+/** `launchWallet`, with the step runner the Playwright fixtures report wallet calls through. */
+export const launch = async (
   setup: WalletSetup,
-  { headless = false }: { headless?: boolean } = {},
+  { headless, step }: { headless: boolean; step: StepRunner },
 ): Promise<LaunchedWallet> => {
   const definition = wallets[setup.wallet];
   if (headless && definition.headlessApprovals !== true) {
@@ -70,21 +79,13 @@ export const launchWallet = async (
       `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
     );
   }
-  const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
-  const profileDir = path.join(cacheDir, profileKey(setup));
-  await restorePreviousProfile(profileDir);
-  try {
-    await stat(profileDir);
-  } catch (error) {
+  const { cacheDir, profileDir } = await locateProfile(setup);
+  if (!(await pathExists(profileDir))) {
     throw new Error(
       `[walletwright] no cache for this setup at ${profileDir}. Build it first with buildCache() or \`walletwright cache\`.`,
-      { cause: error },
     );
   }
-
-  const extensionPath = await definition.prepareExtension(cacheDir, setup.version);
-
-  const extensionId = await extensionIdFromPath(extensionPath);
+  const extensionPath = await prepareExtension(setup, cacheDir);
 
   /** Cleanup must cover copy and launch failures that occur before a context exists. */
   const runDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-"));
@@ -101,30 +102,38 @@ export const launchWallet = async (
   try {
     await cp(profileDir, runDir, { recursive: true });
 
-    context = await chromium.launchPersistentContext(
-      runDir,
-      extensionContextOptions(extensionPath, headless),
-    );
-    const launched = context;
+    const opened = await openWalletContext({
+      definition,
+      extensionPath,
+      headless,
+      userDataDir: runDir,
+    });
+    const launched = opened.context;
+    context = launched;
     launched.on("close", handleContextClose);
 
-    await definition.prepareContext?.(launched);
-    const home = await definition.reachUnlockScreen(launched, extensionId);
-    await definition.unlock(home, setup.password);
+    const screen = createUnlockScreen(definition);
+    const home = await screen.reachUnlockScreen(launched, opened.extensionId);
+    const unlock = () => screen.unlock(home, setup.password);
+    await unlock();
     await closeStrayPages(launched, home);
 
+    const close = async (): Promise<void> => {
+      launched.off("close", handleContextClose);
+      await closeLaunch(launched, runDir);
+    };
     return {
-      close: async () => {
-        launched.off("close", handleContextClose);
-        await closeLaunch(launched, runDir);
-      },
+      close,
       context: launched,
+      [Symbol.asyncDispose]: close,
       wallet: createWallet({
         context: launched,
         definition,
-        extensionId,
+        extensionId: opened.extensionId,
         home,
         password: setup.password,
+        step,
+        unlock,
       }),
     };
   } catch (error) {
@@ -134,5 +143,11 @@ export const launchWallet = async (
     throw error;
   }
 };
+
+/** Launch and unlock a disposable profile copy. Headless mode requires verified wallet support. */
+export const launchWallet = (
+  setup: WalletSetup,
+  { headless = false }: { headless?: boolean } = {},
+): Promise<LaunchedWallet> => launch(setup, { headless, step: runDirectly });
 
 export { closeLaunch };

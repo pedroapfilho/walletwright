@@ -54,13 +54,12 @@ await buildCache(metamask);
 pnpm exec tsx scripts/build-cache.ts
 ```
 
-There is also a CLI. It either takes the wallet inline, or loads a file that **default-exports** a
-`WalletSetup` (a shared module with named exports, like the one above, is driven from code instead):
+There is also a CLI. Point it at the same setup module and it builds every `WalletSetup` the module
+exports, named or default; add `--wallet` to build just one:
 
 ```bash
-walletwright cache --wallet metamask \
-  --seed "test test test test test test test test test test test junk" \
-  --password "Tester@1234"
+walletwright cache --setup ./wallet-setup.ts
+walletwright cache --setup ./wallet-setup.ts --wallet metamask
 ```
 
 Add the cache directory to `.gitignore`:
@@ -97,9 +96,10 @@ test("connect wallet and sign a message", async ({ page, wallet }) => {
 
 ## Step 5: Configure Playwright
 
-Phantom and Rabby run headless; MetaMask, Solflare and Slush need a real window, so default the suite
-to headed (see [Continuous integration](/continuous-integration)). Give wallet flows a
-couple of retries and a single worker:
+No `headless` setting is needed. The fixtures run Phantom and Rabby headless and open a real window
+for MetaMask, Solflare and Slush, whose approvals need one (on CI, see
+[Continuous integration](/continuous-integration)). Give wallet flows a couple of retries and a
+single worker:
 
 ```ts
 // playwright.config.ts

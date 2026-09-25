@@ -1,8 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 import AdmZip from "adm-zip";
+
+import type { ExtensionArchive } from "../types";
+
+import { pathExists } from "./fs";
 
 const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
 
@@ -13,31 +17,11 @@ const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
  */
 const STAGING_PREFIX = ".staging-";
 
-const pathExists = async (target: string): Promise<boolean> => {
-  try {
-    await stat(target);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return false;
-    }
-    throw error;
-  }
-};
-
 /** Download and validate an extension archive, then publish its extraction atomically from staging. */
-export const downloadAndExtractExtension = async (options: {
-  cacheDir: string;
-  kind: "zip" | "crx";
-  name: string;
-  /**
-   * Expected sha256 of the downloaded bytes. Required, and `undefined` only where the bytes genuinely
-   * cannot be pinned, so adding a download site forces a decision instead of quietly trusting it.
-   */
-  sha256: string | undefined;
-  url: string;
-}): Promise<string> => {
-  const { cacheDir, kind, name, sha256, url } = options;
+export const downloadAndExtractExtension = async (
+  options: ExtensionArchive & { cacheDir: string },
+): Promise<string> => {
+  const { cacheDir, format, name, sha256, url } = options;
   const cacheRoot = path.resolve(cacheDir);
   const outDir = path.resolve(cacheDir, name);
   if (outDir === cacheRoot || !outDir.startsWith(cacheRoot + path.sep)) {
@@ -67,7 +51,7 @@ export const downloadAndExtractExtension = async (options: {
   }
 
   let zipBytes = bytes;
-  if (kind === "crx") {
+  if (format === "crx") {
     const start = bytes.indexOf(ZIP_SIGNATURE);
     if (start === -1) {
       throw new Error(`[walletwright] ${url} is not a valid CRX (no ZIP header found)`);
@@ -104,17 +88,3 @@ export const downloadAndExtractExtension = async (options: {
 /** Build the Chrome Web Store CRX download URL for an extension id. */
 export const chromeWebStoreCrxUrl = (extensionId: string): string =>
   `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${extensionId}%26uc`;
-
-/** Download and extract a Chrome Web Store extension (latest) into `<cacheDir>/<name>`. */
-export const prepareWebStoreExtension = (options: {
-  cacheDir: string;
-  extensionId: string;
-  name: string;
-}): Promise<string> =>
-  downloadAndExtractExtension({
-    cacheDir: options.cacheDir,
-    kind: "crx",
-    name: options.name,
-    sha256: undefined,
-    url: chromeWebStoreCrxUrl(options.extensionId),
-  });

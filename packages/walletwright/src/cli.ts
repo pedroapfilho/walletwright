@@ -7,29 +7,28 @@ import { parseArgs } from "node:util";
 import { z } from "zod";
 
 import { buildCache } from "./internal/cache";
-import type { WalletSetup } from "./types";
-import { isWalletKind, wallets } from "./wallets/index";
-
-const KINDS = Object.keys(wallets);
+import type { WalletKind, WalletSetup } from "./types";
+import { isWalletKind, walletKinds } from "./wallets/index";
 
 const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
 
 Usage:
-  walletwright cache --setup <file>            Build cache from a module's default-exported WalletSetup
-  walletwright cache --wallet <${KINDS.join("|")}> --seed "<phrase>" --password "<pw>" [--version <v>]
+  walletwright cache --setup <file> [--wallet <kind>]
+  walletwright cache --wallet <${walletKinds.join("|")}> --seed "<phrase>" --password "<pw>" [--version <v>]
 
 Options:
-  --setup <file>     A module whose default export is a WalletSetup (.ts works on modern Node)
-  --wallet <kind>    ${KINDS.join(" | ")}
+  --setup <file>     Build every WalletSetup the module exports, named or default (.ts works on modern Node)
+  --wallet <kind>    ${walletKinds.join(" | ")}; with --setup, builds only that wallet's setups
   --seed <phrase>    seed phrase to import
   --password <pw>    wallet password
-  --version <v>      pin an extension version
+  --version <v>      pin an extension version (MetaMask)
   --cache-dir <dir>  cache directory (default: .walletwright)
   --headless         build the cache headless
   -h, --help         show this help
 
---setup carries the whole setup, so it cannot be combined with --wallet/--seed/--password/--version;
---cache-dir works with either form. A value that begins with "-" needs the --flag=value spelling.
+--setup carries the credentials, so it cannot be combined with --seed/--password/--version;
+--wallet and --cache-dir work with either form. A value that begins with "-" needs the --flag=value
+spelling. Setups from one file build one after another.
 
 --seed and --password are visible in shell history and process lists when passed as flags; use
 test-only values, or prefer --setup <file> to keep them out of argv.
@@ -58,10 +57,12 @@ type Flags = {
   wallet?: string;
 };
 
-/** The flags `--setup` makes redundant: accepting both silently discarded one of the two. */
-const SETUP_CONFLICTS = ["password", "seed", "version", "wallet"] as const;
+/** The flags a `--setup` file makes redundant: accepting both silently discarded one of the two. */
+const SETUP_CONFLICTS = ["password", "seed", "version"] as const;
 
-type Command = { kind: "help" } | { headless: boolean; kind: "cache"; setup: WalletSetup };
+type Command =
+  | { kind: "help" }
+  | { headless: boolean; kind: "cache"; setups: ReadonlyArray<WalletSetup> };
 
 const nonEmptyStringSchema = z.string().min(1);
 const walletSetupSchema = z.object({
@@ -69,49 +70,81 @@ const walletSetupSchema = z.object({
   password: nonEmptyStringSchema,
   seedPhrase: nonEmptyStringSchema,
   version: nonEmptyStringSchema.optional(),
-  wallet: z.enum(["metamask", "phantom", "rabby", "slush", "solflare"]),
+  wallet: z.enum(walletKinds),
 });
-const setupModuleSchema = z.object({ default: walletSetupSchema });
+const moduleSchema = z.record(z.string(), z.unknown());
 
 const isNonEmptyString = (value: string | undefined): value is string =>
   value !== undefined && nonEmptyStringSchema.safeParse(value).success;
 
-const loadSetup = async (file: string): Promise<WalletSetup> => {
-  const resolved = pathToFileURL(path.resolve(file)).href;
-  const result = setupModuleSchema.safeParse(await import(resolved));
-  if (!result.success) {
-    throw new Error(`[walletwright] ${file} must default-export a WalletSetup`);
+/** Every `WalletSetup` a module exports, named or default, once each and in export order. */
+const loadSetups = async (file: string): Promise<Array<WalletSetup>> => {
+  const exported = moduleSchema.parse(await import(pathToFileURL(path.resolve(file)).href));
+  const seen = new Set<unknown>();
+  const setups: Array<WalletSetup> = [];
+  for (const [name, value] of Object.entries(exported)) {
+    // The field's presence marks a candidate; the full schema validates its value below.
+    if (seen.has(value) || typeof value !== "object" || value === null || !("wallet" in value)) {
+      continue;
+    }
+    seen.add(value);
+    const result = walletSetupSchema.safeParse(value);
+    if (!result.success) {
+      throw new Error(
+        `[walletwright] ${file}: export "${name}" is not a valid WalletSetup\n${z.prettifyError(result.error)}`,
+      );
+    }
+    setups.push(result.data);
   }
-  return result.data.default;
+  if (setups.length === 0) {
+    throw new Error(`[walletwright] ${file} exports no WalletSetup`);
+  }
+  return setups;
 };
 
-const resolveSetup = async (flags: Flags): Promise<WalletSetup> => {
+/** `--wallet`, narrowed to a supported kind; absent or empty means unset. */
+const walletFlag = (value: string | undefined): WalletKind | undefined => {
+  if (!isNonEmptyString(value)) {
+    return undefined;
+  }
+  if (!isWalletKind(value)) {
+    throw new Error(
+      `[walletwright] unknown --wallet "${value}". Expected one of: ${walletKinds.join(", ")}.`,
+    );
+  }
+  return value;
+};
+
+const resolveSetups = async (flags: Flags): Promise<Array<WalletSetup>> => {
   const withCacheDir = (setup: WalletSetup): WalletSetup =>
     isNonEmptyString(flags["cache-dir"]) ? { ...setup, cacheDir: flags["cache-dir"] } : setup;
+  const wallet = walletFlag(flags.wallet);
 
   if (isNonEmptyString(flags.setup)) {
     const redundant = SETUP_CONFLICTS.filter((name) => flags[name] !== undefined);
     if (redundant.length > 0) {
       throw new Error(
-        `[walletwright] --setup carries the whole setup, so --${redundant.join(", --")} would be ignored. Pass one or the other.`,
+        `[walletwright] --setup carries the credentials, so --${redundant.join(", --")} would be ignored. Pass one or the other.`,
       );
     }
-    return withCacheDir(await loadSetup(flags.setup));
+    const setups = await loadSetups(flags.setup);
+    const selected = setups.filter((setup) => wallet === undefined || setup.wallet === wallet);
+    if (selected.length === 0) {
+      throw new Error(`[walletwright] ${flags.setup} exports no ${wallet} WalletSetup`);
+    }
+    return selected.map(withCacheDir);
   }
 
-  const { password, seed, wallet } = flags;
-  if (!isNonEmptyString(wallet) || !isNonEmptyString(seed) || !isNonEmptyString(password)) {
+  const { password, seed } = flags;
+  if (wallet === undefined || !isNonEmptyString(seed) || !isNonEmptyString(password)) {
     throw new Error(
       "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
     );
   }
-  if (!isWalletKind(wallet)) {
-    throw new Error(
-      `[walletwright] unknown --wallet "${wallet}". Expected one of: ${KINDS.join(", ")}.`,
-    );
-  }
   const base: WalletSetup = { password, seedPhrase: seed, wallet };
-  return withCacheDir(isNonEmptyString(flags.version) ? { ...base, version: flags.version } : base);
+  return [
+    withCacheDir(isNonEmptyString(flags.version) ? { ...base, version: flags.version } : base),
+  ];
 };
 
 const parseArgv = async (argv: Array<string>): Promise<Command> => {
@@ -140,7 +173,7 @@ const parseArgv = async (argv: Array<string>): Promise<Command> => {
     );
   }
 
-  return { headless: flags.headless === true, kind: "cache", setup: await resolveSetup(flags) };
+  return { headless: flags.headless === true, kind: "cache", setups: await resolveSetups(flags) };
 };
 
 const main = async (): Promise<void> => {
@@ -150,9 +183,11 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  process.stdout.write(`[walletwright] building ${command.setup.wallet} cache…\n`);
-  const profileDir = await buildCache(command.setup, { headless: command.headless });
-  process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
+  for (const setup of command.setups) {
+    process.stdout.write(`[walletwright] building ${setup.wallet} cache…\n`);
+    const profileDir = await buildCache(setup, { headless: command.headless });
+    process.stdout.write(`[walletwright] cache ready: ${profileDir}\n`);
+  }
 };
 
 /** Resolve the CLI symlink before comparing `process.argv[1]` with `import.meta.url`. */
@@ -171,4 +206,4 @@ if (await isEntryPoint(import.meta.url, process.argv[1])) {
   }
 }
 
-export { isEntryPoint, parseArgv, resolveSetup };
+export { isEntryPoint, parseArgv, resolveSetups };

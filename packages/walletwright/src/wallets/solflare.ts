@@ -1,15 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { prepareWebStoreExtension } from "../internal/download";
-import { createUnlockScreen } from "../internal/unlock-screen";
 import type { WalletDefinition } from "../types";
-
-const SOLFLARE_EXTENSION_ID = "bhhhlbepdkbapadjdnnojkbgioiodbic";
-
-const { reachUnlockScreen, unlock } = createUnlockScreen({
-  entry: "wallet.html",
-  wallet: "Solflare",
-});
 
 const importWallet = async (page: Page, seedPhrase: string, password: string): Promise<void> => {
   await page.getByTestId("btn-import-existing-wallet").click({ timeout: 30_000 });
@@ -51,15 +42,6 @@ export const solflare: WalletDefinition = {
 
   onboardingPage: "wallet.html",
 
-  prepareExtension: (cacheDir) =>
-    prepareWebStoreExtension({
-      cacheDir,
-      extensionId: SOLFLARE_EXTENSION_ID,
-      name: "solflare-chrome-latest",
-    }),
-
-  reachUnlockScreen,
-
   reject: async (popup) => {
     await popup
       .getByTestId("btn-cancel")
@@ -68,5 +50,7 @@ export const solflare: WalletDefinition = {
       .click({ timeout: 30_000 });
   },
 
-  unlock,
+  source: { id: "bhhhlbepdkbapadjdnnojkbgioiodbic", kind: "webStore" },
+
+  unlockScreen: { entry: "wallet.html" },
 };

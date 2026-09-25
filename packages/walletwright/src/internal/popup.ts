@@ -1,50 +1,9 @@
-import { createHash } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
-import path from "node:path";
-
 import type { BrowserContext, Locator, Page } from "@playwright/test";
-import { z } from "zod";
-
-import type { WalletSetup } from "../types";
 
 import { waitUntil } from "./wait";
 
-export const DEFAULT_CACHE_DIR = ".walletwright";
-
 /** MetaMask/Phantom approval-popup URL token; Slush overrides it with `notificationMatch: "isPopup=1"`. */
 export const DEFAULT_NOTIFICATION_MATCH = "notification.html";
-
-/** Stable per-setup profile directory name, so the same wallet+seed+password reuses one cache. */
-export const profileKey = (setup: WalletSetup): string =>
-  createHash("sha256")
-    .update(`${setup.wallet}:${setup.version ?? "default"}:${setup.seedPhrase}:${setup.password}`)
-    .digest("hex")
-    .slice(0, 20);
-
-/** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
-export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {
-  const resolved = path.resolve(extensionPath);
-  let abs = resolved;
-  try {
-    abs = await realpath(resolved);
-  } catch {
-    abs = resolved;
-  }
-  let key: string | undefined;
-  try {
-    const text = await readFile(path.join(abs, "manifest.json"), "utf8");
-    const manifest = z.object({ key: z.string().optional() }).parse(JSON.parse(text));
-    key = manifest.key;
-  } catch {
-    key = undefined;
-  }
-  const source =
-    key === undefined || key === "" ? Buffer.from(abs, "utf8") : Buffer.from(key, "base64");
-  const hex = createHash("sha256").update(source).digest("hex").slice(0, 32);
-  return Array.from(hex, (nibble) => String.fromCodePoint(97 + Number.parseInt(nibble, 16))).join(
-    "",
-  );
-};
 
 /**
  * Approval popups open as `about:blank` and then navigate, so `waitForEvent('page', { predicate })`
@@ -71,15 +30,15 @@ export const findNotificationPopup = ({
   approvalControls,
   context,
   extensionId,
-  match = DEFAULT_NOTIFICATION_MATCH,
-  timeoutMs = 10_000,
+  match,
+  timeoutMs,
 }: {
   /** From `WalletDefinition.approvalControls`, for a wallet that can render its popup requestless. */
-  approvalControls?: (page: Page) => Locator;
+  approvalControls: ((page: Page) => Locator) | undefined;
   context: BrowserContext;
   extensionId: string;
-  match?: string;
-  timeoutMs?: number;
+  match: string;
+  timeoutMs: number;
 }): Promise<Page | undefined> =>
   waitUntil(
     async () => {
@@ -120,7 +79,3 @@ export const placeApprovalWindow = async (page: Page): Promise<void> => {
     // no window to place (headless), or the page refused a CDP session
   }
 };
-
-/** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
-export const extensionStateDir = (profileDir: string, extensionId: string): string =>
-  path.join(profileDir, "Default", "Local Extension Settings", extensionId);

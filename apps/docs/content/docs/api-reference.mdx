@@ -11,8 +11,10 @@ import {
   createWalletFixtures,
   launchWallet,
   wallets,
+  walletKinds,
   walletKindsByEcosystem,
   type Ecosystem,
+  type NetworkConfig,
   type Wallet,
   type WalletSetup,
   type WalletKind,
@@ -32,7 +34,7 @@ type WalletSetup = {
   wallet: WalletKind;
   seedPhrase: string; // 12 or 24 words; use a fresh one for Phantom and Slush
   password: string;
-  version?: string; // pin an extension version (MetaMask)
+  version?: string; // pin an extension version (MetaMask; the Web Store wallets refuse it)
   cacheDir?: string; // default ".walletwright"
 };
 ```
@@ -56,6 +58,11 @@ await buildCache(setup, { headless: true }); // faster; the tests pick their own
 
 Returns a `@playwright/test` `test` whose `context` and `page` run in a persistent Chromium with the
 wallet loaded and unlocked, plus a `wallet` fixture.
+
+Playwright's `headless` option applies only where the wallet supports it (Phantom and Rabby), so the
+default config just works: MetaMask, Solflare and Slush launch headed whatever it says. Every wallet
+call is reported as its own step (`wallet.connectToDapp`, `wallet.accounts.add`, …) in the report and
+trace, and a failing call points at the line in your spec that made it.
 
 ```ts
 const test = createWalletFixtures(setup);
@@ -88,7 +95,6 @@ type Wallet = {
   };
   network: {
     add: (config: NetworkConfig) => Promise<void>;
-    switch: (chainId: number) => Promise<void>;
   };
   settings: { lock: () => Promise<void>; unlock: () => Promise<void> };
   readonly home: Page;
@@ -105,7 +111,7 @@ type NetworkConfig = {
 
 | Member                           | Description                                                                                                      |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `connectToDapp()`                | Approve a pending connection popup. Resolves quietly if the wallet auto-approved.                                |
+| `connectToDapp(options)`         | Approve a pending connection popup. `optional: true` tolerates none, for a site the wallet already trusts.       |
 | `confirmSignature()`             | Approve a pending signature popup. Throws if no popup appears.                                                   |
 | `confirmTransaction()`           | Approve a pending transaction popup. Throws if no popup appears.                                                 |
 | `rejectTransaction()`            | Reject a pending transaction popup.                                                                              |
@@ -118,11 +124,14 @@ type NetworkConfig = {
 | `accounts.rename({index, name})` | Rename the account at that index.                                                                                |
 | `accounts.importPrivateKey(key)` | Import an account from a raw private key.                                                                        |
 | `network.add(config)`            | Add a custom network from the wallet's own UI. The RPC must be reachable; the wallet validates it before saving. |
-| `network.switch(id)`             | Make `chainId` the active network from the wallet's own UI, where the wallet has such a control.                 |
 | `settings.lock()`                | Lock the wallet from its own UI.                                                                                 |
 | `settings.unlock()`              | Unlock it again with the setup's password.                                                                       |
 | `home`                           | The wallet's own extension page. Named `home` because `page` means the dapp under test.                          |
 | `extensionId`                    | The loaded extension id.                                                                                         |
+
+The request-named methods (`connectToDapp`, `confirmSignature`, `rejectTransaction`, …) are aliases
+of `approve` and `reject` that read well in a spec and match Synpress's vocabulary. None of them checks
+what kind of request the popup holds.
 
 ### Capabilities are per-wallet
 
@@ -138,8 +147,8 @@ Every wallet declares `reject`. `settings`, `network.add`, and `accounts` are Me
 Phantom, Rabby, Solflare, and Slush drive connect, sign, and reject end to end but declare none of
 the other optional capabilities yet, so calling those on them throws.
 
-`network.switch` is declared by no wallet yet. MetaMask 13.x scopes the active chain **per dapp**
-and no longer has a wallet-side network selector, so switching is dapp-initiated: the dapp calls
+There is no `network.switch`. MetaMask 13.x scopes the active chain **per dapp** and no longer has a
+wallet-side network selector, so switching is dapp-initiated: the dapp calls
 `wallet_addEthereumChain` (idempotent: adds when missing, switches when present) and
 `wallet.approve()` drives the popup. Avoid a bare EIP-3326 `wallet_switchEthereumChain` for custom
 chains; in MetaMask 13.x it hangs with no popup and no error. See the network recipe in Examples.
@@ -151,11 +160,13 @@ The standalone launcher, without Playwright fixtures. It returns `{ close, conte
 copy, which `context.close()` alone cannot guarantee before the process exits.
 
 ```ts
-const { close, context, wallet } = await launchWallet(setup, { headless: true });
-const page = await context.newPage();
-// drive the page and the wallet here
-await close();
+await using launched = await launchWallet(setup, { headless: true });
+const page = await launched.context.newPage();
+// drive the page and launched.wallet here; it closes when the scope exits, even on a throw
 ```
+
+`await using` calls `close()` for you through `Symbol.asyncDispose`. Without it, destructure
+`{ close, context, wallet }` and call `close()` yourself.
 
 | Argument           | Type          | Description                                         |
 | ------------------ | ------------- | --------------------------------------------------- |
@@ -164,8 +175,7 @@ await close();
 
 Headless is supported for Phantom and Rabby, whose approval windows surface as pages that way.
 MetaMask, Solflare and Slush throw at launch with a named error; run those headed.
-`createWalletFixtures` passes Playwright's own `headless` option through, so a fixture-based suite
-sets the mode in `playwright.config.ts` or with `--headed` rather than here.
+`launchWallet` takes `headless` literally; the fixtures apply it only where the wallet supports it.
 
 ## `@walletwright/core/chain`
 
@@ -255,7 +265,13 @@ connect/sign stand-in, not a chain; drive a real extension for anything that tou
 ## `wallets`
 
 The registry of built-in `WalletDefinition`s, keyed by `WalletKind` (`"metamask"`, `"phantom"`,
-`"rabby"`, `"slush"`, `"solflare"`). Useful for inspection or extension.
+`"rabby"`, `"slush"`, `"solflare"`), for inspecting what a wallet declares (its `ecosystems`,
+`headlessApprovals`, `actions`). It is read-only: a setup can only name a built-in wallet, and adding
+one means adding a definition to this repository.
+
+## `walletKinds`
+
+Every supported `WalletKind`, in registry order.
 
 ## `walletKindsByEcosystem(ecosystem)`
 
@@ -271,15 +287,16 @@ walletKindsByEcosystem("sui"); // ["slush"]
 
 ```bash
 walletwright cache --setup ./wallet-setup.ts
+walletwright cache --setup ./wallet-setup.ts --wallet metamask
 walletwright cache --wallet metamask --seed "YOUR_SEED_HERE" --password "YOUR_PASSWORD_HERE"
 ```
 
-| Flag                | Description                                             |
-| ------------------- | ------------------------------------------------------- |
-| `--setup <file>`    | A module whose default export is a `WalletSetup`.       |
-| `--wallet <kind>`   | `metamask`, `phantom`, `rabby`, `solflare`, or `slush`. |
-| `--seed <phrase>`   | Seed phrase to import.                                  |
-| `--password <pw>`   | Wallet password.                                        |
-| `--version <v>`     | Pin an extension version.                               |
-| `--cache-dir <dir>` | Cache directory (default `.walletwright`).              |
-| `--headless`        | Build the cache headless.                               |
+| Flag                | Description                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| `--setup <file>`    | A module whose `WalletSetup` exports, named or default, are all built, one after another.     |
+| `--wallet <kind>`   | `metamask`, `phantom`, `rabby`, `solflare`, or `slush`. With `--setup`, builds only that one. |
+| `--seed <phrase>`   | Seed phrase to import.                                                                        |
+| `--password <pw>`   | Wallet password.                                                                              |
+| `--version <v>`     | Pin an extension version (MetaMask).                                                          |
+| `--cache-dir <dir>` | Cache directory (default `.walletwright`).                                                    |
+| `--headless`        | Build the cache headless.                                                                     |

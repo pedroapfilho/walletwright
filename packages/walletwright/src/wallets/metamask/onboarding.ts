@@ -1,15 +1,9 @@
 import type { Page } from "@playwright/test";
 
-import { createUnlockScreen } from "../../internal/unlock-screen";
 import { waitUntil } from "../../internal/wait";
 
 const SRP_RETYPE_TIMEOUT_MS = 40_000;
 const SRP_CONFIRM_TIMEOUT_MS = 5000;
-
-const { reachUnlockScreen, unlock } = createUnlockScreen({
-  entry: "home.html",
-  wallet: "MetaMask",
-});
 
 export const importWallet = async (
   page: Page,
@@ -52,5 +46,3 @@ export const importWallet = async (
     .click({ timeout: 10_000 })
     .catch(() => {});
 };
-
-export { reachUnlockScreen, unlock };

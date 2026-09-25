@@ -36,7 +36,6 @@ export default defineConfig({
   // off locally, where the browser is in front of you.
   use: {
     baseURL: demoUrl,
-    headless: false,
     trace: process.env.CI ? "retain-on-failure" : "off",
   },
   webServer: process.env.CI

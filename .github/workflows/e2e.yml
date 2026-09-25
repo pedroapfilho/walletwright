@@ -99,17 +99,11 @@ jobs:
       # renders fine but cannot be clicked, which reads as a button timeout rather than a layout
       # problem. walletwright also repositions the window, and the two together are belt and braces.
       #
-      # "MetaMask: connect and sign on Solana" is excluded: on this runner its popup renders the
-      # wallet home with a disabled Connect footer, so the Solana request never binds to it. Every
-      # other MetaMask spec passes here, and this one passes locally on every run, so it is the
-      # MetaMask-on-GitHub-Actions class of problem rather than anything walletwright drives. The
-      # Solana reject spec still runs. See plans/031.
-      #
       # The Slush specs are excluded here and run in the step below instead.
       - run: |-
           node .github/ci/ci.mjs run e2e -- bash -e -o pipefail -c 'xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
             pnpm --filter demo exec playwright test \
-              --grep-invert "MetaMask: connect and sign on Solana|Slush:"
+              --grep-invert "Slush:"
           '
       # Slush's connect is flaky (roughly one run in five) in a way nobody has pinned down yet: the
       # approval popup opens, takes the confirm click and closes, so walletwright reports a

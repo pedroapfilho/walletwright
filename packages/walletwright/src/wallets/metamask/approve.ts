@@ -1,5 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 
+import { waitUntil } from "../../internal/wait";
+
 /**
  * How long a confirm or cancel button gets to become clickable, once the page is already showing
  * one. Generous because a loaded CI runner renders MetaMask's footer slowly.
@@ -63,8 +65,31 @@ const clickFooterButton = async (popup: Page, button: Locator): Promise<void> =>
   }
 };
 
-export const approve = (popup: Page): Promise<void> =>
-  clickFooterButton(popup, confirmButton(popup));
+/** How long a connect page may keep Connect disabled before it counts as rendered too early. */
+const STALE_CONNECT_MS = 3000;
+
+/**
+ * MetaMask can render a connect page before enabling the requested network (seen with Solana): no
+ * networks under Permissions, Connect disabled, never recomputed. The request is still pending, so
+ * a reload renders it from current state. Connect route only: elsewhere a disabled confirm is busy.
+ */
+export const reloadStaleConnectPage = async (popup: Page): Promise<void> => {
+  if (!popup.url().includes("#/connect/")) {
+    return;
+  }
+  const connect = popup.getByTestId("confirm-btn");
+  const enabled = await waitUntil(() => connect.isEnabled({ timeout: 500 }).catch(() => false), {
+    timeoutMs: STALE_CONNECT_MS,
+  });
+  if (enabled === undefined) {
+    await popup.reload();
+  }
+};
+
+export const approve = async (popup: Page): Promise<void> => {
+  await reloadStaleConnectPage(popup);
+  await clickFooterButton(popup, confirmButton(popup));
+};
 
 /** The cancel counterpart of `approve`; same union-by-DOM-order resolution, not written order. */
 export const reject = (popup: Page): Promise<void> => clickFooterButton(popup, cancelButton(popup));

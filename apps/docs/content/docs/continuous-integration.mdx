@@ -10,8 +10,10 @@ except on a GitHub runner, where MetaMask must be onboarded under the display to
 
 ## Headless
 
-Nothing to configure: Playwright defaults to headless and the fixtures pass that through to the
-wallet. walletwright launches Playwright's bundled Chromium through the `chromium` channel, because
+Nothing to configure. The fixtures run a wallet headless when Playwright's `headless` option is on
+(its default) and the wallet supports it, which today means Phantom and Rabby. MetaMask, Solflare and
+Slush launch headed whatever the option says, because their approvals never surface as a page
+headless. walletwright launches Playwright's bundled Chromium through the `chromium` channel, because
 the default headless build is the headless _shell_, which cannot load an extension at all.
 
 ```bash
@@ -20,38 +22,26 @@ pnpm exec tsx scripts/build-cache.ts
 pnpm exec playwright test
 ```
 
-A wallet with no verified headless approval flow throws at launch instead of hanging, so a mistake
-here is loud.
+Pass `--headed` to watch the Phantom and Rabby specs too.
 
 <Callout type="warn">
   Only Phantom and Rabby declare headless support, because only their approval windows surface as a
-  page that way. `launchWallet` throws by name for the others rather than hanging. MetaMask also has
-  documented compatibility problems running headless on GitHub Actions, so onboard it under the
-  display there as well.
+  page that way. The fixtures launch the others headed, so on a machine without a display they need
+  one (below). `launchWallet` is stricter: it takes `headless` literally and throws by name for
+  those wallets rather than hanging at the first approval. MetaMask also has documented
+  compatibility problems running headless on GitHub Actions, so onboard it under the display there
+  as well.
 </Callout>
 
 ## Headed via a virtual display
 
-The simplest thing that covers every wallet on Linux CI: install `xvfb`, default the suite to
-headed, and give the display a real size, since a popup that opens partly off it cannot be clicked.
-
-```ts
-// playwright.config.ts
-use: {
-  headless: false;
-}
-```
+The simplest thing that covers every wallet on Linux CI: install `xvfb` and give the display a real
+size, since a popup that opens partly off it cannot be clicked. No config change is needed: the
+headed-only wallets use the display, and Phantom and Rabby stay headless.
 
 ```bash
 sudo apt-get install -y xvfb
 xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm exec playwright test
-```
-
-Specs for a wallet that supports headless can opt back in, and `xvfb-run` is harmless for them:
-
-```ts
-// tests/phantom.spec.ts
-test.use({ headless: true });
 ```
 
 ## GitHub Actions
