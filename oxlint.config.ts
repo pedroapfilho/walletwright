@@ -1,11 +1,11 @@
 import { defineConfig } from "oxlint";
 import awesomeness from "oxlint-config-awesomeness";
+import shadcn from "oxlint-config-awesomeness/shadcn";
 
 export default defineConfig({
-  extends: [awesomeness],
+  extends: [awesomeness, shadcn],
   // Generated runtime is byte-verified and tested in the control plane.
   ignorePatterns: [".github/ci/*.mjs"],
-  jsPlugins: ["@shadcn/lint"],
   overrides: [
     // Custom selectors are defined in the landing page.css side-effect import.
     {
@@ -81,12 +81,6 @@ export default defineConfig({
       },
     },
     {
-      files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
-      rules: {
-        "number-literal-case": "off",
-      },
-    },
-    {
       files: ["apps/**/*.ts", "apps/**/*.tsx"],
       rules: {
         "max-lines": "off",
@@ -94,13 +88,11 @@ export default defineConfig({
         "no-console": "off",
         "no-non-null-assertion": "off",
         "no-promise-executor-return": "off",
-        "react-doctor/async-await-in-loop": "off",
       },
     },
     {
       files: ["packages/walletwright/**/*.ts"],
       rules: {
-        "react-doctor/async-await-in-loop": "off",
         "react-doctor/async-defer-await": "off",
         "react-doctor/js-index-maps": "off",
         "react-doctor/js-set-map-lookups": "off",
@@ -141,9 +133,6 @@ export default defineConfig({
     },
   ],
   rules: {
-    "shadcn/no-arbitrary-values": "error",
-    "shadcn/no-inline-styles": "error",
-    "shadcn/no-raw-colors": "error",
     "shadcn/no-restyle": [
       "error",
       {
@@ -156,7 +145,5 @@ export default defineConfig({
         ],
       },
     ],
-    "shadcn/no-unknown-classes": "error",
-    "shadcn/require-static-classes": "error",
   },
 });

@@ -159,7 +159,8 @@ const parseArgv = async (argv: Array<string>): Promise<Command> => {
   }
 
   const flags: Flags = parsed.values;
-  const [command, ...extra] = parsed.positionals;
+  const command = parsed.positionals.at(0);
+  const extra = parsed.positionals.slice(1);
 
   if (flags.help === true || command === undefined || command === "help") {
     return { kind: "help" };

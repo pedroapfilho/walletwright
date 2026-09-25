@@ -23,7 +23,7 @@ const Dapp = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleSign = async () => {
-    const wallet = wallets[0];
+    const wallet = wallets.at(0);
     if (!wallet) {
       setErrorMessage("No connected wallet");
       return;

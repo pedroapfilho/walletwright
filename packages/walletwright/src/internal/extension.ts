@@ -40,12 +40,7 @@ export const prepareExtension = async (setup: WalletSetup, cacheDir: string): Pr
 /** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
 export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {
   const resolved = path.resolve(extensionPath);
-  let abs = resolved;
-  try {
-    abs = await realpath(resolved);
-  } catch {
-    abs = resolved;
-  }
+  const abs = await realpath(resolved).catch(() => resolved);
   let key: string | undefined;
   try {
     const text = await readFile(path.join(abs, "manifest.json"), "utf8");
