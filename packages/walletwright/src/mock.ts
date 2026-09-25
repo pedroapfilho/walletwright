@@ -83,14 +83,15 @@ const installMockWallet = async (
   ] satisfies readonly [string, { icon: string; name: string; rdns: string; uuid: string }];
 
   await target.addInitScript(([binding, info]) => {
-    const hasBinding = <Value extends object>(
-      value: Value,
-    ): value is Value & Record<string, (rpc: Rpc) => Promise<RpcResult>> =>
-      typeof Object.getOwnPropertyDescriptor(value, binding)?.value === "function";
-    if (!hasBinding(window)) {
-      throw new TypeError(`Missing Playwright binding: ${binding}`);
-    }
-    const call = window[binding];
+    const assertBinding: (value: unknown) => asserts value is (rpc: Rpc) => Promise<RpcResult> = (
+      value,
+    ) => {
+      if (typeof value !== "function") {
+        throw new TypeError(`Missing Playwright binding: ${binding}`);
+      }
+    };
+    const call: unknown = Object.getOwnPropertyDescriptor(window, binding)?.value;
+    assertBinding(call);
     const provider = {
       isMetaMask: true,
       on: () => provider,
