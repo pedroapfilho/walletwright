@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import AdmZip from "adm-zip";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, assert, describe, expect, it } from "vitest";
 
 import { chromeWebStoreCrxUrl, downloadAndExtractExtension } from "./download";
 
@@ -99,8 +99,9 @@ describe("downloadAndExtractExtension", () => {
     const zip = new AdmZip();
     zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
     zip.addFile("placeholder.txt", Buffer.from("evil"));
-    const entries = zip.getEntries();
-    entries[1].entryName = "../escape.txt";
+    const placeholder = zip.getEntry("placeholder.txt");
+    assert(placeholder, "placeholder.txt was not added to the zip");
+    placeholder.entryName = "../escape.txt";
     const { close, url } = await serve(zip.toBuffer());
     servers.push({ close });
 
@@ -212,7 +213,9 @@ describe("downloadAndExtractExtension", () => {
     const zip = new AdmZip();
     zip.addFile("manifest.json", Buffer.from('{"name":"fake"}'));
     zip.addFile("placeholder.txt", Buffer.from("evil"));
-    zip.getEntries()[1].entryName = "../escape.txt";
+    const placeholder = zip.getEntry("placeholder.txt");
+    assert(placeholder, "placeholder.txt was not added to the zip");
+    placeholder.entryName = "../escape.txt";
     const { close, url } = await serve(zip.toBuffer());
     servers.push({ close });
 

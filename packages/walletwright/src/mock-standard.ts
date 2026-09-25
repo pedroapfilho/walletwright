@@ -30,8 +30,8 @@ const encodeBase58 = (bytes: Uint8Array): string => {
   const digits: Array<number> = [];
   for (const byte of bytes) {
     let carry = byte;
-    for (let index = 0; index < digits.length; index += 1) {
-      carry += digits[index] * 256;
+    for (const [index, digit] of digits.entries()) {
+      carry += digit * 256;
       digits[index] = carry % 58;
       carry = Math.floor(carry / 58);
     }
@@ -127,14 +127,15 @@ const installMockStandardWallet = async (
   ] satisfies readonly [string, StandardInitInfo];
 
   await target.addInitScript(([binding, info]) => {
-    const hasBinding = <Value extends object>(
-      value: Value,
-    ): value is Value & Record<string, (rpc: BridgeRequest) => Promise<Array<number>>> =>
-      typeof Object.getOwnPropertyDescriptor(value, binding)?.value === "function";
-    if (!hasBinding(window)) {
-      throw new TypeError(`Missing Playwright binding: ${binding}`);
-    }
-    const call = window[binding];
+    const assertBinding: (
+      value: unknown,
+    ) => asserts value is (rpc: BridgeRequest) => Promise<Array<number>> = (value) => {
+      if (typeof value !== "function") {
+        throw new TypeError(`Missing Playwright binding: ${binding}`);
+      }
+    };
+    const call: unknown = Object.getOwnPropertyDescriptor(window, binding)?.value;
+    assertBinding(call);
     const publicKeyBytes = Uint8Array.from(
       (info.publicKeyHex.match(/.{2}/gv) ?? []).map((byte) => Number.parseInt(byte, 16)),
     );
