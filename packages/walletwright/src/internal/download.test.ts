@@ -249,7 +249,7 @@ describe("downloadAndExtractExtension", () => {
         sha256: undefined,
         url,
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/unsupported zip format/v);
 
     expect(existsSync(path.join(outDir, "other.txt"))).toBe(true);
   });

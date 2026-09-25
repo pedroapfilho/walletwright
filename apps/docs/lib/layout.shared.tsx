@@ -16,7 +16,7 @@ export const baseOptions = (): BaseLayoutProps => ({
   nav: {
     title: (
       <>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- next/image serves SVG unoptimized, so it adds nothing for this wordmark */}
         <img
           alt="walletwright"
           className="block h-5 w-auto dark:hidden"
@@ -24,7 +24,7 @@ export const baseOptions = (): BaseLayoutProps => ({
           src="/walletwright-logo-light.svg"
           width={150}
         />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- next/image serves SVG unoptimized, so it adds nothing for this wordmark */}
         <img
           alt="walletwright"
           className="hidden h-5 w-auto dark:block"
