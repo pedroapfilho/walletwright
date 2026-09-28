@@ -1,5 +1,12 @@
 # @walletwright/core
 
+## 0.5.1
+
+### Patch Changes
+
+- 5b687ad: Declare `"sideEffects": false` so bundlers can drop unused entry points. None of the exports runs code at import time.
+- 22d280c: Retry opening Slush's passphrase import screen until its word inputs appear, and fail with a clear error after three attempts. On a slow runner the first "Import existing from passphrase" click could land before the menu was interactive, which left the import waiting on inputs that never rendered.
+
 ## 0.5.0
 
 ### Minor Changes
