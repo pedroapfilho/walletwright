@@ -66,7 +66,9 @@ describe("publishProfile", () => {
     await mkdir(profileDir);
     await writeFile(path.join(profileDir, "state"), "old");
 
-    await expect(publishProfile(path.join(cacheDir, "missing"), profileDir)).rejects.toThrow();
+    await expect(publishProfile(path.join(cacheDir, "missing"), profileDir)).rejects.toThrow(
+      /ENOENT/v,
+    );
 
     await expect(readFile(path.join(profileDir, "state"), "utf8")).resolves.toBe("old");
     expect(await readdir(cacheDir)).toEqual(["profile"]);

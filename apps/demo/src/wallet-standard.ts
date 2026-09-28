@@ -16,7 +16,7 @@ const connectStandard = async (wallet: StandardWallet): Promise<StandardAccount>
     throw new Error(`${wallet.name} lacks standard:connect`);
   }
   const { accounts } = await feature.connect();
-  const account = accounts[0];
+  const account = accounts.at(0);
   if (!account) {
     throw new Error(`${wallet.name} standard:connect returned no accounts`);
   }
