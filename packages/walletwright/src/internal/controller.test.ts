@@ -109,9 +109,9 @@ describe("createWallet", () => {
       const methods = methodsOf(wallet, group);
       expect(Object.keys(methods).length).toBeGreaterThan(0);
 
-      for (const method of Object.keys(methods)) {
+      for (const [method, call] of Object.entries(methods)) {
         calls.length = 0;
-        await methods[method]();
+        await call();
         expect(calls).toEqual([`${group}.${method}`]);
       }
     }
@@ -124,8 +124,8 @@ describe("createWallet", () => {
       const methods = methodsOf(wallet, group);
       expect(Object.keys(methods).length).toBeGreaterThan(0);
 
-      for (const method of Object.keys(methods)) {
-        await expect(methods[method]()).rejects.toThrow(`does not support ${group}.${method}()`);
+      for (const [method, call] of Object.entries(methods)) {
+        await expect(call()).rejects.toThrow(`does not support ${group}.${method}()`);
       }
     }
   });

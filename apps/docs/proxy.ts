@@ -21,7 +21,6 @@ const proxy = (request: NextRequest) => {
 
 export const config = {
   // A plain string literal so Next can statically extract the matcher.
-  // oxlint-disable-next-line unicorn/prefer-string-raw
   matcher: ["/((?!api|llms\\.mdx|llms\\.txt|llms-full\\.txt|_next|.*\\.).*)"],
 };
 

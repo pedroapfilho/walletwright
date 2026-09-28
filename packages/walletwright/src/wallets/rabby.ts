@@ -98,11 +98,11 @@ const clickApprovalButton = async (
         .evaluate(
           (arg) => {
             const target = [...document.querySelectorAll("button")].find((button) => {
-              const text = (button.textContent ?? "").trim();
+              const text = button.textContent.trim();
               return arg.names.includes(text) && !button.disabled && !arg.skip.includes(text);
             });
             target?.click();
-            return target ? (target.textContent ?? "").trim() : "";
+            return target ? target.textContent.trim() : "";
           },
           { names: [...labels], skip: [...clickedLabels] },
         )

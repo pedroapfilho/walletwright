@@ -268,10 +268,11 @@ const signSolanaMessage = async (
       message: Uint8Array;
     }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
   };
-  const [output] = await feature.signMessage({
+  const outputs = await feature.signMessage({
     account,
     message: new TextEncoder().encode(message),
   });
+  const output = outputs.at(0);
   if (!output?.signature) {
     throw new Error("solana:signMessage returned no signature");
   }
