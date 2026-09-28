@@ -123,6 +123,9 @@ export const slush: WalletDefinition = {
     await fclick(page, "Import existing from passphrase");
     await sleep(1500);
 
+    console.log("[slush-debug] url after import click:", page.url());
+    console.log("[slush-debug] body:", (await page.locator("body").innerText().catch((e) => String(e))).slice(0, 1500));
+    await page.screenshot({ path: "slush-debug.png", fullPage: true }).catch(() => {});
     const words = seedPhrase.trim().split(/\s+/v);
     for (let i = 0; i < words.length; i++) {
       await page.getByLabel(`Word ${i + 1}`, { exact: true }).fill(words[i] ?? "");

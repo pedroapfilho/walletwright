@@ -93,6 +93,14 @@ jobs:
       - run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
             pnpm --filter demo test:cache
+        env:
+          DEBUG: pw:api
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: slush-debug
+          path: apps/demo/slush-debug.png
+          if-no-files-found: ignore
       # Under a virtual display, since most of these wallets need a real window for their approvals.
       # Phantom and Rabby run headless, derived from their `headlessApprovals` declaration.
       # A roomy screen on purpose: a wallet popup that opens partly off a small virtual display
