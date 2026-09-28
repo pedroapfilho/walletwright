@@ -7,6 +7,8 @@ const HOME_ROUTE = "#/tokens";
 
 const IMPORT_HOME_TIMEOUT_MS = 30_000;
 const PERSIST_TIMEOUT_MS = 60_000;
+const PASSPHRASE_SCREEN_TIMEOUT_MS = 20_000;
+const PASSPHRASE_SCREEN_ATTEMPTS = 3;
 
 const ACCOUNTS_DATABASE = "signaldb-accounts";
 const PREFERENCES_DATABASE = "signaldb-preferences";
@@ -98,6 +100,28 @@ const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boo
   return true;
 };
 
+/** The first click can land before the menu is interactive on a slow runner, so retry until the words show. */
+const openPassphraseImport = async (page: Page): Promise<void> => {
+  const firstWord = page.getByLabel("Word 1", { exact: true });
+  for (let attempt = 0; attempt < PASSPHRASE_SCREEN_ATTEMPTS; attempt++) {
+    await fclick(page, "More options");
+    await sleep(1000);
+    await fclick(page, "Import existing from passphrase");
+    const opened = await firstWord
+      .waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS })
+      .then(() => true)
+      .catch(() => false);
+    if (opened) {
+      return;
+    }
+    await page.goto(page.url().split("#")[0] ?? page.url());
+    await sleep(2000);
+  }
+  throw new Error(
+    `[walletwright] Slush never opened the passphrase import screen after ${PASSPHRASE_SCREEN_ATTEMPTS} attempts`,
+  );
+};
+
 export const slush: WalletDefinition = {
   approve: async (popup, password) => {
     await sleep(2000);
@@ -118,10 +142,7 @@ export const slush: WalletDefinition = {
   extensionName: "Slush",
 
   importWallet: async (page, seedPhrase, password) => {
-    await fclick(page, "More options");
-    await sleep(1000);
-    await fclick(page, "Import existing from passphrase");
-    await sleep(1500);
+    await openPassphraseImport(page);
 
     const words = seedPhrase.trim().split(/\s+/v);
     for (let i = 0; i < words.length; i++) {
