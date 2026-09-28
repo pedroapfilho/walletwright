@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@privy-io/react-auth": "^3.45.0",
-    "@wallet-standard/app": "^1.1.0",
+    "@wallet-standard/app": "^1.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zod": "^4.6.5"
