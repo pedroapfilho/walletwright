@@ -38,7 +38,9 @@ apps/
 Root scripts run turbo: `build`, `test`, `test:coverage`, `lint`, `typecheck`, `clean`, `dev`. Root
 `test` runs only the walletwright unit suite.
 Root-only: `format`/`format:check` (oxfmt), `test:e2e` (the demo's headed specs, via
-`pnpm --filter demo`), `changeset`/`version-packages`/`release`.
+`pnpm --filter demo`), `changeset`/`version-packages`/`release`. `e2e.yml` runs the demo specs in
+its `wallets` job and the docs app's instant-navigation suite (`pnpm --filter docs test:e2e`) in
+its `docs` job.
 
 Run the demo end-to-end from `apps/demo`: `pnpm exec playwright install chromium`, then
 `pnpm test:cache` to onboard the wallets (or `pnpm test:cache slush` for one), then `pnpm test:e2e`
