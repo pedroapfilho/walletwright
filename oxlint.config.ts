@@ -32,6 +32,7 @@ export default defineConfig({
     },
     {
       files: [
+        "apps/landing/src/app/error.tsx",
         "apps/landing/src/app/layout.tsx",
         "apps/landing/src/app/not-found.tsx",
         "apps/landing/src/app/page.tsx",
