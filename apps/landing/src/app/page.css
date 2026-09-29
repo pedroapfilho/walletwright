@@ -50,6 +50,10 @@ html {
   outline-offset: 2px;
 }
 
+.ref h1:focus-visible {
+  outline: none;
+}
+
 .ref-visually-hidden {
   block-size: 1px;
   clip-path: inset(50%);
