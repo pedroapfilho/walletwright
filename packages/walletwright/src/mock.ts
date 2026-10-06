@@ -1,6 +1,7 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import type { PrivateKeyAccount } from "viem/accounts";
 import { privateKeyToAccount } from "viem/accounts";
+import { z } from "zod";
 
 import type { BridgeCall } from "./internal/page-bridge";
 import { installPageBridge } from "./internal/page-bridge";
@@ -20,21 +21,29 @@ type Rpc = { method: string; params?: ReadonlyArray<unknown> };
 type RpcResult = ReadonlyArray<string> | string | null;
 type Eip6963Info = { icon: string; name: string; rdns: string };
 
+/** MetaMask's own check: a 0x-prefixed hex chain id with no leading zeros. */
+const chainParameterSchema = z.object({
+  chainId: z.string().regex(/^0x[1-9a-f][\da-f]*$/iv),
+});
+
 const toHex = (value: number): `0x${string}` => `0x${value.toString(16)}`;
 
 const isHexMessage = (value: string): value is `0x${string}` => /^0x[\da-fA-F]*$/v.test(value);
 
-/** The EIP-1193 handler a mock provider answers with. Exported for direct, browser-free testing. */
-const createRpcHandler =
-  (account: PrivateKeyAccount, chainIdHex: string) =>
-  ({ method, params = [] }: Rpc): Promise<RpcResult> => {
+/**
+ * The EIP-1193 handler a mock provider answers with. Exported for direct, browser-free testing. It
+ * holds the current chain, which a chain switch or add replaces.
+ */
+const createRpcHandler = (account: PrivateKeyAccount, chainIdHex: string) => {
+  let currentChainIdHex = chainIdHex;
+  return ({ method, params = [] }: Rpc): Promise<RpcResult> => {
     switch (method) {
       case "eth_requestAccounts":
       case "eth_accounts": {
         return Promise.resolve([account.address]);
       }
       case "eth_chainId": {
-        return Promise.resolve(chainIdHex);
+        return Promise.resolve(currentChainIdHex);
       }
       case "personal_sign": {
         const [message] = params;
@@ -49,6 +58,15 @@ const createRpcHandler =
       }
       case "wallet_switchEthereumChain":
       case "wallet_addEthereumChain": {
+        const parsed = chainParameterSchema.safeParse(params[0]);
+        if (!parsed.success) {
+          return Promise.reject(
+            new Error(
+              `[walletwright/mock] ${method} expects params[0].chainId as a 0x-prefixed hex chain id`,
+            ),
+          );
+        }
+        currentChainIdHex = parsed.data.chainId.toLowerCase();
         return Promise.resolve(null);
       }
       default: {
@@ -56,6 +74,7 @@ const createRpcHandler =
       }
     }
   };
+};
 
 const mountEip1193Provider = (
   call: BridgeCall<Rpc, RpcResult>,

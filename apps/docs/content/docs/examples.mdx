@@ -516,7 +516,7 @@ transactions, balances, or receipts, drive an actual extension against the local
 const address = await installMockWallet(page.context(), {
   // anvil/hardhat account #1; the mock signs with this key so signatures verify.
   privateKey: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
-  chainId: 1, // what the dapp sees from eth_chainId
+  chainId: 1, // what the dapp sees from eth_chainId until it switches
   name: "My Test Wallet", // announced over EIP-6963
 });
 ```
