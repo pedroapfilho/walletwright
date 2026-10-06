@@ -65,7 +65,11 @@ type Command =
   | { headless: boolean; kind: "cache"; setups: ReadonlyArray<WalletSetup> };
 
 const nonEmptyStringSchema = z.string().min(1);
-const walletSetupSchema = z.object({
+/**
+ * Strict, so a misspelled key fails instead of being dropped. `cli.test.ts` pins its output to
+ * `WalletSetup`, so a field added to one and not the other fails the typecheck.
+ */
+const walletSetupSchema = z.strictObject({
   cacheDir: nonEmptyStringSchema.optional(),
   password: nonEmptyStringSchema,
   seedPhrase: nonEmptyStringSchema,
@@ -207,4 +211,4 @@ if (await isEntryPoint(import.meta.url, process.argv[1])) {
   }
 }
 
-export { isEntryPoint, parseArgv, resolveSetups };
+export { isEntryPoint, parseArgv, resolveSetups, walletSetupSchema };
