@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "walletwright stand-in",
+  "version": "1.0.0",
+  "description": "A minimal wallet that exercises the walletwright engine through its interface.",
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    { "js": ["content.js"], "matches": ["http://127.0.0.1/*"], "run_at": "document_start" }
+  ],
+  "permissions": ["storage"]
+}
