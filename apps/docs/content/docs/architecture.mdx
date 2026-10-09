@@ -42,6 +42,7 @@ one definition and registering it; the engine does not change.
 ```
 packages/walletwright/src/
   index.ts            public exports
+  engine.ts           buildCache(), launchWallet(): resolve the setup's wallet, run the engine
   cli.ts              `walletwright cache` command
   fixtures.ts         createWalletFixtures(), the Playwright test fixtures
   types.ts            WalletSetup, WalletDefinition, Wallet, the capability types
@@ -49,9 +50,9 @@ packages/walletwright/src/
   mock.ts             @walletwright/core/mock entry point (headless EVM provider)
   mock-standard.ts    @walletwright/core/mock-standard entry point (headless Solana wallet)
   internal/
-    cache.ts          buildCache(): onboard once, persist a profile
-    launch.ts         launchWallet(): copy the profile, launch, unlock
-    browser.ts        openWalletContext(): the one way both phases start Chromium
+    cache.ts          build: onboard once, persist a profile
+    launch.ts         launch: unlock a copy of the profile
+    session.ts        openSession(): Chromium + extension on a throwaway profile, both phases
     profile.ts        profile keys and paths, atomic publish and recovery
     extension.ts      the extension archive a setup runs, extension-id derivation
     download.ts       fetch + extract an extension archive
@@ -74,17 +75,17 @@ Three phases, each owned by one engine module. A test touches only the first (on
 
 ```
 buildCache(setup)                       once, ahead of the tests (headless ok)
+  wallets[setup.wallet]                 resolved once; the engine only sees the definition
   prepareExtension  ─ download + extract the definition's source into .walletwright/
-  openWalletContext(staging)            channel: "chromium", then prepareContext
+  openSession(staging)                  channel: "chromium", then prepareContext
   goto onboarding, retry until registered
   importWallet(seed, password)          the wallet's own onboarding flow
-  close, then finalizeCache             e.g. MetaMask's LevelDB completedOnboarding
+  close, finalizeCache, publish         e.g. MetaMask's LevelDB completedOnboarding
         │
         ▼   .walletwright/<profileKey>  a ready-to-unlock profile on disk
         │
 launchWallet(setup, { headless }) per test worker
-  copy profileDir ─▶ os.tmpdir()/walletwright-XXXX   throwaway, cache stays pristine
-  openWalletContext(runDir)             same launch, same prepareContext
+  openSession(copy of profileDir)       os.tmpdir()/walletwright-XXXX, cache stays pristine
   extensionIdFromPath                   derive the id, do not query the browser
   unlockScreen: reach it, type the password
   closeStrayPages                       drop about:blank and the auto-opened tab
@@ -351,8 +352,10 @@ directory, so onboarding runs once. Change any of those four and you get a disti
 
 `launchWallet` never launches the cached profile directly. It copies it to a fresh
 `mkdtemp` directory and launches from the copy, so the cache stays pristine and parallel workers do
-not share a profile. That throwaway copy has one owner: `launchWallet` removes it on every failure
-path, and the returned `close()` awaits its removal after closing the browser.
+not share a profile. That throwaway copy has one owner, the session `launchWallet` opens: it
+removes the copy on every failure path, and the returned `close()` awaits its removal after closing
+the browser. The build's staging directory is owned the same way, except that it survives the close
+long enough for `finalizeCache` and the publish.
 
 ## The subpackages
 
@@ -393,6 +396,10 @@ Needs the `viem` package.
   is a peer dependency, so you own the version.
 - **One extension point.** A new wallet is one `WalletDefinition`. A new capability is one action
   plus its wiring. The engine is closed to change and open to extension.
+- **Tested through its interface.** The engine's own tests build, launch, and approve against a
+  stand-in wallet extension in headless Chromium, downloaded through the same path as a real wallet.
+  The popup behaviours that once broke on CI (late routing, an idle screen, a respawned window, an
+  unlock screen that needs a reload) are modes of that stand-in, not stubs of Playwright.
 - **Deep modules.** The engine hides a lot of hard-won extension-automation detail behind a small
   surface (`connectToDapp`, `confirmSignature`, `approve`). Most of that detail is documented in
   [How it works](/how-it-works).

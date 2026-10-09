@@ -19,12 +19,14 @@ patched dependencies.
 packages/
   walletwright/        the library (npm: `@walletwright/core`)
     src/index.ts         public API surface
+    src/engine.ts        buildCache(), launchWallet(): resolve the setup's wallet, run the engine
     src/types.ts         WalletSetup, WalletDefinition, Wallet
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
     src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts, solflare.ts) + registry
-    src/internal/        engine: cache (build), launch, browser, profile, extension, download,
-                         unlock-screen, controller, popup
+    src/internal/        engine: cache (build), launch, session, profile, extension, download,
+                         unlock-screen, controller, popup; standin.ts + standin/ is the test-only
+                         stand-in wallet the engine tests drive
   config-typescript/   @repo/typescript-config (tsconfig presets)
   config-vitest/        @repo/config-vitest (node vitest preset)
 apps/
@@ -36,7 +38,9 @@ apps/
 ## Dev workflow
 
 Root scripts run turbo: `build`, `test`, `test:coverage`, `lint`, `typecheck`, `clean`, `dev`. Root
-`test` runs only the walletwright unit suite.
+`test` runs only the walletwright suite: unit tests plus the engine tests, which drive a stand-in
+wallet extension in headless Chromium (`pnpm --filter @walletwright/core exec playwright install
+chromium` once; `test.yml` installs it on CI).
 Root-only: `format`/`format:check` (oxfmt), `test:e2e` (the demo's headed specs, via
 `pnpm --filter demo`), `changeset`/`version-packages`/`release`. `e2e.yml` runs the demo specs in
 its `wallets` job and the docs app's instant-navigation suite (`pnpm --filter docs test:e2e`) in
@@ -53,15 +57,21 @@ id `31337`), e.g. Foundry's `anvil` seeded with the public test mnemonic.
 
 A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
 
-- `buildCache(setup)` (`internal/cache.ts`) launches with the extension, navigates to onboarding,
-  runs `importWallet`, closes, then runs `finalizeCache` while the browser is closed.
-- `launchWallet(setup)` (`internal/launch.ts`) copies the cache to a throwaway profile,
-  launches with the extension, resolves the id, reaches the definition's `unlockScreen` and unlocks
-  it (`internal/unlock-screen.ts`), and returns a `Wallet`.
-- Both start Chromium through `openWalletContext` (`internal/browser.ts`), which also applies
-  `prepareContext`, so the build and the run cannot load the wallet differently. Profile paths and
-  atomic publish live in `internal/profile.ts`; the archive a setup runs (`source`, plus the
-  refusal of `version` for Web Store wallets) in `internal/extension.ts`.
+- The public entry points (`buildCache` and `launchWallet` in `engine.ts`, `createWalletFixtures`)
+  resolve the setup's `WalletKind` to its definition once and pass the definition down. Nothing
+  under `internal/` reads the registry, so any definition can drive the engine, which is how the
+  engine tests drive the stand-in.
+- `build` (`internal/cache.ts`) navigates to onboarding, runs `importWallet`, closes, then runs
+  `finalizeCache` and publishes the profile while the browser is closed.
+- `launch` (`internal/launch.ts`) reaches the definition's `unlockScreen` on a copy of the cached
+  profile, unlocks it (`internal/unlock-screen.ts`), and returns a `Wallet`.
+- Both open Chromium through `openSession` (`internal/session.ts`): the extension on a throwaway
+  profile directory (fresh staging for the build, a copy of the cache for the run) with
+  `prepareContext` applied, so the build and the run cannot load the wallet differently. The session
+  owns the context and the directory together and disposes both on every failure path; the build
+  keeps its staging through `finalizeCache` and publish, the run removes its copy on close. Profile
+  paths and atomic publish live in `internal/profile.ts`; the archive a setup runs (`source`, plus
+  the refusal of `version` for Web Store wallets) in `internal/extension.ts`.
 - `createWallet(...)` (`internal/controller.ts`) implements `connectToDapp`/`confirmSignature`/
   `approve` by finding the approval popup and clicking the wallet's confirm button. Every public
   method goes through one naming helper and a step runner: the fixtures report each call as a boxed
@@ -82,6 +92,17 @@ To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register i
 onboarding, approve, and reject are functions. Each definition declares its `ecosystems`
 (`evm`/`svm`/`sui`/`dot`/`btc`), and `walletKindsByEcosystem(eco)` lists the wallets that drive a
 chain.
+
+The engine tests (`internal/{cache,launch,approval}.test.ts`) run `build`, `launch`, and the
+`Wallet` against a stand-in wallet, headless: a dependency-free MV3 extension in
+`internal/standin/extension`, served by a local HTTP server as a `release` zip with its real sha256,
+so it goes through the real download path. A local dapp page asks it for approval through its
+content script, and each request names how the approval window behaves: `late` opens blank and
+routes later (items 4 and 13), `idle` shows a home screen with no request controls before routing
+(item 1, `approvalControls`), and `respawn` closes mid-approval and reopens (the controller's
+`settleApproval`). `home.html?settle=reload` renders nothing until reloaded (item 10). Its approval
+window surfaces as a page headless, so it declares `headlessApprovals`. Cover a new engine behaviour
+by teaching the stand-in to reproduce it, not by stubbing Playwright.
 
 ## Supported wallets and roadmap
 
@@ -195,7 +216,7 @@ Each item below cost real debugging time. Don't "simplify" them away.
 
 1. **Headless is per-wallet, and the engine never opens an approval itself.** Two things. First,
    Playwright's default headless build is the headless _shell_, which cannot load an extension at
-   all, so `openWalletContext` (`internal/browser.ts`) passes `channel: "chromium"` (the full
+   all, so `openSession` (`internal/session.ts`) passes `channel: "chromium"` (the full
    browser) for both the build and the run. Second, **whether a wallet's approval window surfaces
    as a page headless is a property of that wallet**: Phantom's and Rabby's do, MetaMask's is
    created but never exposed. So a wallet declares `headlessApprovals: true` once verified, and
