@@ -57,8 +57,8 @@ packages/walletwright/src/
     extension.ts      the extension archive a setup runs, extension-id derivation
     download.ts       fetch + extract an extension archive
     unlock-screen.ts  the shared unlock flow every wallet's unlockScreen drives
-    controller.ts     createWallet(): the runtime that drives popups and actions
-    popup.ts          approval-popup polling and placement
+    approval.ts       createApprovals(): every approval, from the window opening to it closing
+    controller.ts     createWallet(): names each wallet call and binds actions
     page-bridge.ts    installPageBridge(): connects a mock's Node handler to its in-page provider
   wallets/
     index.ts          the registry + walletKindsByEcosystem()
@@ -137,28 +137,29 @@ type WalletDefinition = {
     isUnlocked?: (page: Page) => Promise<boolean>; // a warm launch that comes back unlocked
     submit?: (page: Page, field: Locator) => Promise<void>; // defaults to pressing Enter
   };
-  approve: (popup: Page, password: string) => Promise<void>;
-  reject: (popup: Page) => Promise<void>;
-  notificationMatch?: string; // popup URL token; defaults to "notification.html"
-  headlessApprovals?: boolean; // its approval window surfaces as a page headless
-  approvalControls?: (popup: Page) => Locator; // what "a request is on screen" looks like
+  approval: {
+    confirm: (popup: Page) => Locator; // every control that approves, across all screens
+    cancel: (popup: Page) => Locator; // every control that rejects
+    click?: { kind: "locator"; force?: boolean; settleMs?: number } | { kind: "inPage" };
+    screens?: ApprovalScreen[]; // what the wallet can put in front of the request
+    urlMatch?: string; // window URL token; defaults to "notification.html"
+    headless?: boolean; // its approval window surfaces as a page headless
+  };
   actions?: WalletActions; // optional capabilities beyond connect/sign
 };
 ```
 
-| Member               | When the engine calls it                                                       |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `source`             | in both phases, to fetch and extract the extension into the cache dir          |
-| `onboardingPage`     | in `buildCache`, to navigate to the first-run screen                           |
-| `prepareContext`     | in both, right after the browser starts and before anything navigates          |
-| `importWallet`       | in `buildCache`, to run the import-from-seed flow                              |
-| `finalizeCache`      | after `buildCache` closes the browser (profile DB not held open)               |
-| `unlockScreen`       | in `launchWallet` (and `settings.unlock`), to open the home page and unlock it |
-| `approve` / `reject` | in the controller, to confirm or cancel a pending approval popup               |
-| `notificationMatch`  | in the popup poller, to recognize this wallet's approval popups by URL         |
-| `headlessApprovals`  | in the fixtures and `launchWallet`, to keep a wallet headed when it must be    |
-| `approvalControls`   | in the popup poller, to tell a pending request from the wallet's idle UI       |
-| `actions`            | in the controller, to expose optional capabilities on the `Wallet`             |
+| Member              | When the engine calls it                                                       |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `source`            | in both phases, to fetch and extract the extension into the cache dir          |
+| `onboardingPage`    | in `buildCache`, to navigate to the first-run screen                           |
+| `prepareContext`    | in both, right after the browser starts and before anything navigates          |
+| `importWallet`      | in `buildCache`, to run the import-from-seed flow                              |
+| `finalizeCache`     | after `buildCache` closes the browser (profile DB not held open)               |
+| `unlockScreen`      | in `launchWallet` (and `settings.unlock`), to open the home page and unlock it |
+| `approval`          | in the approval engine, to find, answer, and wait out each approval window     |
+| `approval.headless` | in the fixtures and `launchWallet`, to keep a wallet headed when it must be    |
+| `actions`           | in the controller, to expose optional capabilities on the `Wallet`             |
 
 ### Adding a wallet
 
@@ -187,12 +188,10 @@ export const rabby: WalletDefinition = {
   // The engine opens this page, waits past ERR_BLOCKED_BY_CLIENT, and types the password.
   unlockScreen: { entry: "index.html" },
 
-  approve: async (popup) => {
-    await popup.getByRole("button", { name: "Confirm" }).click();
-  },
-
-  reject: async (popup) => {
-    await popup.getByRole("button", { name: "Cancel" }).click();
+  // The engine finds the window, clicks each control once, and waits for the window to close.
+  approval: {
+    confirm: (popup) => popup.getByRole("button", { name: /^(?:Connect|Sign|Confirm)$/v }),
+    cancel: (popup) => popup.getByRole("button", { name: /^(?:Cancel|Reject)$/v }),
   },
 };
 ```
@@ -213,7 +212,7 @@ export const wallets = { metamask, phantom, slush, rabby };
 ## The capability model
 
 Connect and sign are universal, so they live directly on the `Wallet` and every wallet must
-implement `approve`. Everything beyond that (rejecting, managing accounts, adding networks, locking)
+declare its `approval` window. Everything beyond that (managing accounts, adding networks, locking)
 is optional and declared per wallet through `WalletDefinition.actions`.
 
 ```ts
@@ -241,7 +240,7 @@ The controller mirrors whatever a wallet declares onto the runtime `Wallet` and 
 for anything it did not:
 
 ```
-[walletwright] Slush does not support reject()
+[walletwright] Slush does not support network.add()
 ```
 
 That is the design center: the API never claims support a wallet has not proven. `network.add` is
@@ -300,37 +299,47 @@ export const metamask: WalletDefinition = {
 
 ## The runtime controller
 
-`createWallet` (`internal/controller.ts`) builds the `Wallet` you drive. Two responsibilities:
-resolving approval popups, and binding capability actions.
+`createWallet` (`internal/controller.ts`) builds the `Wallet` you drive. It names each call and binds
+capability actions; every approval goes to the approval engine (`internal/approval.ts`).
 
-### Popup resolution
+### The approval engine
 
-Approval popups are the tricky part of driving a real extension, and several details are
+Approval windows are the tricky part of driving a real extension. The engine owns each one from the
+request to its answer, so a wallet only declares what its window looks like. Several details are
 load-bearing:
 
-- **Poll, do not wait for an event.** A popup opens as `about:blank` and then navigates, so
+- **Poll, do not wait for an event.** A window opens as `about:blank` and then navigates, so
   `context.waitForEvent('page', { url })` misses it. The engine polls `context.pages()` for a page
-  whose URL matches the wallet's `notificationMatch` (`findNotificationPopup` in `popup.ts`).
-- **"Found" means "usable".** The window opens before it renders (a bare URL with no buttons) and
-  routes to the request later, sometimes tens of seconds later under a busy MV3 service worker. The
-  poller only returns a popup once a button is visible, so the caller never clicks a blank shell.
-- **Required vs optional.** An approval waits up to 30 seconds for the wallet-spawned popup and
+  whose URL matches the wallet's `approval.urlMatch`.
+- **"Found" means answerable.** The window opens before it renders (a bare URL with no buttons) and
+  routes to the request later, sometimes tens of seconds later under a busy MV3 service worker, and
+  MetaMask's can render its home screen. The engine takes a window only once one of the wallet's
+  `confirm` or `cancel` controls, or a password prompt, is showing.
+- **Required vs optional.** An approval waits up to 30 seconds for the wallet-spawned window and
   throws if none appears. `connectToDapp({ optional: true })` and `approve({ optional: true })`
-  tolerate no popup, because a wallet may auto-approve a site it already trusts.
-- **Re-front the dapp after a wallet-UI action.** While an extension page is the active tab, MetaMask
-  renders new approvals inline there instead of opening the popup the engine drives, so the
-  controller brings the dapp page back to the front when an action finishes.
-- **Retry a popup that closed under us.** The poller can grab the previous popup in its final moments
-  (a window closes right after its own approval resolves), so a failed settle re-finds once.
+  wait 10 seconds and tolerate no window, because a wallet may auto-approve a site it already trusts.
+- **One pass at a time, until the window closes.** Each pass answers a password prompt through the
+  shared unlock flow (the same "password field cleared" check as unlock), or passes one of the
+  wallet's declared `screens` (each at most once: MetaMask's Snap notice, its stale connect page), or
+  clicks the next enabled control it has not clicked yet. Each label is clicked at most once, since
+  Rabby re-issues a request whose control is clicked twice, and Rabby signs with Sign and then
+  Confirm. The window closing after a click is the answer; one that never closes fails within 60
+  seconds, naming the controls it clicked.
+- **A window that closes before any click was replaced.** The wallet can close a window and open a
+  fresh one for the same request, so the engine looks for the new window and answers that.
+- **Clicks follow the wallet.** By default a control takes Playwright's click (optionally `force`d,
+  after a `settleMs` pause for a window that wires handlers late, like Slush's). Rabby declares
+  `inPage`: its window unmounts while Playwright waits on a click, so the click is dispatched inside
+  the page. MetaMask stays on locators, since LavaMoat scuttles `page.evaluate`.
+- **Re-front the dapp.** While an extension page is the active tab, MetaMask renders new approvals
+  inline there instead of opening the window the engine drives, so the dapp page goes back in front
+  when an action finishes and before every approval.
 - **Headless support is per-wallet.** MetaMask's approval window is created without ever being
-  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `headlessApprovals` runs
+  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `approval.headless` runs
   headless: the fixtures launch the rest headed, and `launchWallet` refuses them by name. walletwright never opens an approval
   URL itself: a page the wallet did not open for a request shows its home screen, not the request.
-- **"Found" means settleable, not merely rendered.** A wallet can declare `approvalControls`, the
-  controls that exist only while a request is on screen, and the poller waits for those instead of
-  for any button. MetaMask needs this because its popup can render home.
-- **Approval windows get placed.** A popup that opens partly off a small or virtual display renders
-  fine but cannot be clicked, so the controller pins it to 360x592 and moves it on screen over CDP.
+- **Approval windows get placed.** A window that opens partly off a small or virtual display renders
+  fine but cannot be clicked, so the engine pins it to 360x592 and moves it on screen over CDP.
 
 ### Action binding
 

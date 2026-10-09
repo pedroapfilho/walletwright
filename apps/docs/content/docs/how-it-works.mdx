@@ -38,9 +38,14 @@ type WalletDefinition = {
     isUnlocked?: (page) => Promise<boolean>;
     submit?: (page, field) => Promise<void>;
   };
-  approve: (popup, password) => Promise<void>;
-  reject: (popup) => Promise<void>; // the cancel counterpart of approve
-  notificationMatch?: string; // popup URL token; defaults to "notification.html"
+  approval: {
+    confirm: (popup) => Locator; // every control that approves, across all screens
+    cancel: (popup) => Locator; // every control that rejects
+    click?: { kind: "locator"; force?: boolean; settleMs?: number } | { kind: "inPage" };
+    screens?: ApprovalScreen[]; // what the wallet can put in front of the request
+    urlMatch?: string; // window URL token; defaults to "notification.html"
+    headless?: boolean;
+  };
   actions?: WalletActions; // optional capabilities: accounts, network, settings
 };
 ```
