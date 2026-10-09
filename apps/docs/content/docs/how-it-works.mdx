@@ -9,8 +9,8 @@ in three phases: build a cache, launch from it, and drive the popups.
 ## The phases
 
 1. **Build the cache** (`buildCache`). Launch Chromium with the unpacked extension, navigate to the
-   onboarding page, run the import-from-seed flow, close the browser, then apply any post-close fix.
-   The onboarded profile is written to `.walletwright/<hash>`.
+   onboarding page, run the import-from-seed flow, wait until the wallet's state is on disk, close the
+   browser, then apply any post-close fix. The onboarded profile is written to `.walletwright/<hash>`.
 2. **Launch** (`createWalletFixtures` or `launchWallet`). Copy the cached profile to a throwaway
    directory, launch with the extension, resolve the extension id, reach the unlock screen, and
    unlock. This returns a `Wallet`.
@@ -32,6 +32,7 @@ type WalletDefinition = {
     | { kind: "release"; defaultVersion: string; release: (version) => ExtensionArchive };
   onboardingPage: string; // e.g. "home.html"
   importWallet: (page, seedPhrase, password) => Promise<void>;
+  isPersisted?: ({ page, profileDir, extensionId }) => Promise<boolean>; // the state is on disk
   finalizeCache?: (profileDir, extensionId) => Promise<void>;
   unlockScreen: {
     entry: string;

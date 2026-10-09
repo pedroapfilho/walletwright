@@ -61,8 +61,9 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   resolve the setup's `WalletKind` to its definition once and pass the definition down. Nothing
   under `internal/` reads the registry, so any definition can drive the engine, which is how the
   engine tests drive the stand-in.
-- `build` (`internal/cache.ts`) navigates to onboarding, runs `importWallet`, closes, then runs
-  `finalizeCache` and publishes the profile while the browser is closed.
+- `build` (`internal/cache.ts`) navigates to onboarding, runs `importWallet` (which ends once its
+  last screen shows, with no trailing sleep), waits until the profile is durable (item 24), closes,
+  then runs `finalizeCache` and publishes the profile while the browser is closed.
 - `launch` (`internal/launch.ts`) reaches the definition's `unlockScreen` on a copy of the cached
   profile, unlocks it (`internal/unlock-screen.ts`), and returns a `Wallet`.
 - Both open Chromium through `openSession` (`internal/session.ts`): the extension on a throwaway
@@ -105,7 +106,8 @@ driven end-to-end.
 
 To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register it in
 `src/wallets/index.ts`. Its download `source`, `unlockScreen`, and `approval` are declared data the
-engine drives; onboarding is a function. `approval` names the window's URL token (`urlMatch`), its
+engine drives; onboarding is a function, and `isPersisted` an optional check that the onboarded
+wallet is on disk (item 24). `approval` names the window's URL token (`urlMatch`), its
 `confirm` and `cancel` controls (every one the request can show, which is also how the engine tells
 a request from the wallet's idle UI), how to click them (`click`: Playwright's click with an
 optional `settleMs`, or `inPage`), any `screens` the wallet puts in front of the request, and
@@ -122,7 +124,8 @@ routes later (items 4 and 13), `idle` shows a home screen with no request contro
 (item 1), `respawn` closes mid-approval and reopens, `steps` signs with Sign and then Confirm and
 answers `re-issued` if Sign is clicked twice (Rabby), `reauth` asks for the password after Approve
 (Slush) while `refuse` never takes it, and `notice` covers the request until a declared screen
-accepts it (item 17). `home.html?settle=reload` renders nothing until reloaded (item 10). Its
+accepts it (item 17). `home.html?settle=reload` renders nothing until reloaded (item 10), and
+`onboarding.html?persist=late` shows its last screen 3s before it writes the wallet (item 24). Its
 approval window surfaces as a page headless, so it declares `approval.headless`. Cover a new engine behaviour
 by teaching the stand-in to reproduce it, not by stubbing Playwright.
 
@@ -156,8 +159,8 @@ Web Store build current in October 2026. The parts that took real debugging:
   in Slush's GraphQL API (`api.slush.app`, Relay persisted queries) owned by an anonymous device
   session. The device keeps only that session (`anonymous-session-token`), the encrypted passphrase
   (`mnemonic__<id>`) and `password_hash`, all in the `keyval` store of the `keyval-store` IndexedDB
-  (`signaldb-accounts` stays empty). `walletPersisted` waits for those keys before the cache is
-  published.
+  (`signaldb-accounts` stays empty). Slush's `isPersisted` (`walletPersisted`) holds once those
+  keys are in place, so the build publishes no profile without them.
 - **So nothing is stubbed: the run needs the real backend.** `api.slush.app` and
   `initialize.slush.app` answer Playwright's Chromium with 200. Only a non-browser client such as
   `curl` gets Cloudflare's 403 (the Mysten Labs marketing page), with or without a browser
@@ -395,6 +398,19 @@ Each item below cost real debugging time. Don't "simplify" them away.
     location inside this package. Either way the failure loses its code frame at the spec line.
     There is no public way to register a library's frames as internal (`setBoxedStackPrefixes` is
     Playwright-only).
+24. **A wallet's last onboarding screen is not its state on disk.** Wallets persist on a debounce:
+    measured on a developer machine, MetaMask's `KeyringController` is still `{}` when its last
+    screen shows and gets its vault, with the accounts, about 1.3s later; Rabby writes 0.8s after
+    "Address Imported"; Phantom keeps writing for 3.1s after its last submit. The extension's
+    LevelDB directories already hold `LOCK`/`LOG`/`MANIFEST` when onboarding loads, so a check that
+    files exist proves nothing. The build therefore waits for durability before closing: a wallet
+    that can read its own state declares `isPersisted` (MetaMask reads its vault from a copy of its
+    LevelDB, since the open browser holds the lock; Slush reads its secrets from IndexedDB). Phantom,
+    Rabby, and Solflare rely on the engine's default, which snapshots the extension's storage before
+    `importWallet` and waits for it to change and then hold still for `STORAGE_QUIET_MS` (2s, longer
+    than the measured gap before a debounced write). Counting from the first change keeps a wallet
+    that writes nothing until well after its last screen from passing on silence. The default is a
+    heuristic: prefer a declared check wherever a wallet's real state is cheap to read.
 
 ## Conventions
 

@@ -79,7 +79,8 @@ buildCache(setup)                       once, ahead of the tests (headless ok)
   prepareExtension  ─ download + extract the definition's source into .walletwright/
   openSession(staging)                  channel: "chromium", then prepareContext
   goto onboarding, retry until registered
-  importWallet(seed, password)          the wallet's own onboarding flow
+  importWallet(seed, password)          the wallet's own onboarding flow, up to its last screen
+  wait until durable                    isPersisted, or storage changed then still for 2s
   close, finalizeCache, publish         e.g. MetaMask's LevelDB completedOnboarding
         │
         ▼   .walletwright/<profileKey>  a ready-to-unlock profile on disk
@@ -131,6 +132,11 @@ type WalletDefinition = {
   onboardingPage: string; // extension-relative entry, e.g. "home.html"
   prepareContext?: (context: BrowserContext) => Promise<void>; // adjust the browser before it navigates
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
+  isPersisted?: (onboarded: {
+    extensionId: string;
+    page: Page;
+    profileDir: string;
+  }) => Promise<boolean>;
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
   unlockScreen: {
     entry: string; // extension-relative page with the password field, e.g. "home.html"
@@ -155,6 +161,7 @@ type WalletDefinition = {
 | `onboardingPage`    | in `buildCache`, to navigate to the first-run screen                           |
 | `prepareContext`    | in both, right after the browser starts and before anything navigates          |
 | `importWallet`      | in `buildCache`, to run the import-from-seed flow                              |
+| `isPersisted`       | in `buildCache`, polled until the onboarded wallet is on disk                  |
 | `finalizeCache`     | after `buildCache` closes the browser (profile DB not held open)               |
 | `unlockScreen`      | in `launchWallet` (and `settings.unlock`), to open the home page and unlock it |
 | `approval`          | in the approval engine, to find, answer, and wait out each approval window     |
@@ -363,6 +370,13 @@ id as a plain string, so nothing downstream depends on browser state.
 `buildCache` writes an onboarded profile to `.walletwright/<profileKey>`, where `profileKey` is the
 first 20 hex characters of `sha256("<wallet>:<version>:<seed>:<password>")`. Same setup, same
 directory, so onboarding runs once. Change any of those four and you get a distinct profile.
+
+Reaching a wallet's last onboarding screen does not put its state on disk. Wallets persist on a
+debounce, and MetaMask writes its vault about 1.3s after that screen, so the build closes the
+browser only once the profile is durable. A wallet that can read its own state declares
+`isPersisted`: MetaMask reads its vault from a copy of its LevelDB, Slush its secrets from IndexedDB.
+For Phantom, Rabby, and Solflare the engine snapshots the extension's storage before `importWallet`
+and waits for it to change and then hold still for 2s.
 
 `launchWallet` never launches the cached profile directly. It copies it to a fresh
 `mkdtemp` directory and launches from the copy, so the cache stays pristine and parallel workers do
