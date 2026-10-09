@@ -74,13 +74,15 @@ jobs:
             pnpm --filter demo exec playwright test \
               --grep-invert "Slush:"
           '
-      # Slush's connect is flaky (roughly one run in five) in a way nobody has pinned down yet: the
-      # approval popup opens, takes the confirm click and closes, so walletwright reports a
-      # successful approval, but the dapp's `standard:connect` never yields an account and the spec
-      # times out on an empty `#suiAccount`. Unlike the MetaMask Solana exclusion above this is not
-      # a GitHub-runner problem — it reproduces headed on a developer machine — so it is a real bug
-      # and the specs keep running on every push, uploading traces, rather than being switched off.
-      # Until it is diagnosed it must not gate the branch. Drop `continue-on-error` once it is.
+      # Slush's connect used to flake: the approval window took the confirm click and closed, so
+      # walletwright reported success, but `#suiAccount` stayed empty, often on every retry in that
+      # run. CI logs show it in about 22 of 60 runs from 2026-09-14 to 2026-09-28 16:47Z and in none
+      # of the 21 runs since, on the same cached Slush build. No walletwright change lines up with
+      # that, and the traces that could say more have expired. On Slush 26.21.1, 8 headed rounds with
+      # a fresh backend session each opened exactly one approval window per request, and the dapp
+      # had the account within 0.2s of that window closing: a closed window is the answer. Slush now
+      # also needs its real backend, which this runner has not been shown to reach, so the step still
+      # must not gate the branch. Drop `continue-on-error` once it passes here reliably.
       - id: slush
         continue-on-error: true
         run: |-

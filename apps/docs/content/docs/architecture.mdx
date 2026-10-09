@@ -140,7 +140,7 @@ type WalletDefinition = {
   approval: {
     confirm: (popup: Page) => Locator; // every control that approves, across all screens
     cancel: (popup: Page) => Locator; // every control that rejects
-    click?: { kind: "locator"; force?: boolean; settleMs?: number } | { kind: "inPage" };
+    click?: { kind: "locator"; settleMs?: number } | { kind: "inPage" };
     screens?: ApprovalScreen[]; // what the wallet can put in front of the request
     urlMatch?: string; // window URL token; defaults to "notification.html"
     headless?: boolean; // its approval window surfaces as a page headless
@@ -327,8 +327,8 @@ load-bearing:
   seconds, naming the controls it clicked.
 - **A window that closes before any click was replaced.** The wallet can close a window and open a
   fresh one for the same request, so the engine looks for the new window and answers that.
-- **Clicks follow the wallet.** By default a control takes Playwright's click (optionally `force`d,
-  after a `settleMs` pause for a window that wires handlers late, like Slush's). Rabby declares
+- **Clicks follow the wallet.** By default a control takes Playwright's click, optionally after a
+  `settleMs` pause for a window that wires handlers late, like Slush's. Rabby declares
   `inPage`: its window unmounts while Playwright waits on a click, so the click is dispatched inside
   the page. MetaMask stays on locators, since LavaMoat scuttles `page.evaluate`.
 - **Re-front the dapp.** While an extension page is the active tab, MetaMask renders new approvals

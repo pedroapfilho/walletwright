@@ -152,7 +152,7 @@ export const createApprovals = ({
       );
       return;
     }
-    await click(control, { force: clickStrategy.force, settleMs, timeoutMs: BUDGETS.click });
+    await click(control, { settleMs, timeoutMs: BUDGETS.click });
   };
 
   /** A request control, or a password prompt in front of one, is what makes a window answerable. */

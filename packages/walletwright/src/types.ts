@@ -124,8 +124,6 @@ export type ApprovalScreen = {
 export type ApprovalClick =
   /** Playwright's click, which waits for the control to be actionable. */
   | {
-      /** Skip the actionability checks, for controls that are not native buttons (Slush). */
-      force?: boolean;
       kind: "locator";
       /** Pause before every click and password entry, for a window that wires handlers after render. */
       settleMs?: number;
