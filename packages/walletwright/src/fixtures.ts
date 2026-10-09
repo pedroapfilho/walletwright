@@ -43,7 +43,7 @@ export const createWalletFixtures = (setup: WalletSetup) => {
     walletLaunch: [
       async ({ headless }, use) => {
         const launched = await launch(definition, setup, {
-          headless: headless && definition.headlessApprovals === true,
+          headless: headless && definition.approval.headless === true,
           step: reportAsStep,
         });
         await use(launched);

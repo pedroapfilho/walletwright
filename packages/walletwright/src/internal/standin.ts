@@ -4,22 +4,28 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { BrowserContext } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import AdmZip from "adm-zip";
 
 import type { WalletDefinition } from "../types";
 
 const FIXTURE_DIR = fileURLToPath(new URL("standin", import.meta.url));
-/** Longer than a respawned popup lives, shorter than an idle one, see `standin/extension`. */
-const CLICK_TIMEOUT_MS = 5000;
 const ANSWER_TIMEOUT_MS = 10_000;
 
 /**
- * How the stand-in's approval popup behaves for one request: `ready` renders the request at once,
- * `late` opens blank and routes afterwards, `idle` shows the wallet's home before the request, and
- * `respawn` is replaced by a fresh window while its buttons are still disabled.
+ * How the stand-in's approval popup behaves for one request; `standin/extension/notification.js`
+ * documents each. `late`, `idle`, and `respawn` delay or replace the request, `steps`, `reauth`, and
+ * `notice` put screens in front of its answer, and `refuse` never takes the password.
  */
-export type ApprovalMode = "idle" | "late" | "ready" | "respawn";
+export type ApprovalMode =
+  | "idle"
+  | "late"
+  | "notice"
+  | "ready"
+  | "reauth"
+  | "refuse"
+  | "respawn"
+  | "steps";
 
 export type Standin = {
   close: () => Promise<void>;
@@ -31,6 +37,8 @@ export type Standin = {
     mode: ApprovalMode,
   ) => Promise<{ answer: () => Promise<string | null> }>;
 };
+
+const notice = (popup: Page) => popup.getByRole("button", { name: "Accept" });
 
 /** The profile directory a context runs on, as Chromium itself reports it. */
 export const userDataDirOf = async (context: BrowserContext): Promise<string> => {
@@ -76,12 +84,19 @@ export const serveStandin = async (): Promise<Standin> => {
   const sha256 = createHash("sha256").update(archive).digest("hex");
 
   const definition: WalletDefinition = {
-    approvalControls: (popup) => popup.getByRole("button", { name: /^(?:Approve|Reject)$/v }),
-    approve: (popup) =>
-      popup.getByRole("button", { name: "Approve" }).click({ timeout: CLICK_TIMEOUT_MS }),
+    approval: {
+      cancel: (popup) => popup.getByRole("button", { name: "Reject" }),
+      confirm: (popup) => popup.getByRole("button", { name: /^(?:Approve|Sign|Confirm)$/v }),
+      headless: true,
+      screens: [
+        {
+          pass: (popup) => notice(popup).click(),
+          shows: (popup) => notice(popup).isVisible(),
+        },
+      ],
+    },
     ecosystems: ["evm"],
     extensionName: "Stand-in",
-    headlessApprovals: true,
     importWallet: async (page, seedPhrase, password) => {
       await page.getByLabel("Secret recovery phrase").fill(seedPhrase);
       await page.getByLabel("Password").fill(password);
@@ -89,8 +104,6 @@ export const serveStandin = async (): Promise<Standin> => {
       await page.getByText("Wallet ready").waitFor();
     },
     onboardingPage: "onboarding.html",
-    reject: (popup) =>
-      popup.getByRole("button", { name: "Reject" }).click({ timeout: CLICK_TIMEOUT_MS }),
     source: {
       defaultVersion: "1.0.0",
       kind: "release",

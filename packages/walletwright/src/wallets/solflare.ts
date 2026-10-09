@@ -30,12 +30,10 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
 };
 
 export const solflare: WalletDefinition = {
-  approve: async (popup) => {
-    await popup
-      .getByTestId("btn-connect")
-      .or(popup.getByTestId("btn-approve"))
-      .first()
-      .click({ timeout: 30_000 });
+  approval: {
+    cancel: (popup) => popup.getByTestId("btn-cancel").or(popup.getByTestId("btn-reject")),
+    confirm: (popup) => popup.getByTestId("btn-connect").or(popup.getByTestId("btn-approve")),
+    urlMatch: "confirm_popup.html",
   },
 
   ecosystems: ["svm"],
@@ -44,17 +42,7 @@ export const solflare: WalletDefinition = {
 
   importWallet,
 
-  notificationMatch: "confirm_popup.html",
-
   onboardingPage: "wallet.html",
-
-  reject: async (popup) => {
-    await popup
-      .getByTestId("btn-cancel")
-      .or(popup.getByTestId("btn-reject"))
-      .first()
-      .click({ timeout: 30_000 });
-  },
 
   source: { id: "bhhhlbepdkbapadjdnnojkbgioiodbic", kind: "webStore" },
 

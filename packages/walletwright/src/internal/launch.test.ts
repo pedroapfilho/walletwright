@@ -60,7 +60,10 @@ describe.concurrent("launch", { timeout: 60_000 }, () => {
 
   it("refuses headless for a wallet without verified headless approvals", async ({ expect }) => {
     await expect(
-      launchHeadless({ ...standin.definition, headlessApprovals: false }),
+      launchHeadless({
+        ...standin.definition,
+        approval: { ...standin.definition.approval, headless: false },
+      }),
     ).rejects.toThrow(
       "[walletwright] Stand-in has no verified headless approval flow; run this suite headed",
     );

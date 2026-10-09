@@ -4,6 +4,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletDefinition } from "../types";
 
+import { createApprovals } from "./approval";
 import { createWallet, type StepRunner } from "./controller";
 import { prepareExtension } from "./extension";
 import { pathExists } from "./fs";
@@ -51,7 +52,7 @@ export const launch = async (
   setup: EngineSetup,
   { headless, step }: { headless: boolean; step: StepRunner },
 ): Promise<LaunchedWallet> => {
-  if (headless && definition.headlessApprovals !== true) {
+  if (headless && definition.approval.headless !== true) {
     throw new Error(
       `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
     );
@@ -86,6 +87,12 @@ export const launch = async (
     context: session.context,
     [Symbol.asyncDispose]: close,
     wallet: createWallet({
+      approvals: createApprovals({
+        context: session.context,
+        definition,
+        extensionId: session.extensionId,
+        reauthenticate: (popup) => screen.submitPassword(popup, setup.password),
+      }),
       context: session.context,
       definition,
       extensionId: session.extensionId,

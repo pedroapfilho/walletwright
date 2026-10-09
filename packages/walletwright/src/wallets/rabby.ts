@@ -6,7 +6,6 @@ import type { WalletDefinition } from "../types";
 
 const ROUTE_TIMEOUT_MS = 30_000;
 const SEED_PASTE_TIMEOUT_MS = 3000;
-const APPROVAL_TIMEOUT_MS = 30_000;
 
 const ONBOARDING_ROUTE = "index.html#/new-user/guide";
 
@@ -74,67 +73,25 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
   await sleep(1000);
 };
 
-const CONFIRM_LABELS = ["Connect", "Sign", "Confirm"];
-const CANCEL_LABELS = ["Cancel", "Reject"];
-
-/** Rabby's focus-fragile popup requires in-page clicks; signing then requires a second Confirm click. */
-const clickApprovalButton = async (
-  popup: Page,
-  labels: ReadonlyArray<string>,
-): Promise<boolean> => {
-  // Every label already clicked, not just the most recent one: after Sign then Confirm, a one-slot
-  // memory makes "Sign" eligible again, and re-clicking it re-issues the request.
-  const clickedLabels = new Set<string>();
-  const answered = await waitUntil(
-    async () => {
-      if (popup.isClosed()) {
-        return true;
-      }
-      const clicked = await popup
-        .evaluate(
-          (arg) => {
-            const target = [...document.querySelectorAll("button")].find((button) => {
-              const text = button.textContent.trim();
-              return arg.names.includes(text) && !button.disabled && !arg.skip.includes(text);
-            });
-            target?.click();
-            return target ? target.textContent.trim() : "";
-          },
-          { names: [...labels], skip: [...clickedLabels] },
-        )
-        .catch(() => "");
-      if (clicked) {
-        clickedLabels.add(clicked);
-      }
-      return undefined;
-    },
-    { intervalMs: 300, timeoutMs: APPROVAL_TIMEOUT_MS },
-  );
-  return answered === true || popup.isClosed();
-};
-
 export const rabby: WalletDefinition = {
-  approve: async (popup) => {
-    if (!(await clickApprovalButton(popup, CONFIRM_LABELS))) {
-      throw new Error("[walletwright] Rabby approval: no confirm button became actionable");
-    }
+  /**
+   * Its window unmounts its contents seconds after losing focus, and reads a click Playwright is still
+   * settling as a dismissal, so controls are clicked in-page. Signing is Sign, then Confirm.
+   */
+  approval: {
+    cancel: (popup) => popup.locator("button").filter({ hasText: /^(?:Cancel|Reject)$/v }),
+    click: { kind: "inPage" },
+    confirm: (popup) => popup.locator("button").filter({ hasText: /^(?:Connect|Sign|Confirm)$/v }),
+    headless: true,
   },
 
   ecosystems: ["evm"],
 
   extensionName: "Rabby",
 
-  headlessApprovals: true,
-
   importWallet,
 
   onboardingPage: ONBOARDING_ROUTE,
-
-  reject: async (popup) => {
-    if (!(await clickApprovalButton(popup, CANCEL_LABELS))) {
-      throw new Error("[walletwright] Rabby reject: no cancel button became actionable");
-    }
-  },
 
   source: { id: "acmacodkjbdgmoleebolmdjonilkdbch", kind: "webStore" },
 

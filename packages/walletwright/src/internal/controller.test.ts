@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { WalletDefinition } from "../types";
 
+import type { Approvals } from "./approval";
 import { createWallet, runDirectly, type StepRunner } from "./controller";
 
 const stubContext = { pages: () => [] } as unknown as BrowserContext;
@@ -14,9 +15,10 @@ const stubHome = {
 const makeDefinition = (actions?: WalletDefinition["actions"]): WalletDefinition =>
   ({
     actions,
-    approve: vi.fn(),
     extensionName: "Fake Wallet",
   }) as unknown as WalletDefinition;
+
+const stubApprovals: Approvals = { approve: vi.fn(), reject: vi.fn() };
 
 const stubUnlock = () => Promise.resolve();
 
@@ -26,6 +28,7 @@ const makeWallet = (
   step: StepRunner = runDirectly,
 ) =>
   createWallet({
+    approvals: stubApprovals,
     context: stubContext,
     definition: makeDefinition(actions),
     extensionId: "fake-extension-id",

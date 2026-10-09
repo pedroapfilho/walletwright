@@ -74,10 +74,50 @@ describe.concurrent("wallet approvals", { timeout: 60_000 }, () => {
     expect(await dapp.answer()).toBe("approved");
   });
 
+  it("clicks each control of a multi-screen approval once", async ({ expect }) => {
+    await using launched = await launchStandin();
+    const dapp = await standin.request(launched.context, "steps");
+
+    await launched.wallet.confirmSignature();
+
+    expect(await dapp.answer()).toBe("approved");
+  });
+
+  it("re-authenticates through the unlock flow when the window asks for the password", async ({
+    expect,
+  }) => {
+    await using launched = await launchStandin();
+    const dapp = await standin.request(launched.context, "reauth");
+
+    await launched.wallet.confirmSignature();
+
+    expect(await dapp.answer()).toBe("approved");
+  });
+
+  it("fails when the window keeps asking for the password", async ({ expect }) => {
+    await using launched = await launchStandin();
+    await standin.request(launched.context, "refuse");
+
+    await expect(launched.wallet.confirmSignature()).rejects.toThrow(
+      "[walletwright] Stand-in did not take the password",
+    );
+  });
+
+  it("passes a screen the wallet declares before clicking the request", async ({ expect }) => {
+    await using launched = await launchStandin();
+    const dapp = await standin.request(launched.context, "notice");
+
+    await launched.wallet.approve();
+
+    expect(await dapp.answer()).toBe("approved");
+  });
+
   it("throws when a required popup never appears", async ({ expect }) => {
     await using launched = await launchStandin();
 
-    await expect(launched.wallet.approve()).rejects.toThrow("approval popup did not appear");
+    await expect(launched.wallet.approve()).rejects.toThrow(
+      "[walletwright] Stand-in's approval window did not appear (gave up after 30s)",
+    );
   });
 
   it("resolves an optional approval that never appears", async ({ expect }) => {

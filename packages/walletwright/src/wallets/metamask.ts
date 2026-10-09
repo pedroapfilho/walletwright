@@ -3,7 +3,7 @@ import type { ExtensionArchive, WalletDefinition } from "../types";
 import { accounts } from "./metamask/actions/accounts";
 import { network } from "./metamask/actions/network";
 import { settings } from "./metamask/actions/settings";
-import { approvalControls, approve, reject } from "./metamask/approve";
+import { approval } from "./metamask/approve";
 import { importWallet } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
 
@@ -35,8 +35,7 @@ const ACCOUNT_SYNC_HOST = "user-storage.api.cx.metamask.io";
 
 export const metamask: WalletDefinition = {
   actions: { accounts, network, settings },
-  approvalControls,
-  approve,
+  approval,
   ecosystems: ["evm", "svm"],
   extensionName: "MetaMask",
   finalizeCache: markMetaMaskOnboarded,
@@ -45,7 +44,6 @@ export const metamask: WalletDefinition = {
   prepareContext: async (context) => {
     await context.route(`**://${ACCOUNT_SYNC_HOST}/**`, (route) => route.abort());
   },
-  reject,
   source: { defaultVersion: DEFAULT_VERSION, kind: "release", release: metamaskRelease },
   unlockScreen: { entry: "home.html" },
 };

@@ -19,9 +19,8 @@ const ITEMS_STORE = "items";
 const FORCED = { force: true } as const;
 /** Slush mounts its welcome controls before wiring their handlers, and an early click is a no-op. */
 const WELCOME_CONTROL = { ...FORCED, settleMs: 1000 } as const;
-const POPUP_CONTROL = { ...FORCED, timeoutMs: 15_000 } as const;
-/** Short, so a signing popup, which has no Approve, falls through to Sign quickly. */
-const APPROVE_PROBE = { ...FORCED, timeoutMs: 4000 } as const;
+/** Its approval window reports controls visible about two seconds before their handlers wire up. */
+const APPROVAL_SETTLE_MS = 2000;
 
 const { click, clickIfShown } = clicksFor("Slush");
 
@@ -126,20 +125,13 @@ const openPassphraseImport = async (page: Page): Promise<void> => {
 };
 
 export const slush: WalletDefinition = {
-  approve: async (popup, password) => {
-    await sleep(2000);
-    const confirmed =
-      (await clickIfShown(labelled(popup, "Approve"), APPROVE_PROBE)) ||
-      (await clickIfShown(labelled(popup, "Sign"), POPUP_CONTROL));
-    if (!confirmed) {
-      throw new Error("[walletwright] Slush approval: neither Approve nor Sign was actionable");
-    }
-    await sleep(1500);
-    const input = popup.locator('input[type="password"]');
-    if (await input.isVisible().catch(() => false)) {
-      await input.fill(password);
-      await clickIfShown(labelled(popup, "Unlock"), POPUP_CONTROL);
-    }
+  /** Connect confirms with Approve, signing with Sign and then the password again (Unlock). */
+  approval: {
+    cancel: (popup) => popup.getByText("Reject", { exact: true }),
+    click: { force: true, kind: "locator", settleMs: APPROVAL_SETTLE_MS },
+    confirm: (popup) =>
+      popup.getByText("Approve", { exact: true }).or(popup.getByText("Sign", { exact: true })),
+    urlMatch: "isPopup=1",
   },
 
   ecosystems: ["sui"],
@@ -175,8 +167,6 @@ export const slush: WalletDefinition = {
     });
   },
 
-  notificationMatch: "isPopup=1",
-
   onboardingPage: "index.html",
 
   prepareContext: async (context) => {
@@ -187,13 +177,6 @@ export const slush: WalletDefinition = {
         status: 200,
       }),
     );
-  },
-
-  reject: async (popup) => {
-    await sleep(2000);
-    if (!(await clickIfShown(labelled(popup, "Reject"), POPUP_CONTROL))) {
-      throw new Error("[walletwright] Slush reject: no Reject control was actionable");
-    }
   },
 
   source: { id: "opcgpfmipidbgpenhmajoajpbobppdil", kind: "webStore" },

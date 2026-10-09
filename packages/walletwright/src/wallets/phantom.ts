@@ -5,14 +5,15 @@ import type { WalletDefinition } from "../types";
 const { click } = clicksFor("Phantom");
 
 export const phantom: WalletDefinition = {
-  approve: async (popup) => {
-    await popup.getByTestId("primary-button").click({ timeout: 15_000 });
+  approval: {
+    cancel: (popup) => popup.getByTestId("secondary-button"),
+    confirm: (popup) => popup.getByTestId("primary-button"),
+    headless: true,
   },
+
   ecosystems: ["evm", "svm"],
 
   extensionName: "Phantom",
-
-  headlessApprovals: true,
 
   importWallet: async (page, seedPhrase, password) => {
     const testId = (id: string) => page.locator(`[data-testid="${id}"]`);
@@ -40,10 +41,6 @@ export const phantom: WalletDefinition = {
   },
 
   onboardingPage: "onboarding.html",
-
-  reject: async (popup) => {
-    await popup.getByTestId("secondary-button").click({ timeout: 15_000 });
-  },
 
   source: { id: "bfnaelmomeimhlpmgjnjophhpkkoljpa", kind: "webStore" },
 
