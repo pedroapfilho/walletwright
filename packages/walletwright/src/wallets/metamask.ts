@@ -6,6 +6,7 @@ import { settings } from "./metamask/actions/settings";
 import { approval } from "./metamask/approve";
 import { importWallet } from "./metamask/onboarding";
 import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
+import { isMetaMaskPersisted } from "./metamask/persisted";
 
 /** Release hashes for the pinned default. Add an entry before changing `DEFAULT_VERSION`. */
 const RELEASE_SHA256 = {
@@ -40,6 +41,7 @@ export const metamask: WalletDefinition = {
   extensionName: "MetaMask",
   finalizeCache: markMetaMaskOnboarded,
   importWallet,
+  isPersisted: isMetaMaskPersisted,
   onboardingPage: "home.html",
   prepareContext: async (context) => {
     await context.route(`**://${ACCOUNT_SYNC_HOST}/**`, (route) => route.abort());
