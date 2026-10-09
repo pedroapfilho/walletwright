@@ -80,6 +80,13 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   file's worth of flow keeps its helpers in a folder of the same name, so the definition file stays
   the import site: `metamask.ts` assembles, `metamask/onboarding.ts` and `metamask/approve.ts` and
   `metamask/actions/*.ts` implement.
+- Onboarding, `unlockScreen.submit`, and actions click the wallet's own UI through
+  `clicksFor(wallet)` (`internal/click.ts`), which has two intents. `click` is a control the flow
+  needs: it waits for it to show, clicks, and throws `[walletwright] <Wallet> never showed <control>`
+  on timeout. `clickIfShown` is an interstitial a run may skip: absence within its budget resolves
+  `false`, but a control that shows and then refuses the click throws. `force` and `settleMs` are
+  options, and the budgets (30s required, 10s optional) live in that module. Approval clicks are
+  still each wallet's own.
 
 Beyond connect and sign, capabilities are **optional and per-wallet**. `WalletDefinition.actions`
 groups them (`accounts`, `network`, `settings`, and later `tokens`). The engine mirrors what a wallet declares onto `Wallet` and throws
@@ -136,9 +143,9 @@ debugging:
   route. A `#/CreateWallet` spinner sits in between and must finish, or the wallet never persists.
 - There is no separate `notification.html`. Approvals are `index.html` with `isPopup=1` in the URL,
   which is what `notificationMatch` keys on.
-- The buttons aren't native, so they need `click({ force: true })`. The popup also reports its buttons
-  visible about 2 seconds before its React handlers wire up, so `approve` sleeps first; an early click
-  is a silent no-op.
+- The buttons aren't native, so they need `force: true`. The popup also reports its buttons visible
+  about 2 seconds before its React handlers wire up, so `approve` sleeps first and the welcome clicks
+  settle before clicking; an early click is a silent no-op.
 - Connect confirms with "Approve". Signing confirms with "Sign" and then re-prompts for the password
   ("Unlock"), which is why `WalletDefinition.approve` takes the password.
 - Gate clicks on `waitFor({ state: "visible" })`, never `isVisible({ timeout })`. `isVisible()` reads
@@ -146,6 +153,8 @@ debugging:
   late-mounting single-page UI it reads false and the click silently no-ops. That broke the cache
   build: the `More options` / `Import existing from passphrase` clicks were skipped and the flow never
   reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
+  `internal/click.ts` now gates every wallet's onboarding and unlock clicks this way. The one instant
+  read left is the sign re-auth check inside Slush's `approve`.
 - **Its backend has to be stubbed, or nothing renders.** `api.slush.app` and `initialize.slush.app`
   answer an automated browser with a Cloudflare 403 whose body is the Mysten Labs marketing page (a
   plain `curl` gets the same, while Sui's own `fullnode.mainnet.sui.io` answers 200, so it is Slush's

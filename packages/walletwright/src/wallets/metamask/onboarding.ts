@@ -1,23 +1,26 @@
 import type { Page } from "@playwright/test";
 
+import { clicksFor } from "../../internal/click";
 import { waitUntil } from "../../internal/wait";
 
 const SRP_RETYPE_TIMEOUT_MS = 40_000;
 const SRP_CONFIRM_TIMEOUT_MS = 5000;
+
+const { click, clickIfShown } = clicksFor("MetaMask");
 
 export const importWallet = async (
   page: Page,
   seedPhrase: string,
   password: string,
 ): Promise<void> => {
-  await page.getByTestId("onboarding-import-wallet").click();
-  await page.getByTestId("onboarding-import-with-srp-button").click();
+  await click(page.getByTestId("onboarding-import-wallet"));
+  await click(page.getByTestId("onboarding-import-with-srp-button"));
 
   const srpField = page.getByTestId("srp-input-import__srp-note");
   const confirmEnabled = page.locator('[data-testid="import-srp-confirm"]:not([disabled])');
   const accepted = await waitUntil(
     async () => {
-      await srpField.click();
+      await click(srpField);
       await srpField.fill("");
       await srpField.pressSequentially(seedPhrase, { delay: 50 });
       return confirmEnabled
@@ -30,19 +33,13 @@ export const importWallet = async (
   if (accepted === undefined) {
     throw new Error("[walletwright] MetaMask rejected the seed phrase (confirm stayed disabled)");
   }
-  await confirmEnabled.click();
+  await click(confirmEnabled);
 
   await page.getByTestId("create-password-new-input").fill(password);
   await page.getByTestId("create-password-confirm-input").fill(password);
-  await page.getByTestId("create-password-terms").click();
-  await page.locator('[data-testid="create-password-submit"]:not([disabled])').click();
+  await click(page.getByTestId("create-password-terms"));
+  await click(page.locator('[data-testid="create-password-submit"]:not([disabled])'));
 
-  await page
-    .getByTestId("passkey-maybe-later-button")
-    .click({ timeout: 10_000 })
-    .catch(() => {});
-  await page
-    .getByTestId("metametrics-i-agree")
-    .click({ timeout: 10_000 })
-    .catch(() => {});
+  await clickIfShown(page.getByTestId("passkey-maybe-later-button"));
+  await clickIfShown(page.getByTestId("metametrics-i-agree"));
 };

@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 
+import { clicksFor } from "../internal/click";
 import { sleep, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
@@ -13,6 +14,18 @@ const PASSPHRASE_SCREEN_ATTEMPTS = 3;
 const ACCOUNTS_DATABASE = "signaldb-accounts";
 const PREFERENCES_DATABASE = "signaldb-preferences";
 const ITEMS_STORE = "items";
+
+/** Slush's controls are not native buttons, so every click on one is forced. */
+const FORCED = { force: true } as const;
+/** Slush mounts its welcome controls before wiring their handlers, and an early click is a no-op. */
+const WELCOME_CONTROL = { ...FORCED, settleMs: 1000 } as const;
+const POPUP_CONTROL = { ...FORCED, timeoutMs: 15_000 } as const;
+/** Short, so a signing popup, which has no Approve, falls through to Sign quickly. */
+const APPROVE_PROBE = { ...FORCED, timeoutMs: 4000 } as const;
+
+const { click, clickIfShown } = clicksFor("Slush");
+
+const labelled = (page: Page, text: string) => page.getByText(text, { exact: true }).first();
 
 const atHome = async (page: Page): Promise<boolean> =>
   (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
@@ -86,46 +99,38 @@ const walletPersisted = (page: Page): Promise<boolean> =>
     },
   );
 
-const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boolean> => {
-  const target = page.getByText(text, { exact: true }).first();
-  const visible = await target
-    .waitFor({ state: "visible", timeout: timeoutMs })
-    .then(() => true)
-    .catch(() => false);
-  if (!visible) {
-    return false;
-  }
-  await target.scrollIntoViewIfNeeded().catch(() => {});
-  await target.click({ force: true, timeout: timeoutMs });
-  return true;
-};
-
-/** The first click can land before the menu is interactive on a slow runner, so retry until the words show. */
+/**
+ * On a slow runner a welcome click can still land before Slush responds, leaving the page where it
+ * was. Reloading the welcome screen and starting over recovers it, so an attempt that fails is
+ * retried, and the last failure is the cause if every attempt does.
+ */
 const openPassphraseImport = async (page: Page): Promise<void> => {
   const firstWord = page.getByLabel("Word 1", { exact: true });
+  let failure: unknown;
   for (let attempt = 0; attempt < PASSPHRASE_SCREEN_ATTEMPTS; attempt++) {
-    await fclick(page, "More options");
-    await sleep(1000);
-    await fclick(page, "Import existing from passphrase");
-    const opened = await firstWord
-      .waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS })
-      .then(() => true)
-      .catch(() => false);
-    if (opened) {
+    try {
+      await click(labelled(page, "More options"), WELCOME_CONTROL);
+      await click(labelled(page, "Import existing from passphrase"), WELCOME_CONTROL);
+      await firstWord.waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS });
       return;
+    } catch (error) {
+      failure = error;
     }
     await page.goto(page.url().split("#")[0] ?? page.url());
     await sleep(2000);
   }
   throw new Error(
     `[walletwright] Slush never opened the passphrase import screen after ${PASSPHRASE_SCREEN_ATTEMPTS} attempts`,
+    { cause: failure },
   );
 };
 
 export const slush: WalletDefinition = {
   approve: async (popup, password) => {
     await sleep(2000);
-    const confirmed = (await fclick(popup, "Approve", 4000)) || (await fclick(popup, "Sign"));
+    const confirmed =
+      (await clickIfShown(labelled(popup, "Approve"), APPROVE_PROBE)) ||
+      (await clickIfShown(labelled(popup, "Sign"), POPUP_CONTROL));
     if (!confirmed) {
       throw new Error("[walletwright] Slush approval: neither Approve nor Sign was actionable");
     }
@@ -133,7 +138,7 @@ export const slush: WalletDefinition = {
     const input = popup.locator('input[type="password"]');
     if (await input.isVisible().catch(() => false)) {
       await input.fill(password);
-      await fclick(popup, "Unlock");
+      await clickIfShown(labelled(popup, "Unlock"), POPUP_CONTROL);
     }
   },
 
@@ -148,18 +153,16 @@ export const slush: WalletDefinition = {
     for (let i = 0; i < words.length; i++) {
       await page.getByLabel(`Word ${i + 1}`, { exact: true }).fill(words[i] ?? "");
     }
-    await page.getByRole("button", { name: "Next" }).click();
+    const next = page.getByRole("button", { name: "Next" });
+    await click(next);
     await sleep(2000);
 
     await page.locator('input[placeholder="Password"]').fill(password);
     await page.locator('input[placeholder="Confirm Password"]').fill(password);
-    await page.getByRole("button", { name: "Next" }).click();
+    await click(next);
     await sleep(2000);
 
-    await page
-      .getByRole("button", { name: "Next" })
-      .click()
-      .catch(() => {});
+    await clickIfShown(next);
     await waitUntilOrThrow(() => atHome(page), {
       intervalMs: 1000,
       message: `Slush import never reached the wallet home (${HOME_ROUTE})`,
@@ -188,7 +191,7 @@ export const slush: WalletDefinition = {
 
   reject: async (popup) => {
     await sleep(2000);
-    if (!(await fclick(popup, "Reject"))) {
+    if (!(await clickIfShown(labelled(popup, "Reject"), POPUP_CONTROL))) {
       throw new Error("[walletwright] Slush reject: no Reject control was actionable");
     }
   },
@@ -199,7 +202,7 @@ export const slush: WalletDefinition = {
     entry: "index.html",
     isUnlocked: atHome,
     submit: async (page) => {
-      await fclick(page, "Unlock");
+      await click(labelled(page, "Unlock"), FORCED);
     },
   },
 };

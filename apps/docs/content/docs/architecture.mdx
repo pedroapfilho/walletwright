@@ -164,7 +164,9 @@ type WalletDefinition = {
 
 Write a definition, register it in `wallets/index.ts`, and declare the ecosystems it drives. Nothing
 in the engine changes. This is the skeleton; the selectors are discovered by driving the real
-extension, never guessed.
+extension, never guessed. Onboarding, unlock, and actions click through `clicksFor`
+(`internal/click.ts`): `click` waits for a control the flow needs and throws a named error if it
+never shows, and `clickIfShown` takes an interstitial that may be skipped.
 
 ```ts
 // src/wallets/rabby.ts
@@ -266,13 +268,16 @@ Implement the action against the wallet's own `home` page and attach it to the d
 
 ```ts
 // src/wallets/metamask/actions/settings.ts
+import { clicksFor } from "../../../internal/click.ts";
 import type { SettingsActions } from "../../../types.ts";
+
+const { click } = clicksFor("MetaMask");
 
 export const settings: SettingsActions = {
   lock: async ({ home }) => {
-    await home.getByTestId("account-options-menu-button").click();
+    await click(home.getByTestId("account-options-menu-button"));
     // The menu renders the item several times (responsive variants), only one of which is visible.
-    await home.getByTestId("global-menu-lock").filter({ visible: true }).first().click();
+    await click(home.getByTestId("global-menu-lock").filter({ visible: true }).first());
     await home.locator('input[type="password"]').waitFor({ state: "visible", timeout: 15_000 });
   },
 

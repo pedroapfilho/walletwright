@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 
+import { clicksFor } from "../internal/click";
 import { sleep, waitUntil, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
@@ -9,11 +10,7 @@ const APPROVAL_TIMEOUT_MS = 30_000;
 
 const ONBOARDING_ROUTE = "index.html#/new-user/guide";
 
-const clickText = async (page: Page, text: string, timeoutMs = 30_000): Promise<void> => {
-  const target = page.getByText(text, { exact: true }).first();
-  await target.waitFor({ state: "visible", timeout: timeoutMs });
-  await target.click();
-};
+const { click } = clicksFor("Rabby");
 
 /**
  * Rabby routes with a hash router, so `waitForURL` never settles (a hash change fires no navigation
@@ -32,12 +29,11 @@ const waitForRoute = async (
 };
 
 const importWallet = async (page: Page, seedPhrase: string, password: string): Promise<void> => {
-  await clickText(page, "I already have an address");
-  await clickText(page, "Seed Phrase or Private Key");
+  await click(page.getByText("I already have an address", { exact: true }).first());
+  await click(page.getByText("Seed Phrase or Private Key", { exact: true }).first());
   await waitForRoute(page, "seed-or-key");
 
   const words = page.locator('input[type="password"]');
-  await words.first().waitFor({ state: "visible", timeout: 30_000 });
   await page
     .context()
     .grantPermissions(["clipboard-read", "clipboard-write"])
@@ -51,25 +47,25 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
     return value.trim().length > 0;
   };
 
-  await words.first().click();
+  await click(words.first());
   await page.evaluate((phrase) => navigator.clipboard.writeText(phrase), seedPhrase.trim());
   await page.keyboard.press("ControlOrMeta+v");
   const pasted = await waitUntil(lastFilled, { timeoutMs: SEED_PASTE_TIMEOUT_MS });
   if (pasted === undefined) {
     for (let index = 0; index < list.length; index++) {
       const box = words.nth(index);
-      await box.click();
+      await click(box);
       await box.fill(list[index] ?? "");
     }
   }
-  await page.getByRole("button", { exact: true, name: "Next" }).first().click();
+  await click(page.getByRole("button", { exact: true, name: "Next" }).first());
 
   await waitForRoute(page, "set-password");
   const passwords = page.locator('input[type="password"]');
   await passwords.nth(1).waitFor({ state: "visible", timeout: 30_000 });
   await passwords.nth(0).fill(password);
   await passwords.nth(1).fill(password);
-  await page.getByRole("button", { exact: true, name: "Confirm" }).first().click();
+  await click(page.getByRole("button", { exact: true, name: "Confirm" }).first());
 
   await page
     .getByText("Address Imported", { exact: false })
