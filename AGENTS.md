@@ -107,8 +107,8 @@ To add a wallet, implement a `WalletDefinition` in `src/wallets/` and register i
 `src/wallets/index.ts`. Its download `source`, `unlockScreen`, and `approval` are declared data the
 engine drives; onboarding is a function. `approval` names the window's URL token (`urlMatch`), its
 `confirm` and `cancel` controls (every one the request can show, which is also how the engine tells
-a request from the wallet's idle UI), how to click them (`click`: Playwright's click with optional
-`force` and `settleMs`, or `inPage`), any `screens` the wallet puts in front of the request, and
+a request from the wallet's idle UI), how to click them (`click`: Playwright's click with an
+optional `settleMs`, or `inPage`), any `screens` the wallet puts in front of the request, and
 whether the window surfaces headless (`headless`). Each definition declares its `ecosystems`
 (`evm`/`svm`/`sui`/`dot`/`btc`), and `walletKindsByEcosystem(eco)` lists the wallets that drive a
 chain.
@@ -149,38 +149,59 @@ and BTC has no standard, so each Bitcoin wallet injects its own provider.
 ### Slush (SUI), verified
 
 Slush (`src/wallets/slush.ts`) resolves its id via the path (no manifest key). It is a single-page
-app: popup, onboarding, unlock, and approvals all live in `index.html`. The parts that took real
-debugging:
+app: popup, onboarding, unlock, and approvals all live in `index.html`. Verified against 26.21.1, the
+Web Store build current in October 2026. The parts that took real debugging:
 
-- Onboarding runs `#/Welcome` → "More options" → "Import existing from passphrase" → 12 inputs
-  `input[placeholder="Word N"]` → "Next" → `#/CreatePassword` (`input[placeholder="Password"]` and
-  `"Confirm Password"`) → "Next" → `#/OnboardingSecurity` → "Next" → wait for `#/tokens`, the home
-  route. A `#/CreateWallet` spinner sits in between and must finish, or the wallet never persists.
-- There is no separate `notification.html`. Approvals are `index.html` with `isPopup=1` in the URL,
-  which is what `approval.urlMatch` keys on.
-- The buttons aren't native, so they need `force: true`. The popup also reports its buttons visible
-  about 2 seconds before its React handlers wire up, so its approval declares
-  `click: { force: true, settleMs: 2000 }` and the welcome clicks settle before clicking; an early
-  click is a silent no-op.
-- Connect confirms with "Approve". Signing confirms with "Sign" and then re-prompts for the password
-  ("Unlock"), which the engine answers through the shared unlock flow (`unlockScreen.submit` clicks
-  "Unlock"), checking that the password field clears.
+- **Its accounts live on Slush's backend.** The wallet's accounts and dapp connections are records
+  in Slush's GraphQL API (`api.slush.app`, Relay persisted queries) owned by an anonymous device
+  session. The device keeps only that session (`anonymous-session-token`), the encrypted passphrase
+  (`mnemonic__<id>`) and `password_hash`, all in the `keyval` store of the `keyval-store` IndexedDB
+  (`signaldb-accounts` stays empty). `walletPersisted` waits for those keys before the cache is
+  published.
+- **So nothing is stubbed: the run needs the real backend.** `api.slush.app` and
+  `initialize.slush.app` answer Playwright's Chromium with 200. Only a non-browser client such as
+  `curl` gets Cloudflare's 403 (the Mysten Labs marketing page), with or without a browser
+  User-Agent, so a `curl` 403 says nothing about the browser. Answering `*.slush.app` with
+  `{"data":{}}` renders "Unexpected Error: Relay: Missing expected data at path
+  'deviceSessionInvalid' in 'navigationQuery'" and "Reload App" in place of `#/GetStarted`, and no
+  stub can stand in for the account and connection records.
+- **Every run from one cache shares that session**, and copying the profile does not reset what the
+  backend holds. A site connected once stays connected, so later connects return the account with
+  no popup, which is why `tests/slush.spec.ts` connects with `connectToDapp({ optional: true })`. A
+  new cache build is a new session.
+- Onboarding runs `#/GetStarted` → "Get started" → `#/SendOTP` (phone or email sign-in) → "Skip" →
+  "Maybe later" in the bottom sheet → `#/CreateAccount` → "Passphrase" (expands its row) → that row's
+  "Import" link (`a[href$="#/ImportPassphrase"]`) → twelve inputs labelled `Word N` → "Import" →
+  `#/CreatePassword` (placeholders `Password` and `Re-enter password`) → "Next" →
+  `#/RequirePassword` → "Dive into Slush" → `#/tokens`, the home route.
+- **Expand the Passphrase row before clicking its Import link.** Playwright reports the link visible
+  while the row is still collapsed, so a forced click lands on the row and nothing happens, which
+  surfaces as a `Word 1` timeout. The link click is unforced, so it waits for the open row.
+- The welcome controls render before their handlers are wired, so those clicks are forced and
+  settle first; an early click is a silent no-op. "Import", "Next", "Dive into Slush" and "Unlock"
+  are native buttons that stay disabled until their inputs register, so they are clicked unforced,
+  which waits for them to enable; a forced click fires at the disabled button.
+- **Unlock.** A launch within `autoLockTime` (60 minutes by default) of the build comes back
+  unlocked on `#/tokens`. Later, an alarm sets `walletLocked` and a lock form (`Password` field,
+  "Unlock") renders over `#/tokens`, so the hash alone does not mean unlocked. The form mounts before
+  the hash reaches `#/tokens`, and the unlock flow checks for the password field before
+  `isUnlocked`. The form slides in and its button stays disabled until the password registers, hence
+  the unforced click.
+- There is no separate `notification.html`. Approvals are `index.html#approve-connection?…&isPopup=1`
+  and `index.html#sign-personal-message?…&isPopup=1`, so `approval.urlMatch` keys on `isPopup=1`.
+  The window opens blank and renders its request about 2 seconds later; the engine takes it once
+  Approve, Sign, or Reject shows. They are native buttons, clicked unforced after the approval's
+  2-second `settleMs`, kept because an early click on a Slush control is a silent no-op.
+- Connect confirms with "Approve" (aria-label "Approve Connection"; its "Reject" carries
+  `data-testid="reject-connection-button"`). Signing confirms with "Sign" or cancels with "Reject".
+  Onboarding leaves "Confirm transactions" off, so signing does not re-prompt for the password; the
+  approval engine still answers a password prompt through the shared unlock flow if one shows.
 - Gate clicks on `waitFor({ state: "visible" })`, never `isVisible({ timeout })`. `isVisible()` reads
   the current state and returns immediately (its `timeout` does not wait), so against Slush's
-  late-mounting single-page UI it reads false and the click silently no-ops. That broke the cache
-  build: the `More options` / `Import existing from passphrase` clicks were skipped and the flow never
-  reached the seed screen, surfacing as a `Word 1` input timeout several screens later.
-  `internal/click.ts` now gates every wallet's onboarding and unlock clicks this way. The approval
-  engine reads instantly too, but inside a poll over the window, so a late mount is read on a
-  later pass.
-- **Its backend has to be stubbed, or nothing renders.** `api.slush.app` and `initialize.slush.app`
-  answer an automated browser with a Cloudflare 403 whose body is the Mysten Labs marketing page (a
-  plain `curl` gets the same, while Sui's own `fullnode.mainnet.sui.io` answers 200, so it is Slush's
-  edge, not the network). Slush's GraphQL client throws `NonGraphQLResponseError` on that HTML and
-  renders a "Reload App" screen instead of `#/Welcome`, which surfaces several screens later as a
-  `Word 1` input timeout and looks exactly like a stale selector. `slush.ts` answers every
-  `*.slush.app` request with `{"data":{}}` via `WalletDefinition.prepareContext`; onboarding,
-  unlock, connect, and sign need nothing else from the API. Drop it once the endpoint answers again.
+  late-mounting single-page UI it reads false and the click silently no-ops, surfacing as a `Word 1`
+  input timeout several screens later. `internal/click.ts` gates every wallet's onboarding and
+  unlock clicks this way. The approval engine reads instantly too, but inside a poll over the
+  window, so a late mount is read on a later pass.
 - **Headed only.** Opening `index.html?isPopup=1` in a tab (the trick that reaches approvals headless
   elsewhere) drops the query and lands on `#/tokens`, so there is no approval to drive.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
@@ -291,7 +312,7 @@ Each item below cost real debugging time. Don't "simplify" them away.
    malicious and drops the connection. Use a fresh, unfunded mnemonic for both.
 7. **Confirm-button selectors differ.** MetaMask: connect `confirm-btn`, sign `confirm-footer-button`
    (legacy `page-container-footer-next`). Phantom: `primary-button` (reject `secondary-button`).
-   Slush: the text "Approve" or "Sign", then "Unlock" for the sign re-auth.
+   Slush: the text "Approve" or "Sign" (and "Unlock" if it re-prompts for the password).
 8. **Extract with `adm-zip`, not `extract-zip`.** `extract-zip` mangled the MetaMask ZIP, pulling 2 of
    852 files. The `PK` ZIP signature for stripping CRX headers is a decimal byte array (`[80,75,3,4]`)
    to dodge the conflict between oxfmt lowercasing hex and `number-literal-case` wanting uppercase.

@@ -170,8 +170,9 @@ Wallet Standard wallet named "MetaMask" with `solana:` chains) is in `apps/demo/
 
 ## Sui (Slush)
 
-Slush connects through the Wallet Standard and re-prompts for the password when signing. The fixture
-handles the re-auth, so the test is still just connect then sign.
+Slush connects through the Wallet Standard. It keeps a site's connection on its own backend, under
+the session every run from one cache shares, so only the first connect after a cache build shows a
+popup; connect with `optional: true`.
 
 ```ts
 // tests/slush.spec.ts
@@ -185,7 +186,7 @@ test("connect and sign on Sui", async ({ page, wallet }) => {
   await page.goto("/");
 
   await page.getByTestId("sui-connect").click();
-  await wallet.connectToDapp();
+  await wallet.connectToDapp({ optional: true });
   await expect(page.getByTestId("sui-account")).toHaveText(/^0x[0-9a-fA-F]+$/);
 
   await page.getByTestId("sui-sign").click();

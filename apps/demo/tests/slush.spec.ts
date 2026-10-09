@@ -3,11 +3,13 @@ import { slushTest } from "./fixtures";
 const test = slushTest;
 const { expect } = test;
 
+// Slush keeps a site's connection on its backend, under the session every launch from one cache
+// shares, so only the first connect after a cache build shows a popup.
 test("Slush: connect + sign on Sui", async ({ page, wallet }) => {
   await page.goto("/");
 
   await page.locator("#suiConnect").click();
-  await wallet.connectToDapp();
+  await wallet.connectToDapp({ optional: true });
   await expect(page.locator("#suiAccount")).toHaveText(/^0x[0-9a-fA-F]+$/);
 
   await page.locator("#suiSign").click();
@@ -19,7 +21,7 @@ test("Slush: reject a signature request", async ({ page, wallet }) => {
   await page.goto("/");
 
   await page.locator("#suiConnect").click();
-  await wallet.connectToDapp();
+  await wallet.connectToDapp({ optional: true });
   await expect(page.locator("#suiAccount")).toHaveText(/^0x[0-9a-fA-F]+$/);
 
   await page.locator("#suiSign").click();
