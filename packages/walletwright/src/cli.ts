@@ -6,7 +6,7 @@ import { parseArgs } from "node:util";
 
 import { z } from "zod";
 
-import { buildCache } from "./internal/cache";
+import { buildCache } from "./engine";
 import type { WalletKind, WalletSetup } from "./types";
 import { isWalletKind, walletKinds } from "./wallets/index";
 

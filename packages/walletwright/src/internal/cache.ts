@@ -1,14 +1,11 @@
-import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import type { BrowserContext } from "@playwright/test";
+import type { WalletDefinition } from "../types";
 
-import type { WalletSetup } from "../types";
-import { wallets } from "../wallets/index";
-
-import { openWalletContext } from "./browser";
 import { prepareExtension } from "./extension";
-import { extensionStateDir, locateProfile, publishProfile } from "./profile";
+import { type EngineSetup, extensionStateDir, locateProfile, publishProfile } from "./profile";
+import { openSession, type WalletSession } from "./session";
 import { gotoWithRetry, sleep, waitUntilOrThrow } from "./wait";
 
 const NAVIGATION_TIMEOUT_MS = 15_000;
@@ -36,69 +33,44 @@ const hasPersistedState = async (profileDir: string, extensionId: string): Promi
   return listings.some((listing) => listing.status === "fulfilled" && listing.value.length > 0);
 };
 
-/** The seams a unit test replaces, so the build can be exercised without a browser or network. */
-type BuildCacheDependencies = {
-  launchPersistentContext?: Parameters<typeof openWalletContext>[0]["launchPersistentContext"];
-  prepareExtension: typeof prepareExtension;
-};
+const onboard = async (
+  definition: WalletDefinition,
+  setup: EngineSetup,
+  { context, extensionId, userDataDir }: WalletSession,
+): Promise<void> => {
+  const page =
+    context.pages().find((candidate) => candidate.url() === "about:blank") ??
+    (await context.newPage());
+  await gotoWithRetry(page, `chrome-extension://${extensionId}/${definition.onboardingPage}`, {
+    label: `${definition.extensionName} onboarding page`,
+    timeoutMs: NAVIGATION_TIMEOUT_MS,
+  });
+  await sleep(2000);
 
-const defaultDependencies: BuildCacheDependencies = { prepareExtension };
+  await definition.importWallet(page, setup.seedPhrase, setup.password);
+  await sleep(FLUSH_SETTLE_MS); // let the wallet flush state to disk before we close
+  await waitUntilOrThrow(() => hasPersistedState(userDataDir, extensionId), {
+    intervalMs: 500,
+    message: `${definition.extensionName} onboarding wrote no wallet state into ${userDataDir}`,
+    timeoutMs: STATE_WRITE_TIMEOUT_MS,
+  });
+};
 
 /** Build in staging and retain the prior cache until the new profile publishes successfully. */
-const buildCacheWithDependencies = async (
-  setup: WalletSetup,
+export const build = async (
+  definition: WalletDefinition,
+  setup: EngineSetup,
   { headless = false }: { headless?: boolean } = {},
-  dependencies: BuildCacheDependencies = defaultDependencies,
 ): Promise<string> => {
-  const definition = wallets[setup.wallet];
   const { cacheDir, profileDir } = await locateProfile(setup);
-  const extensionPath = await dependencies.prepareExtension(setup, cacheDir);
-  await mkdir(cacheDir, { recursive: true });
-  const staging = await mkdtemp(path.join(cacheDir, BUILD_PREFIX));
-
-  let context: BrowserContext | undefined;
-  try {
-    const opened = await openWalletContext({
-      definition,
-      extensionPath,
-      headless,
-      launchPersistentContext: dependencies.launchPersistentContext,
-      userDataDir: staging,
-    });
-    context = opened.context;
-    const { extensionId } = opened;
-
-    const page =
-      context.pages().find((candidate) => candidate.url() === "about:blank") ??
-      (await context.newPage());
-    await gotoWithRetry(page, `chrome-extension://${extensionId}/${definition.onboardingPage}`, {
-      label: `${definition.extensionName} onboarding page`,
-      timeoutMs: NAVIGATION_TIMEOUT_MS,
-    });
-    await sleep(2000);
-
-    await definition.importWallet(page, setup.seedPhrase, setup.password);
-    await sleep(FLUSH_SETTLE_MS); // let the wallet flush state to disk before we close
-    await waitUntilOrThrow(() => hasPersistedState(staging, extensionId), {
-      intervalMs: 500,
-      message: `${definition.extensionName} onboarding wrote no wallet state into ${staging}`,
-      timeoutMs: STATE_WRITE_TIMEOUT_MS,
-    });
-    await context.close();
-    await definition.finalizeCache?.(staging, extensionId);
-
-    await publishProfile(staging, profileDir);
-    return profileDir;
-  } catch (error) {
-    await context?.close().catch(() => {});
-    throw error;
-  } finally {
-    await rm(staging, { force: true, recursive: true });
-  }
+  const extensionPath = await prepareExtension(definition, setup, cacheDir);
+  const { session } = await openSession(
+    { definition, extensionPath, headless, profile: { parent: cacheDir, prefix: BUILD_PREFIX } },
+    (opened) => onboard(definition, setup, opened),
+  );
+  await session.close(async () => {
+    await definition.finalizeCache?.(session.userDataDir, session.extensionId);
+    await publishProfile(session.userDataDir, profileDir);
+  });
+  return profileDir;
 };
-
-const buildCache = (setup: WalletSetup, options?: { headless?: boolean }): Promise<string> =>
-  buildCacheWithDependencies(setup, options);
-
-export { buildCache, buildCacheWithDependencies };
-export type { BuildCacheDependencies };

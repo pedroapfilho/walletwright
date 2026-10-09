@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { WalletSetup } from "../types";
+import { wallets } from "../wallets/index";
 
 import { extensionArchive, extensionIdFromPath } from "./extension";
 
@@ -12,21 +13,23 @@ const setup = (wallet: WalletSetup["wallet"]): WalletSetup => ({
 
 describe("extensionArchive", () => {
   it("resolves the default release when the setup pins no version", () => {
-    expect(extensionArchive(setup("metamask"))).toMatchObject({
+    expect(extensionArchive(wallets.metamask, setup("metamask"))).toMatchObject({
       format: "zip",
       sha256: expect.stringMatching(/^[0-9a-f]{64}$/v),
     });
   });
 
   it("resolves the release the setup pins", () => {
-    expect(extensionArchive({ ...setup("metamask"), version: "13.0.0" })).toMatchObject({
+    expect(
+      extensionArchive(wallets.metamask, { ...setup("metamask"), version: "13.0.0" }),
+    ).toMatchObject({
       name: "metamask-chrome-13.0.0",
       sha256: undefined,
     });
   });
 
   it("keeps each Web Store wallet in its own latest-build directory", () => {
-    expect(extensionArchive(setup("phantom"))).toEqual({
+    expect(extensionArchive(wallets.phantom, setup("phantom"))).toEqual({
       format: "crx",
       name: "phantom-chrome-latest",
       sha256: undefined,
@@ -35,9 +38,9 @@ describe("extensionArchive", () => {
   });
 
   it("refuses a version for a Web Store wallet instead of ignoring it", () => {
-    expect(() => extensionArchive({ ...setup("phantom"), version: "1.0.0" })).toThrow(
-      /Phantom runs its Chrome Web Store build, which cannot be pinned/v,
-    );
+    expect(() =>
+      extensionArchive(wallets.phantom, { ...setup("phantom"), version: "1.0.0" }),
+    ).toThrow(/Phantom runs its Chrome Web Store build, which cannot be pinned/v);
   });
 });
 

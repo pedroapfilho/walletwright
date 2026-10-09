@@ -4,17 +4,19 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import type { ExtensionArchive, WalletSetup } from "../types";
-import { wallets } from "../wallets/index";
+import type { ExtensionArchive, WalletDefinition } from "../types";
 
 import { chromeWebStoreCrxUrl, downloadAndExtractExtension } from "./download";
+import type { EngineSetup } from "./profile";
 
 /**
  * The archive a setup runs. A release source honours `version`; a Web Store source cannot pin one,
  * so asking for it is an error rather than a setting that forks the profile cache for the same build.
  */
-export const extensionArchive = (setup: WalletSetup): ExtensionArchive => {
-  const { extensionName, source } = wallets[setup.wallet];
+export const extensionArchive = (
+  { extensionName, source }: WalletDefinition,
+  setup: EngineSetup,
+): ExtensionArchive => {
   if (source.kind === "release") {
     return source.release(setup.version ?? source.defaultVersion);
   }
@@ -31,11 +33,13 @@ export const extensionArchive = (setup: WalletSetup): ExtensionArchive => {
   };
 };
 
-/** Download and unpack the setup's extension into `cacheDir`, returning its path. */
-export const prepareExtension = async (setup: WalletSetup, cacheDir: string): Promise<string> => {
-  const extensionPath = await downloadAndExtractExtension({ cacheDir, ...extensionArchive(setup) });
-  return extensionPath;
-};
+/** Download and unpack the definition's extension into `cacheDir`, returning its path. */
+export const prepareExtension = (
+  definition: WalletDefinition,
+  setup: EngineSetup,
+  cacheDir: string,
+): Promise<string> =>
+  downloadAndExtractExtension({ cacheDir, ...extensionArchive(definition, setup) });
 
 /** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
 export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {

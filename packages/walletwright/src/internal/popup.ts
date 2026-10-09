@@ -10,7 +10,7 @@ export const DEFAULT_NOTIFICATION_MATCH = "notification.html";
  * misses them, poll the open pages instead. `match` is the URL token identifying the popup
  * (`notification.html` for MetaMask/Phantom; `isPopup=1` for Slush's single-page `index.html`).
  */
-export const isApprovalPopup = (page: Page, extensionId: string, match: string): boolean =>
+const isApprovalPopup = (page: Page, extensionId: string, match: string): boolean =>
   page.url().startsWith(`chrome-extension://${extensionId}`) &&
   page.url().includes(match) &&
   !page.isClosed();
