@@ -86,5 +86,4 @@ const clicksFor = (wallet: string): Clicks => {
   return { click, clickIfShown };
 };
 
-export type { ClickOptions };
 export { clicksFor };
