@@ -40,9 +40,10 @@ export type Approvals = {
 
 type Intent = "cancel" | "confirm";
 
+/** Whether any match shows: a union's first match in DOM order can be a hidden variant. */
 const isShowing = async (control: Locator): Promise<boolean> => {
   try {
-    return await control.first().isVisible();
+    return await control.filter({ visible: true }).first().isVisible();
   } catch {
     return false; // the page can go while we ask
   }
