@@ -7,7 +7,6 @@ import type { WalletDefinition } from "../types";
 const HOME_ROUTE = "#/tokens";
 
 const IMPORT_HOME_TIMEOUT_MS = 30_000;
-const PERSIST_TIMEOUT_MS = 60_000;
 const PASSPHRASE_SCREEN_TIMEOUT_MS = 20_000;
 const PASSPHRASE_SCREEN_ATTEMPTS = 3;
 
@@ -149,12 +148,9 @@ export const slush: WalletDefinition = {
       message: `Slush import never reached the wallet home (${HOME_ROUTE})`,
       timeoutMs: IMPORT_HOME_TIMEOUT_MS,
     });
-    await waitUntilOrThrow(() => walletPersisted(page), {
-      intervalMs: 1000,
-      message: "Slush import never persisted its session, passphrase and password hash",
-      timeoutMs: PERSIST_TIMEOUT_MS,
-    });
   },
+
+  isPersisted: ({ page }) => walletPersisted(page),
 
   onboardingPage: "index.html",
 

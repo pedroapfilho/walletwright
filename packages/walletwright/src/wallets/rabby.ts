@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { clicksFor } from "../internal/click";
-import { sleep, waitUntil, waitUntilOrThrow } from "../internal/wait";
+import { waitUntil, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
 const ROUTE_TIMEOUT_MS = 30_000;
@@ -70,7 +70,6 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
     .getByText("Address Imported", { exact: false })
     .first()
     .waitFor({ state: "visible", timeout: 30_000 });
-  await sleep(1000);
 };
 
 export const rabby: WalletDefinition = {

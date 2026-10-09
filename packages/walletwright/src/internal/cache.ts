@@ -1,16 +1,21 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { WalletDefinition } from "../types";
+import type { OnboardedWallet, WalletDefinition } from "../types";
 
 import { prepareExtension } from "./extension";
 import { type EngineSetup, extensionStateDir, locateProfile, publishProfile } from "./profile";
 import { openSession, type WalletSession } from "./session";
-import { gotoWithRetry, sleep, waitUntilOrThrow } from "./wait";
+import { gotoWithRetry, waitUntilOrThrow } from "./wait";
 
 const NAVIGATION_TIMEOUT_MS = 15_000;
-const FLUSH_SETTLE_MS = 3000;
-const STATE_WRITE_TIMEOUT_MS = 10_000;
+const PERSIST_TIMEOUT_MS = 60_000;
+const PERSIST_INTERVAL_MS = 500;
+/**
+ * Longer than a wallet takes to start its debounced write after its last onboarding screen (measured
+ * locally: Rabby 0.8s, MetaMask 1.3s), so storage that changed and then held still this long is done.
+ */
+const STORAGE_QUIET_MS = 2000;
 
 /**
  * Prefix for an in-progress build. Inside `cacheDir` so publishing is a `rename` on one filesystem,
@@ -18,8 +23,8 @@ const STATE_WRITE_TIMEOUT_MS = 10_000;
  */
 const BUILD_PREFIX = ".building-";
 
-/** Wallet state may live in `chrome.storage.local` or extension IndexedDB. */
-const hasPersistedState = async (profileDir: string, extensionId: string): Promise<boolean> => {
+/** Every file of the extension's `chrome.storage.local` and IndexedDB, with its size. */
+const listStorage = async (profileDir: string, extensionId: string): Promise<string> => {
   const stores = [
     extensionStateDir(profileDir, extensionId),
     path.join(
@@ -29,8 +34,43 @@ const hasPersistedState = async (profileDir: string, extensionId: string): Promi
       `chrome-extension_${extensionId}_0.indexeddb.leveldb`,
     ),
   ];
-  const listings = await Promise.allSettled(stores.map((dir) => readdir(dir)));
-  return listings.some((listing) => listing.status === "fulfilled" && listing.value.length > 0);
+  const files = await Promise.all(
+    stores.map(async (dir) => {
+      const names = await readdir(dir).catch(() => []);
+      return Promise.all(
+        names.map(async (name) => {
+          const size = await stat(path.join(dir, name)).then(
+            (file) => file.size,
+            () => -1,
+          );
+          return `${dir}/${name}:${size}`;
+        }),
+      );
+    }),
+  );
+  return files.flat().join("\n");
+};
+
+/**
+ * Take the extension's storage as it is now, and return a check that holds once it has changed since
+ * and then stayed still for `STORAGE_QUIET_MS`. Counting from the first change, not from the call,
+ * keeps a wallet that writes nothing until well after its last screen from passing on silence.
+ */
+const storageSettles = async (
+  profileDir: string,
+  extensionId: string,
+): Promise<() => Promise<boolean>> => {
+  const before = await listStorage(profileDir, extensionId);
+  let listing = before;
+  let changedAt = Date.now();
+  return async () => {
+    const current = await listStorage(profileDir, extensionId);
+    if (current !== listing) {
+      listing = current;
+      changedAt = Date.now();
+    }
+    return listing !== before && Date.now() - changedAt >= STORAGE_QUIET_MS;
+  };
 };
 
 const onboard = async (
@@ -45,14 +85,14 @@ const onboard = async (
     label: `${definition.extensionName} onboarding page`,
     timeoutMs: NAVIGATION_TIMEOUT_MS,
   });
-  await sleep(2000);
 
+  const isPersisted: (onboarded: OnboardedWallet) => Promise<boolean> =
+    definition.isPersisted ?? (await storageSettles(userDataDir, extensionId));
   await definition.importWallet(page, setup.seedPhrase, setup.password);
-  await sleep(FLUSH_SETTLE_MS); // let the wallet flush state to disk before we close
-  await waitUntilOrThrow(() => hasPersistedState(userDataDir, extensionId), {
-    intervalMs: 500,
-    message: `${definition.extensionName} onboarding wrote no wallet state into ${userDataDir}`,
-    timeoutMs: STATE_WRITE_TIMEOUT_MS,
+  await waitUntilOrThrow(() => isPersisted({ extensionId, page, profileDir: userDataDir }), {
+    intervalMs: PERSIST_INTERVAL_MS,
+    message: `${definition.extensionName} never persisted the onboarded wallet into ${userDataDir}`,
+    timeoutMs: PERSIST_TIMEOUT_MS,
   });
 };
 

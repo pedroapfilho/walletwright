@@ -36,8 +36,7 @@ export const phantom: WalletDefinition = {
     await testId("onboarding-form-confirm-password-input").fill(password);
     await click(testId("onboarding-form-terms-of-service-checkbox"));
     await click(testId("onboarding-form-submit-button"));
-    await sleep(2500);
-    await sleep(1500);
+    await testId("onboarding-form-password-input").waitFor({ state: "hidden", timeout: 30_000 });
   },
 
   onboardingPage: "onboarding.html",

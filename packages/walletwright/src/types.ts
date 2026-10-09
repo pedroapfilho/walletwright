@@ -157,6 +157,15 @@ export type ApprovalWindow = {
   urlMatch?: string;
 };
 
+/** A wallet the build has just onboarded, as its `isPersisted` check reads it. */
+export type OnboardedWallet = {
+  extensionId: string;
+  /** The onboarding page, on the wallet's last onboarding screen. */
+  page: Page;
+  /** The build's profile directory, still held by the open browser. */
+  profileDir: string;
+};
+
 /**
  * Everything wallet-specific that the generic engine needs. One implementation per wallet lives in
  * `src/wallets/*`.
@@ -175,8 +184,14 @@ export type WalletDefinition = {
    * holding the DB), e.g. forcing `completedOnboarding=true` in MetaMask's leveldb.
    */
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
-  /** Run the import-from-seed onboarding flow. */
+  /** Run the import-from-seed onboarding flow, ending once its last screen shows. */
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
+  /**
+   * Whether the onboarded wallet is on disk, so the build can close the browser. Polled after
+   * `importWallet` until it holds. Without one, the build waits for the extension's storage to change
+   * and then stop changing, which cannot tell a debounced write still to come from none.
+   */
+  isPersisted?: (onboarded: OnboardedWallet) => Promise<boolean>;
   /** Extension-relative path of the first-run onboarding entry (e.g. `home.html`). */
   onboardingPage: string;
   /**

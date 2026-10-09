@@ -1,11 +1,13 @@
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, it } from "vitest";
 
 import { build } from "./cache";
+import { runDirectly } from "./controller";
 import { pathExists } from "./fs";
+import { launch } from "./launch";
 import type { EngineSetup } from "./profile";
 import { type Standin, serveStandin, userDataDirOf } from "./standin";
 
@@ -51,6 +53,59 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
 
     expect(await listCache(setup.cacheDir)).toEqual(
       [path.basename(profileDir), EXTENSION_DIR].toSorted(),
+    );
+  });
+
+  it("waits for a wallet that writes its state long after its last screen", async ({ expect }) => {
+    const setup = await makeSetup();
+
+    await build({ ...standin.definition, onboardingPage: "onboarding.html?persist=late" }, setup, {
+      headless: true,
+    });
+
+    const launched = await launch(standin.definition, setup, { headless: true, step: runDirectly });
+    try {
+      expect(await launched.wallet.home.getByText("Unlocked", { exact: true }).isVisible()).toBe(
+        true,
+      );
+    } finally {
+      await launched.close();
+    }
+  });
+
+  it("polls the wallet's own check on the onboarding page until it holds, then finalizes", async ({
+    expect,
+  }) => {
+    const setup = await makeSetup();
+    let staging = "";
+    const checked: Array<{ page: string; profileDir: string }> = [];
+    let checksBeforeFinalize = 0;
+
+    await build(
+      {
+        ...standin.definition,
+        finalizeCache: () => {
+          checksBeforeFinalize = checked.length;
+          return Promise.resolve();
+        },
+        isPersisted: async ({ page, profileDir }) => {
+          checked.push({
+            page: new URL(page.url()).pathname,
+            profileDir: await realpath(profileDir),
+          });
+          return checked.length === 3;
+        },
+        prepareContext: async (context) => {
+          staging = await userDataDirOf(context);
+        },
+      },
+      setup,
+      { headless: true },
+    );
+
+    expect(checksBeforeFinalize).toBe(3);
+    expect(checked).toEqual(
+      Array.from({ length: 3 }, () => ({ page: "/onboarding.html", profileDir: staging })),
     );
   });
 
