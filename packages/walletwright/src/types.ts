@@ -112,6 +112,60 @@ export type UnlockScreen = {
   submit?: (page: Page, field: Locator) => Promise<void>;
 };
 
+/** A screen a wallet can put in front of a request, which the engine passes before answering it. */
+export type ApprovalScreen = {
+  /** Get the approval past this screen. The engine runs it at most once per approval. */
+  pass: (popup: Page) => Promise<void>;
+  /** Whether the screen is up right now. Checked on every pass over the window, so it must not wait. */
+  shows: (popup: Page) => Promise<boolean>;
+};
+
+/** How the engine clicks a control in the approval window. */
+export type ApprovalClick =
+  /** Playwright's click, which waits for the control to be actionable. */
+  | {
+      kind: "locator";
+      /** Pause before every click and password entry, for a window that wires handlers after render. */
+      settleMs?: number;
+    }
+  /** A click dispatched inside the page, for a window that unmounts while Playwright waits on it. */
+  | { kind: "inPage" };
+
+/**
+ * The wallet's approval window, as data the engine drives: it finds and places the window, passes
+ * `screens`, re-authenticates through the shared unlock flow when asked for the password, clicks
+ * each `confirm` or `cancel` control at most once, and waits for the window to close.
+ */
+export type ApprovalWindow = {
+  /** Every control that rejects a request. */
+  cancel: (popup: Page) => Locator;
+  /** How the engine clicks `confirm` and `cancel` controls. Defaults to `{ kind: "locator" }`. */
+  click?: ApprovalClick;
+  /**
+   * Every control that approves a request, across all of its screens (Rabby signs with Sign, then
+   * Confirm). Together with `cancel` it is how the engine tells a request from the wallet's idle UI.
+   */
+  confirm: (popup: Page) => Locator;
+  /** Whether the window surfaces as a Playwright page headless. Declare it once verified. */
+  headless?: boolean;
+  /** Screens the wallet can put in front of a request, in the order they are checked. */
+  screens?: ReadonlyArray<ApprovalScreen>;
+  /**
+   * URL token that identifies the window. Defaults to `notification.html` (MetaMask, Phantom, Rabby).
+   * Slush routes approvals through `index.html` and marks them with `isPopup=1`.
+   */
+  urlMatch?: string;
+};
+
+/** A wallet the build has just onboarded, as its `isPersisted` check reads it. */
+export type OnboardedWallet = {
+  extensionId: string;
+  /** The onboarding page, on the wallet's last onboarding screen. */
+  page: Page;
+  /** The build's profile directory, still held by the open browser. */
+  profileDir: string;
+};
+
 /**
  * Everything wallet-specific that the generic engine needs. One implementation per wallet lives in
  * `src/wallets/*`.
@@ -119,13 +173,8 @@ export type UnlockScreen = {
 export type WalletDefinition = {
   /** Optional capabilities beyond connect/sign. Omit a group the wallet can't (or doesn't) drive. */
   actions?: WalletActions;
-  /** Controls that exist only for a pending request, excluding idle wallet UI. */
-  approvalControls?: (popup: Page) => Locator;
-  /**
-   * Click the approve/confirm button in an approval popup (connect or sign). `password` is provided
-   * because some wallets (e.g. Slush) re-prompt for it to authorize a signature.
-   */
-  approve: (popup: Page, password: string) => Promise<void>;
+  /** The approval window the engine drives for connect, sign, and every other dapp request. */
+  approval: ApprovalWindow;
   /** Ecosystems this wallet can drive (e.g. `["evm", "svm"]` for Phantom). */
   ecosystems: ReadonlyArray<Ecosystem>;
   /** Display name, used in step titles and error messages (e.g. `MetaMask`). */
@@ -135,16 +184,14 @@ export type WalletDefinition = {
    * holding the DB), e.g. forcing `completedOnboarding=true` in MetaMask's leveldb.
    */
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
-  /** Whether the real wallet exposes approval windows as Playwright pages in headless mode. */
-  headlessApprovals?: boolean;
-  /** Run the import-from-seed onboarding flow. */
+  /** Run the import-from-seed onboarding flow, ending once its last screen shows. */
   importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
   /**
-   * URL token that identifies this wallet's approval popup. Defaults to `notification.html`
-   * (MetaMask/Phantom). Single-page wallets differ, Slush routes approvals through `index.html` and
-   * marks them with `isPopup=1`.
+   * Whether the onboarded wallet is on disk, so the build can close the browser. Polled after
+   * `importWallet` until it holds. Without one, the build waits for the extension's storage to change
+   * and then stop changing, which cannot tell a debounced write still to come from none.
    */
-  notificationMatch?: string;
+  isPersisted?: (onboarded: OnboardedWallet) => Promise<boolean>;
   /** Extension-relative path of the first-run onboarding entry (e.g. `home.html`). */
   onboardingPage: string;
   /**
@@ -153,8 +200,6 @@ export type WalletDefinition = {
    * rather than a page driven.
    */
   prepareContext?: (context: BrowserContext) => Promise<void>;
-  /** Click the cancel/reject button in an approval popup, the counterpart of `approve`. */
-  reject: (popup: Page) => Promise<void>;
   /** Where the extension is downloaded from. */
   source: ExtensionSource;
   /** The wallet's password screen. Its page stays open after unlock as `Wallet.home`. */

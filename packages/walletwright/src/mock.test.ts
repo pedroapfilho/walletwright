@@ -64,10 +64,34 @@ describe("createRpcHandler", () => {
     );
   });
 
-  it("resolves wallet_addEthereumChain and wallet_switchEthereumChain to null", async () => {
-    await expect(handle({ method: "wallet_addEthereumChain" })).resolves.toBeNull();
-    await expect(handle({ method: "wallet_switchEthereumChain" })).resolves.toBeNull();
-  });
+  it.each(["wallet_switchEthereumChain", "wallet_addEthereumChain"])(
+    "reports the chain %s moved to from eth_chainId",
+    async (method) => {
+      const switching = createRpcHandler(account, "0x7a69");
+
+      await expect(switching({ method, params: [{ chainId: "0xA" }] })).resolves.toBeNull();
+      await expect(switching({ method: "eth_chainId" })).resolves.toBe("0xa");
+    },
+  );
+
+  it.each([
+    { params: [] },
+    { params: [{}] },
+    { params: [{ chainId: 10 }] },
+    { params: [{ chainId: "0x" }] },
+    { params: [{ chainId: "0x0a" }] },
+    { params: ["0xa"] },
+  ])(
+    "rejects a chain switch with params $params and keeps the current chain",
+    async ({ params }) => {
+      const switching = createRpcHandler(account, "0x7a69");
+
+      await expect(switching({ method: "wallet_switchEthereumChain", params })).rejects.toThrow(
+        /^\[walletwright\/mock\] wallet_switchEthereumChain expects params\[0\]\.chainId/v,
+      );
+      await expect(switching({ method: "eth_chainId" })).resolves.toBe("0x7a69");
+    },
+  );
 
   it("rejects an unsupported method", async () => {
     await expect(handle({ method: "eth_getBalance" })).rejects.toThrow(/unsupported method/v);

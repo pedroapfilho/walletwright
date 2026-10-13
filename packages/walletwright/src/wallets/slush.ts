@@ -1,140 +1,128 @@
 import type { Page } from "@playwright/test";
 
+import { clicksFor } from "../internal/click";
 import { sleep, waitUntilOrThrow } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
 const HOME_ROUTE = "#/tokens";
 
 const IMPORT_HOME_TIMEOUT_MS = 30_000;
-const PERSIST_TIMEOUT_MS = 60_000;
 const PASSPHRASE_SCREEN_TIMEOUT_MS = 20_000;
 const PASSPHRASE_SCREEN_ATTEMPTS = 3;
 
-const ACCOUNTS_DATABASE = "signaldb-accounts";
-const PREFERENCES_DATABASE = "signaldb-preferences";
-const ITEMS_STORE = "items";
+const SECRETS_DATABASE = "keyval-store";
+const SECRETS_STORE = "keyval";
+const SESSION_TOKEN_KEY = "anonymous-session-token";
+const PASSWORD_HASH_KEY = "password_hash";
+const PASSPHRASE_KEY_PREFIX = "mnemonic__";
+
+const FORCED = { force: true } as const;
+/** Slush mounts its welcome controls before wiring their handlers, and an early click is a no-op. */
+const WELCOME_CONTROL = { ...FORCED, settleMs: 1000 } as const;
+/** Its approval window reports controls visible about two seconds before their handlers wire up. */
+const APPROVAL_SETTLE_MS = 2000;
+
+const { click } = clicksFor("Slush");
+
+const labelled = (page: Page, text: string) => page.getByText(text, { exact: true }).first();
 
 const atHome = async (page: Page): Promise<boolean> =>
   (await page.evaluate(() => globalThis.location.hash).catch(() => "")) === HOME_ROUTE;
 
 /**
- * Slush writes the imported account, its provider and the preferences row that selects it in
- * separate transactions, so reaching the home route does not mean the profile is durable yet.
- * Caching between those writes yields a profile that unlocks to an account-less wallet.
+ * Slush keeps the imported account on its backend, and on the device only the session that owns it,
+ * the encrypted passphrase and the password hash, each written on its own. Reaching the home route
+ * does not mean all three are on disk, and a profile cached without one cannot unlock or sign.
  */
 const walletPersisted = (page: Page): Promise<boolean> =>
   page.evaluate(
-    async ({ accountsDatabase, preferencesDatabase, storeName }) => {
-      const readItems = async (databaseName: string): Promise<Array<object>> => {
-        const databases = await indexedDB.databases();
-        if (!databases.some((database) => database.name === databaseName)) {
-          return [];
-        }
+    async ({ databaseName, passphrasePrefix, required, storeName }) => {
+      const databases = await indexedDB.databases();
+      if (!databases.some((database) => database.name === databaseName)) {
+        return false;
+      }
 
-        const database = await new Promise<IDBDatabase>((resolve, reject) => {
-          const request = indexedDB.open(databaseName);
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.addEventListener("success", () => {
+          resolve(request.result);
+        });
+        request.addEventListener("error", () => {
+          reject(request.error ?? new Error(`Unable to open ${databaseName}`));
+        });
+      });
+
+      try {
+        if (!database.objectStoreNames.contains(storeName)) {
+          return false;
+        }
+        const request = database
+          .transaction(storeName, "readonly")
+          .objectStore(storeName)
+          .getAllKeys();
+        const keys = await new Promise<Array<IDBValidKey>>((resolve, reject) => {
           request.addEventListener("success", () => {
             resolve(request.result);
           });
           request.addEventListener("error", () => {
-            reject(request.error ?? new Error(`Unable to open ${databaseName}`));
+            reject(request.error ?? new Error(`Unable to read ${storeName}`));
           });
         });
-
-        try {
-          if (!database.objectStoreNames.contains(storeName)) {
-            return [];
-          }
-          const store = database.transaction(storeName, "readonly").objectStore(storeName);
-          const request = store.getAll();
-          return await new Promise<Array<object>>((resolve, reject) => {
-            request.addEventListener("success", () => {
-              resolve(request.result.filter((item) => typeof item === "object" && item !== null));
-            });
-            request.addEventListener("error", () => {
-              reject(request.error ?? new Error(`Unable to read ${storeName}`));
-            });
-          });
-        } finally {
-          database.close();
-        }
-      };
-
-      const accounts = await readItems(accountsDatabase);
-      const accountIds = new Set<string>();
-      for (const account of accounts) {
-        if ("id" in account && typeof account.id === "string") {
-          accountIds.add(account.id);
-        }
+        const names = keys.filter((key) => typeof key === "string");
+        return (
+          required.every((name) => names.includes(name)) &&
+          names.some((name) => name.startsWith(passphrasePrefix))
+        );
+      } finally {
+        database.close();
       }
-      if (accountIds.size === 0) {
-        return false;
-      }
-
-      const preferences = await readItems(preferencesDatabase);
-      return preferences.some(
-        (preference) =>
-          "currentAccountId" in preference &&
-          typeof preference.currentAccountId === "string" &&
-          accountIds.has(preference.currentAccountId),
-      );
     },
     {
-      accountsDatabase: ACCOUNTS_DATABASE,
-      preferencesDatabase: PREFERENCES_DATABASE,
-      storeName: ITEMS_STORE,
+      databaseName: SECRETS_DATABASE,
+      passphrasePrefix: PASSPHRASE_KEY_PREFIX,
+      required: [SESSION_TOKEN_KEY, PASSWORD_HASH_KEY],
+      storeName: SECRETS_STORE,
     },
   );
 
-const fclick = async (page: Page, text: string, timeoutMs = 15_000): Promise<boolean> => {
-  const target = page.getByText(text, { exact: true }).first();
-  const visible = await target
-    .waitFor({ state: "visible", timeout: timeoutMs })
-    .then(() => true)
-    .catch(() => false);
-  if (!visible) {
-    return false;
-  }
-  await target.scrollIntoViewIfNeeded().catch(() => {});
-  await target.click({ force: true, timeout: timeoutMs });
-  return true;
-};
-
-/** The first click can land before the menu is interactive on a slow runner, so retry until the words show. */
+/**
+ * On a slow runner a welcome click can still land before Slush responds, leaving the page where it
+ * was. Reloading the welcome screen and starting over recovers it, so an attempt that fails is
+ * retried, and the last failure is the cause if every attempt does.
+ */
 const openPassphraseImport = async (page: Page): Promise<void> => {
   const firstWord = page.getByLabel("Word 1", { exact: true });
+  let failure: unknown;
   for (let attempt = 0; attempt < PASSPHRASE_SCREEN_ATTEMPTS; attempt++) {
-    await fclick(page, "More options");
-    await sleep(1000);
-    await fclick(page, "Import existing from passphrase");
-    const opened = await firstWord
-      .waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS })
-      .then(() => true)
-      .catch(() => false);
-    if (opened) {
+    try {
+      await click(labelled(page, "Get started"), WELCOME_CONTROL);
+      await click(labelled(page, "Skip"), WELCOME_CONTROL);
+      await click(labelled(page, "Maybe later"), WELCOME_CONTROL);
+      await click(labelled(page, "Passphrase"), WELCOME_CONTROL);
+      // Unforced: the link reports visible while its row is still collapsed, so the click has to
+      // wait for the row to open over it.
+      await click(page.locator('a[href$="#/ImportPassphrase"]'));
+      await firstWord.waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS });
       return;
+    } catch (error) {
+      failure = error;
     }
     await page.goto(page.url().split("#")[0] ?? page.url());
     await sleep(2000);
   }
   throw new Error(
     `[walletwright] Slush never opened the passphrase import screen after ${PASSPHRASE_SCREEN_ATTEMPTS} attempts`,
+    { cause: failure },
   );
 };
 
 export const slush: WalletDefinition = {
-  approve: async (popup, password) => {
-    await sleep(2000);
-    const confirmed = (await fclick(popup, "Approve", 4000)) || (await fclick(popup, "Sign"));
-    if (!confirmed) {
-      throw new Error("[walletwright] Slush approval: neither Approve nor Sign was actionable");
-    }
-    await sleep(1500);
-    const input = popup.locator('input[type="password"]');
-    if (await input.isVisible().catch(() => false)) {
-      await input.fill(password);
-      await fclick(popup, "Unlock");
-    }
+  /** Connect confirms with Approve, signing with Sign. */
+  approval: {
+    cancel: (popup) => popup.locator("button").filter({ hasText: /^Reject$/v }),
+    click: { kind: "locator", settleMs: APPROVAL_SETTLE_MS },
+    confirm: (popup) => popup.locator("button").filter({ hasText: /^(?:Approve|Sign)$/v }),
+    urlMatch: "isPopup=1",
   },
 
   ecosystems: ["sui"],
@@ -148,58 +136,32 @@ export const slush: WalletDefinition = {
     for (let i = 0; i < words.length; i++) {
       await page.getByLabel(`Word ${i + 1}`, { exact: true }).fill(words[i] ?? "");
     }
-    await page.getByRole("button", { name: "Next" }).click();
-    await sleep(2000);
+    await click(page.getByRole("button", { exact: true, name: "Import" }));
 
-    await page.locator('input[placeholder="Password"]').fill(password);
-    await page.locator('input[placeholder="Confirm Password"]').fill(password);
-    await page.getByRole("button", { name: "Next" }).click();
-    await sleep(2000);
+    await page.getByPlaceholder("Password", { exact: true }).fill(password);
+    await page.getByPlaceholder("Re-enter password", { exact: true }).fill(password);
+    await click(page.getByRole("button", { exact: true, name: "Next" }));
 
-    await page
-      .getByRole("button", { name: "Next" })
-      .click()
-      .catch(() => {});
+    await click(page.getByRole("button", { exact: true, name: "Dive into Slush" }));
     await waitUntilOrThrow(() => atHome(page), {
       intervalMs: 1000,
       message: `Slush import never reached the wallet home (${HOME_ROUTE})`,
       timeoutMs: IMPORT_HOME_TIMEOUT_MS,
     });
-    await waitUntilOrThrow(() => walletPersisted(page), {
-      intervalMs: 1000,
-      message: "Slush import never persisted an account and its selected preference",
-      timeoutMs: PERSIST_TIMEOUT_MS,
-    });
   },
 
-  notificationMatch: "isPopup=1",
+  isPersisted: ({ page }) => walletPersisted(page),
 
   onboardingPage: "index.html",
-
-  prepareContext: async (context) => {
-    await context.route("**://*.slush.app/**", (route) =>
-      route.fulfill({
-        body: JSON.stringify({ data: {} }),
-        contentType: "application/json",
-        status: 200,
-      }),
-    );
-  },
-
-  reject: async (popup) => {
-    await sleep(2000);
-    if (!(await fclick(popup, "Reject"))) {
-      throw new Error("[walletwright] Slush reject: no Reject control was actionable");
-    }
-  },
 
   source: { id: "opcgpfmipidbgpenhmajoajpbobppdil", kind: "webStore" },
 
   unlockScreen: {
     entry: "index.html",
     isUnlocked: atHome,
+    // Unforced: the lock form slides in, and its button stays disabled until the password registers.
     submit: async (page) => {
-      await fclick(page, "Unlock");
+      await click(page.getByRole("button", { exact: true, name: "Unlock" }));
     },
   },
 };

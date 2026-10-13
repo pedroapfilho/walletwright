@@ -9,8 +9,8 @@ in three phases: build a cache, launch from it, and drive the popups.
 ## The phases
 
 1. **Build the cache** (`buildCache`). Launch Chromium with the unpacked extension, navigate to the
-   onboarding page, run the import-from-seed flow, close the browser, then apply any post-close fix.
-   The onboarded profile is written to `.walletwright/<hash>`.
+   onboarding page, run the import-from-seed flow, wait until the wallet's state is on disk, close the
+   browser, then apply any post-close fix. The onboarded profile is written to `.walletwright/<hash>`.
 2. **Launch** (`createWalletFixtures` or `launchWallet`). Copy the cached profile to a throwaway
    directory, launch with the extension, resolve the extension id, reach the unlock screen, and
    unlock. This returns a `Wallet`.
@@ -32,15 +32,21 @@ type WalletDefinition = {
     | { kind: "release"; defaultVersion: string; release: (version) => ExtensionArchive };
   onboardingPage: string; // e.g. "home.html"
   importWallet: (page, seedPhrase, password) => Promise<void>;
+  isPersisted?: ({ page, profileDir, extensionId }) => Promise<boolean>; // the state is on disk
   finalizeCache?: (profileDir, extensionId) => Promise<void>;
   unlockScreen: {
     entry: string;
     isUnlocked?: (page) => Promise<boolean>;
     submit?: (page, field) => Promise<void>;
   };
-  approve: (popup, password) => Promise<void>;
-  reject: (popup) => Promise<void>; // the cancel counterpart of approve
-  notificationMatch?: string; // popup URL token; defaults to "notification.html"
+  approval: {
+    confirm: (popup) => Locator; // every control that approves, across all screens
+    cancel: (popup) => Locator; // every control that rejects
+    click?: { kind: "locator"; settleMs?: number } | { kind: "inPage" };
+    screens?: ApprovalScreen[]; // what the wallet can put in front of the request
+    urlMatch?: string; // window URL token; defaults to "notification.html"
+    headless?: boolean;
+  };
   actions?: WalletActions; // optional capabilities: accounts, network, settings
 };
 ```
@@ -73,7 +79,6 @@ Each of these is load-bearing. Drop one and the wallet either drives the dapp or
 - **Confirm-button selectors per wallet.** MetaMask: connect `confirm-btn`, sign
   `confirm-footer-button` (with the legacy `page-container-footer-next` as a fallback). Phantom:
   `primary-button`. Rabby: the text "Connect", "Sign", then "Confirm", since signing takes two steps.
-  Solflare: `btn-connect` to connect, `btn-approve` to sign. Slush: the text "Approve" or "Sign",
-  then "Unlock" for the sign re-auth.
+  Solflare: `btn-connect` to connect, `btn-approve` to sign. Slush: the buttons "Approve" or "Sign".
 - **Extraction.** Extensions are unzipped with `adm-zip`, after stripping the CRX binary header at the
   ZIP signature.

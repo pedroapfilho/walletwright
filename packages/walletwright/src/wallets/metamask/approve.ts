@@ -1,95 +1,86 @@
 import type { Locator, Page } from "@playwright/test";
 
+import { clicksFor } from "../../internal/click";
 import { waitUntil } from "../../internal/wait";
+import type { ApprovalScreen, ApprovalWindow } from "../../types";
+
+const { click } = clicksFor("MetaMask");
+
+const NOTICE = ".snap-install-warning";
 
 /**
- * How long a confirm or cancel button gets to become clickable, once the page is already showing
- * one. Generous because a loaded CI runner renders MetaMask's footer slowly.
+ * A Snap's third-party notice covers the whole footer, so it intercepts confirm and cancel alike,
+ * and its Accept stays disabled until the notice is scrolled to the bottom.
  */
-const BUTTON_TIMEOUT_MS = 45_000;
-/** The retry only covers a notice that rendered late, so it does not need the full budget again. */
-const RETRY_TIMEOUT_MS = 10_000;
-
-/** Snap notices intercept footer clicks and disable Accept until their content is scrolled. */
-const acceptThirdPartyNotice = async (popup: Page): Promise<void> => {
-  const modal = popup.locator(".snap-install-warning");
-  if ((await modal.count().catch(() => 0)) === 0) {
-    return;
-  }
-  await modal
-    .locator("p")
-    .last()
-    .scrollIntoViewIfNeeded()
-    .catch(() => {});
-  await modal
-    .getByRole("button", { name: "Accept" })
-    .click({ timeout: 3000 })
-    .catch(() => {});
-};
-
-/** Resolve the confirm test id used by standard, legacy, and Snap request footers. */
-const confirmButton = (popup: Page): Locator =>
-  popup
-    .getByTestId("confirm-btn")
-    .or(popup.getByTestId("confirm-footer-button"))
-    .or(popup.locator('[data-testid="page-container-footer-next"]'))
-    .or(popup.locator('[data-testid$="-confirm-snap-footer-button"]'))
-    .first();
-
-const cancelButton = (popup: Page): Locator =>
-  popup
-    .getByTestId("cancel-btn")
-    .or(popup.getByTestId("confirm-footer-cancel-button"))
-    .or(popup.locator('[data-testid="page-container-footer-cancel"]'))
-    .or(popup.locator('[data-testid$="-cancel-snap-footer-button"]'))
-    .first();
-
-/** Distinguishes a pending request from MetaMask's requestless notification home screen. */
-export const approvalControls = (popup: Page): Locator =>
-  confirmButton(popup).or(cancelButton(popup));
-
-/**
- * Click one of the popup's footer buttons. The third-party notice covers that whole footer, so both
- * confirm and cancel are intercepted while it is up, and both need the dismiss-then-retry: without it
- * a click times out against a button that is rendered and enabled, which reads as a stale selector.
- */
-const clickFooterButton = async (popup: Page, button: Locator): Promise<void> => {
-  await acceptThirdPartyNotice(popup);
-  try {
-    await button.click({ timeout: BUTTON_TIMEOUT_MS });
-  } catch (error) {
-    await acceptThirdPartyNotice(popup);
-    await button.click({ timeout: RETRY_TIMEOUT_MS }).catch(() => {
-      throw error;
-    });
-  }
+const thirdPartyNotice: ApprovalScreen = {
+  pass: async (popup) => {
+    const notice = popup.locator(NOTICE);
+    await notice
+      .locator("p")
+      .last()
+      .scrollIntoViewIfNeeded()
+      .catch(() => {});
+    await click(notice.getByRole("button", { name: "Accept" }));
+  },
+  shows: async (popup) => {
+    try {
+      return await popup.locator(NOTICE).first().isVisible();
+    } catch {
+      return false;
+    }
+  },
 };
 
 /** How long a connect page may keep Connect disabled before it counts as rendered too early. */
 const STALE_CONNECT_MS = 3000;
+const READ_TIMEOUT_MS = 500;
+
+const connectButton = (popup: Page): Locator => popup.getByTestId("confirm-btn");
+
+const connectEnabled = async (popup: Page): Promise<boolean> => {
+  try {
+    return await connectButton(popup).isEnabled({ timeout: READ_TIMEOUT_MS });
+  } catch {
+    return false;
+  }
+};
 
 /**
  * MetaMask can render a connect page before enabling the requested network (seen with Solana): no
  * networks under Permissions, Connect disabled, never recomputed. The request is still pending, so
  * a reload renders it from current state. Connect route only: elsewhere a disabled confirm is busy.
  */
-export const reloadStaleConnectPage = async (popup: Page): Promise<void> => {
-  if (!popup.url().includes("#/connect/")) {
-    return;
-  }
-  const connect = popup.getByTestId("confirm-btn");
-  const enabled = await waitUntil(() => connect.isEnabled({ timeout: 500 }).catch(() => false), {
-    timeoutMs: STALE_CONNECT_MS,
-  });
-  if (enabled === undefined) {
-    await popup.reload();
-  }
+export const staleConnectPage: ApprovalScreen = {
+  pass: async (popup) => {
+    const enabled = await waitUntil(() => connectEnabled(popup), { timeoutMs: STALE_CONNECT_MS });
+    if (enabled === undefined) {
+      await popup.reload();
+    }
+  },
+  shows: async (popup) =>
+    popup.url().includes("#/connect/") &&
+    (await connectButton(popup)
+      .isVisible()
+      .catch(() => false)) &&
+    !(await connectEnabled(popup)),
 };
 
-export const approve = async (popup: Page): Promise<void> => {
-  await reloadStaleConnectPage(popup);
-  await clickFooterButton(popup, confirmButton(popup));
+/**
+ * MetaMask's approval window. Its popup can render the requestless home screen, which the confirm
+ * and cancel test ids tell apart from a request. Locators only: LavaMoat scuttles `page.evaluate`.
+ */
+export const approval: ApprovalWindow = {
+  cancel: (popup) =>
+    popup
+      .getByTestId("cancel-btn")
+      .or(popup.getByTestId("confirm-footer-cancel-button"))
+      .or(popup.locator('[data-testid="page-container-footer-cancel"]'))
+      .or(popup.locator('[data-testid$="-cancel-snap-footer-button"]')),
+  confirm: (popup) =>
+    popup
+      .getByTestId("confirm-btn")
+      .or(popup.getByTestId("confirm-footer-button"))
+      .or(popup.locator('[data-testid="page-container-footer-next"]'))
+      .or(popup.locator('[data-testid$="-confirm-snap-footer-button"]')),
+  screens: [thirdPartyNotice, staleConnectPage],
 };
-
-/** The cancel counterpart of `approve`; same union-by-DOM-order resolution, not written order. */
-export const reject = (popup: Page): Promise<void> => clickFooterButton(popup, cancelButton(popup));

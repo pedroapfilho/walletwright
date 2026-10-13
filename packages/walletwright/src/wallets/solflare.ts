@@ -1,35 +1,39 @@
 import type { Page } from "@playwright/test";
 
+import { clicksFor } from "../internal/click";
 import type { WalletDefinition } from "../types";
 
+/** Quick setup only shows once Solflare has checked the seed's accounts for SOL over the network. */
+const BALANCE_CHECK_TIMEOUT_MS = 60_000;
+
+const { click } = clicksFor("Solflare");
+
 const importWallet = async (page: Page, seedPhrase: string, password: string): Promise<void> => {
-  await page.getByTestId("btn-import-existing-wallet").click({ timeout: 30_000 });
-  await page.getByText("Recovery phrase", { exact: true }).first().click({ timeout: 30_000 });
+  await click(page.getByTestId("btn-import-existing-wallet"));
+  await click(page.getByText("Recovery phrase", { exact: true }).first());
 
   const words = seedPhrase.trim().split(/\s+/v);
   await page.getByTestId("input-recovery-phrase-1").waitFor({ state: "visible", timeout: 30_000 });
   for (let index = 0; index < words.length; index++) {
     await page.getByTestId(`input-recovery-phrase-${index + 1}`).fill(words[index] ?? "");
   }
-  await page.getByTestId("btn-continue").click({ timeout: 30_000 });
+  await click(page.getByTestId("btn-continue"));
 
   await page.getByTestId("input-new-password").waitFor({ state: "visible", timeout: 30_000 });
   await page.getByTestId("input-new-password").fill(password);
   await page.getByTestId("input-repeat-password").fill(password);
-  await page.getByTestId("btn-continue").click({ timeout: 30_000 });
+  await click(page.getByTestId("btn-continue"));
 
-  await page.getByTestId("btn-quick-setup").click({ timeout: 60_000 });
+  await click(page.getByTestId("btn-quick-setup"), { timeoutMs: BALANCE_CHECK_TIMEOUT_MS });
 
-  await page.getByTestId("btn-explore").click({ timeout: 60_000 });
+  await click(page.getByTestId("btn-explore"));
 };
 
 export const solflare: WalletDefinition = {
-  approve: async (popup) => {
-    await popup
-      .getByTestId("btn-connect")
-      .or(popup.getByTestId("btn-approve"))
-      .first()
-      .click({ timeout: 30_000 });
+  approval: {
+    cancel: (popup) => popup.getByTestId("btn-cancel").or(popup.getByTestId("btn-reject")),
+    confirm: (popup) => popup.getByTestId("btn-connect").or(popup.getByTestId("btn-approve")),
+    urlMatch: "confirm_popup.html",
   },
 
   ecosystems: ["svm"],
@@ -38,17 +42,7 @@ export const solflare: WalletDefinition = {
 
   importWallet,
 
-  notificationMatch: "confirm_popup.html",
-
   onboardingPage: "wallet.html",
-
-  reject: async (popup) => {
-    await popup
-      .getByTestId("btn-cancel")
-      .or(popup.getByTestId("btn-reject"))
-      .first()
-      .click({ timeout: 30_000 });
-  },
 
   source: { id: "bhhhlbepdkbapadjdnnojkbgioiodbic", kind: "webStore" },
 

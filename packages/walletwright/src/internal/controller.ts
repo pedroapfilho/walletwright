@@ -2,15 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
 
-import { DEFAULT_NOTIFICATION_MATCH, findNotificationPopup, placeApprovalWindow } from "./popup";
-import { formatTimeout, waitUntil } from "./wait";
-
-const POPUP_CLOSE_TIMEOUT_MS = 15_000;
-/** Optional approvals keep a short wait: "no popup" is a normal outcome, and the wait is latency. */
-const OPTIONAL_POPUP_TIMEOUT_MS = 10_000;
-/** A popup that has to appear gets the full wait: the MV3 service worker can be slow to spawn it. */
-const REQUIRED_POPUP_TIMEOUT_MS = 30_000;
-type ResolveOptions = { optional?: boolean };
+import { type Approvals, frontDapp } from "./approval";
 
 /**
  * Runs one named wallet call. The Playwright fixtures report each call as a boxed `test.step`;
@@ -20,32 +12,9 @@ export type StepRunner = (title: string, body: () => Promise<void>) => Promise<v
 
 export const runDirectly: StepRunner = (_title, body) => body();
 
-/**
- * Drive `popup` with `settle` and return the page that actually took the approval. A popup that
- * closes mid-settle is the wallet respawning the request, so re-acquire once and drive the new one.
- */
-const settleApproval = async (
-  settle: (popup: Page) => Promise<void>,
-  popup: Page,
-  acquire: () => Promise<Page | undefined>,
-): Promise<Page> => {
-  try {
-    await settle(popup);
-    return popup;
-  } catch (error) {
-    if (!popup.isClosed()) {
-      throw error;
-    }
-    const fresh = await acquire();
-    if (!fresh) {
-      throw error;
-    }
-    await settle(fresh);
-    return fresh;
-  }
-};
-
 type CreateWalletOptions = {
+  /** Answers the wallet's approval windows. */
+  approvals: Approvals;
   context: BrowserContext;
   definition: WalletDefinition;
   extensionId: string;
@@ -59,6 +28,7 @@ type CreateWalletOptions = {
 
 /** Build the runtime controller that drives an unlocked wallet against the dapp under test. */
 export const createWallet = ({
+  approvals,
   context,
   definition,
   extensionId,
@@ -67,60 +37,7 @@ export const createWallet = ({
   step,
   unlock,
 }: CreateWalletOptions): Wallet => {
-  const match = definition.notificationMatch ?? DEFAULT_NOTIFICATION_MATCH;
   const ctx: WalletActionContext = { context, extensionId, home, password, unlock };
-
-  /** MetaMask opens requests inline while its extension page owns focus. */
-  const frontDapp = async (): Promise<void> => {
-    const dapp = context.pages().find((page) => /^https?:/v.test(page.url()) && !page.isClosed());
-    await dapp?.bringToFront().catch(() => {});
-  };
-
-  /** Find and place the approval window before its controls are driven. */
-  const acquireApproval = async (optional: boolean): Promise<Page | undefined> => {
-    const popup = await findNotificationPopup({
-      approvalControls: definition.approvalControls,
-      context,
-      extensionId,
-      match,
-      timeoutMs: optional ? OPTIONAL_POPUP_TIMEOUT_MS : REQUIRED_POPUP_TIMEOUT_MS,
-    });
-    if (popup) {
-      await placeApprovalWindow(popup);
-    }
-    return popup;
-  };
-
-  /** Drive the pending approval popup with `settle`, then wait for that popup to close. */
-  const resolvePopup = async (
-    settle: (popup: Page) => Promise<void>,
-    { optional = false }: ResolveOptions,
-  ): Promise<void> => {
-    await frontDapp();
-    const acquire = () => acquireApproval(optional);
-    const popup = await acquire();
-    if (!popup) {
-      if (optional) {
-        return; // e.g. Phantom auto-approves an already-trusted site (no popup)
-      }
-      const open = context.pages().map((page) => page.url());
-      throw new Error(
-        `[walletwright] approval popup did not appear. Open pages: ${open.join(" | ") || "none"}`,
-      );
-    }
-
-    const driven = await settleApproval(settle, popup, acquire);
-
-    /** Wait for the exact popup we drove; chained popups may reuse the same URL. */
-    const closed = await waitUntil(() => driven.isClosed() || undefined, {
-      timeoutMs: POPUP_CLOSE_TIMEOUT_MS,
-    });
-    if (closed === undefined) {
-      throw new Error(
-        `[walletwright] approval popup did not close after ${formatTimeout(POPUP_CLOSE_TIMEOUT_MS)} (the approval may not have registered)`,
-      );
-    }
-  };
 
   /**
    * Every public call goes through here, so each one reaches `step` under its own name. It awaits
@@ -133,11 +50,7 @@ export const createWallet = ({
       await step(`wallet.${name}`, () => fn(...args));
     };
 
-  const approve = (options: ResolveOptions = {}) =>
-    resolvePopup((popup) => definition.approve(popup, password), options);
-
-  const reject = (options: ResolveOptions = {}) =>
-    resolvePopup((popup) => definition.reject(popup), options);
+  const { approve, reject } = approvals;
 
   /** Bind a verified wallet action and restore focus to the dapp when it finishes. */
   const action = <Args extends ReadonlyArray<unknown>>(
@@ -153,7 +66,7 @@ export const createWallet = ({
       }
       await home.bringToFront().catch(() => {});
       await fn(ctx, ...args);
-      await frontDapp();
+      await frontDapp(context);
     });
 
   const { accounts, network, settings } = definition.actions ?? {};

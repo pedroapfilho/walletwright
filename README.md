@@ -18,7 +18,7 @@ A monorepo for [`walletwright`](./packages/walletwright), Playwright wallet auto
 ```sh
 pnpm install
 pnpm build         # build the library
-pnpm test          # fast unit tests only
+pnpm test          # unit tests and the headless engine tests (needs Playwright's Chromium)
 pnpm test:e2e      # the demo's extension specs (most need a display; use xvfb-run on CI)
 pnpm lint
 pnpm typecheck

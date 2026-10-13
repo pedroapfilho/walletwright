@@ -3,9 +3,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod";
 
-import { isEntryPoint, parseArgv, resolveSetups } from "./cli";
+import { isEntryPoint, parseArgv, resolveSetups, type walletSetupSchema } from "./cli";
+import type { WalletSetup } from "./types";
 
 const tempDirs: Array<string> = [];
 
@@ -21,6 +23,12 @@ const makeTempDir = (): string => {
   tempDirs.push(dir);
   return dir;
 };
+
+describe("walletSetupSchema", () => {
+  it("parses exactly a WalletSetup, so a field added to only one of them fails the typecheck", () => {
+    expectTypeOf<z.output<typeof walletSetupSchema>>().toEqualTypeOf<WalletSetup>();
+  });
+});
 
 describe("isEntryPoint", () => {
   it("recognises the entry when it is reached through a symlink", async () => {
@@ -160,6 +168,16 @@ describe("resolveSetups", () => {
 
     await expect(resolveSetups({ setup: file })).rejects.toThrow(
       /export "broken" is not a valid WalletSetup/v,
+    );
+  });
+
+  it("rejects a setup with a key WalletSetup does not have instead of dropping it", async () => {
+    const file = writeSetupModule(
+      'export const typo = { cacheDirr: "./ci", password: "pw", seedPhrase: "a b c", wallet: "metamask" };\n',
+    );
+
+    await expect(resolveSetups({ setup: file })).rejects.toThrow(
+      /\[walletwright\].*export "typo" is not a valid WalletSetup\n.*Unrecognized key: "cacheDirr"/v,
     );
   });
 

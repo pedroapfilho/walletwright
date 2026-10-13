@@ -10,8 +10,14 @@ const DEFAULT_CACHE_DIR = ".walletwright";
 
 const PREVIOUS_SUFFIX = ".previous";
 
+/**
+ * A setup as the engine runs it. The public entry points resolve `wallet` to its definition, so from
+ * there on it only names the cache, and any definition can drive the engine.
+ */
+export type EngineSetup = Omit<WalletSetup, "wallet"> & { wallet: string };
+
 /** Stable per-setup profile directory name, so the same wallet+seed+password reuses one cache. */
-export const profileKey = (setup: WalletSetup): string =>
+export const profileKey = (setup: EngineSetup): string =>
   createHash("sha256")
     .update(`${setup.wallet}:${setup.version ?? "default"}:${setup.seedPhrase}:${setup.password}`)
     .digest("hex")
@@ -38,7 +44,7 @@ export const restorePreviousProfile = async (profileDir: string): Promise<void> 
  * recovered, so building and launching both start from the same answer.
  */
 export const locateProfile = async (
-  setup: WalletSetup,
+  setup: EngineSetup,
 ): Promise<{ cacheDir: string; profileDir: string }> => {
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
   const profileDir = path.join(cacheDir, profileKey(setup));

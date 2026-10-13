@@ -2,10 +2,12 @@
   // tsdown reads this build config at build time; it's an entry point, not dead code.
   // The privy page is the demo's second Vite input: fallow's vite plugin only
   // reads the deprecated `build.rollupOptions`, not Vite 8's `rolldownOptions`.
+  // The stand-in extension's pages load their scripts from HTML, which fallow does not read.
   "entry": [
     "apps/docs/components/ui/*.tsx",
     "packages/walletwright/tsdown.config.ts",
     "apps/demo/src/privy.tsx",
+    "packages/walletwright/src/internal/standin/extension/*.js",
   ],
   // Consumed by `vitest run --coverage` via the v8 provider, referenced by name not import.
   // Generated runtime is tested and byte-verified by the control plane.

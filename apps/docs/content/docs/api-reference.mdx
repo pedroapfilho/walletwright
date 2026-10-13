@@ -224,13 +224,15 @@ test("connect and sign, no extension", async ({ page }) => {
 | Option       | Default                 | Description                                |
 | ------------ | ----------------------- | ------------------------------------------ |
 | `privateKey` | anvil/hardhat account 0 | Key the mock signs with; sets the account. |
-| `chainId`    | `31337`                 | Chain id reported to the dapp.             |
+| `chainId`    | `31337`                 | Chain id reported until the dapp switches. |
 | `name`       | `Walletwright Mock`     | Name announced over EIP-6963.              |
 
-It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_sign`, and no-ops the
-chain-switch methods. It is a connect/sign stand-in, not an EVM: it does not execute transactions.
-For anything real (transactions, balances, receipts), drive an actual extension against
-`@walletwright/core/chain`.
+It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_sign`. After
+`wallet_switchEthereumChain` or `wallet_addEthereumChain` with a hex `params[0].chainId`,
+`eth_chainId` reports the new chain; a malformed chain id rejects. It emits no events, `chainChanged`
+included, so a dapp that switches should re-read `eth_chainId`. It is a connect/sign stand-in, not an
+EVM: it does not execute transactions. For anything real (transactions, balances, receipts), drive
+an actual extension against `@walletwright/core/chain`.
 
 ## `@walletwright/core/mock-standard`
 
@@ -266,7 +268,7 @@ connect/sign stand-in, not a chain; drive a real extension for anything that tou
 
 The registry of built-in `WalletDefinition`s, keyed by `WalletKind` (`"metamask"`, `"phantom"`,
 `"rabby"`, `"slush"`, `"solflare"`), for inspecting what a wallet declares (its `ecosystems`,
-`headlessApprovals`, `actions`). It is read-only: a setup can only name a built-in wallet, and adding
+`approval`, `actions`). It is read-only: a setup can only name a built-in wallet, and adding
 one means adding a definition to this repository.
 
 ## `walletKinds`

@@ -24,11 +24,4 @@ describe("wallet registry", () => {
       expect(wallets[kind].ecosystems.length).toBeGreaterThan(0);
     }
   });
-
-  it("drives the universal flow on every registered wallet", () => {
-    for (const kind of Object.keys(wallets) as Array<WalletKind>) {
-      expect(typeof wallets[kind].approve).toBe("function");
-      expect(typeof wallets[kind].reject).toBe("function");
-    }
-  });
 });

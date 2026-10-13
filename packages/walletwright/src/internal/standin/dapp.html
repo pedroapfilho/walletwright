@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>stand-in dapp</title>
+  </head>
+  <body>
+    <output id="answer"></output>
+    <script>
+      window.addEventListener("message", (event) => {
+        if (event.data?.standin === "answer") {
+          document.querySelector("#answer").textContent = event.data.answer;
+        }
+      });
+      const mode = new URLSearchParams(window.location.search).get("mode");
+      window.postMessage({ mode, standin: "request" }, window.location.origin);
+    </script>
+  </body>
+</html>

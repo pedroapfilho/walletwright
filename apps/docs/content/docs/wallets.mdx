@@ -164,8 +164,9 @@ export const slush: WalletSetup = {
 - Headed only: its headless approval flow has not been verified, so it is not declared.
 
 <Callout type="info">
-  Slush re-prompts for the password when signing. walletwright handles that inside the `wallet`
-  fixture, so your test is still just `connectToDapp()` then `confirmSignature()`.
+  Slush keeps your accounts and connected sites on its own backend, under the session the cache build
+  created, so every run from one cache shares them. A site connected in one test is already trusted
+  in the next, with no popup: connect with `connectToDapp({ optional: true })`.
 </Callout>
 
 ## Pinning versions
