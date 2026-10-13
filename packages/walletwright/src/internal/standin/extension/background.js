@@ -8,6 +8,11 @@ const pending = new Map();
 const popupUrl = (id, mode) =>
   chrome.runtime.getURL(`notification.html?request=${id}&mode=${mode}`);
 
+const respawn = async (windowId, id) => {
+  await chrome.windows.remove(windowId);
+  await chrome.windows.create({ ...POPUP, url: popupUrl(id, "ready") });
+};
+
 /**
  * `late` opens on `about:blank` and navigates afterwards, like MetaMask's popup. `respawn` is
  * replaced by a fresh window for the same request while its buttons are still disabled.
@@ -22,9 +27,8 @@ const openPopup = async (id, mode) => {
   }
   const window = await chrome.windows.create({ ...POPUP, url: popupUrl(id, mode) });
   if (mode === "respawn") {
-    setTimeout(async () => {
-      await chrome.windows.remove(window.id);
-      await openPopup(id, "ready");
+    setTimeout(() => {
+      void respawn(window.id, id);
     }, RESPAWN_AFTER_MS);
   }
 };
