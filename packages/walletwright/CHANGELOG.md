@@ -1,5 +1,19 @@
 # @walletwright/core
 
+## 0.6.0
+
+### Minor Changes
+
+- ca58090: `buildCache` closes the browser only once the onboarded wallet is on disk, in place of fixed sleeps and a check that some storage file exists. `WalletDefinition` gains an optional `isPersisted({ page, profileDir, extensionId })` that the build polls after `importWallet`: MetaMask's waits for its vault, which it writes about a second after its last onboarding screen, and Slush's for the session, passphrase and password hash it used to wait for inside its onboarding. A wallet without one is on disk once its extension storage has changed since onboarding began and then held still for 2s. `importWallet` now ends at its last screen, with no trailing sleep.
+- ca58090: `WalletDefinition` declares its approval window under one member, `approval`, in place of `approve`, `reject`, `approvalControls`, `notificationMatch`, and `headlessApprovals`. It names the `confirm` and `cancel` controls, how to click them, the `screens` a wallet can put in front of a request, the window's `urlMatch`, and `headless`. The engine now drives every approval itself: it re-authenticates through the shared unlock flow when a window asks for the password again and fails if the password field does not clear, clicks each control at most once, and waits for the window to close under one set of budgets. An approval that never completes fails naming the controls it clicked, where a Slush re-authentication used to pass without checking that it took.
+
+### Patch Changes
+
+- ca58090: `walletwright cache --setup` now rejects a setup export with a key `WalletSetup` does not have, naming the export and the key, instead of silently dropping it. A misspelled `cacheDir` used to build into the default cache directory without a word.
+- ca58090: The EVM mock now tracks chain switches: after `wallet_switchEthereumChain` or `wallet_addEthereumChain`, `eth_chainId` reports the requested chain instead of the one the mock was installed with. Both methods reject unless `params[0].chainId` is a 0x-prefixed hex chain id. Each mock install also announces a random UUIDv4 over EIP-6963, as the spec asks, in place of a counter-derived one.
+- ca58090: Slush onboards, unlocks, connects and signs again on its current release (26.21.1). Onboarding follows the new import flow (Get started, skip the phone or email sign-in, Passphrase, Import), the cache waits for the session, passphrase and password hash Slush now stores in its `keyval-store` IndexedDB, and the unlock clicks its button once the password registers. Slush's backend is no longer stubbed: it now holds the wallet's accounts and connected sites, so runs need to reach `api.slush.app`, and a site connected in one run from a cache is already trusted in the next (connect with `connectToDapp({ optional: true })`).
+- ca58090: Wallet onboarding, unlock, and account, network, and settings actions now click through one helper that waits for each control to show. A control the flow needs and never sees fails with `[walletwright] <Wallet> never showed <control>`, and a control that shows but takes no click fails naming it, where some of these clicks used to no-op or time out silently. Phantom's unlock clicks its Unlock button rather than falling back to Enter, and its onboarding no longer looks for a "Get Started" step the current extension does not show.
+
 ## 0.5.1
 
 ### Patch Changes
