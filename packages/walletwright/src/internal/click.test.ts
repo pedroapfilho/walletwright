@@ -1,4 +1,4 @@
-import { errors } from "@playwright/test";
+import { chromium, errors } from "@playwright/test";
 import type { Locator } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
@@ -63,14 +63,6 @@ describe("click", () => {
     await expect(click(control)).rejects.toBe(closed);
   });
 
-  it("passes force through to the click", async () => {
-    const { clicked, control } = fakeControl();
-
-    await click(control, { force: true, timeoutMs: 15_000 });
-
-    expect(clicked).toHaveBeenCalledWith({ force: true, timeout: 15_000 });
-  });
-
   it("settles between the control showing and the click", async () => {
     vi.useFakeTimers();
     try {
@@ -114,4 +106,27 @@ describe("clickIfShown", () => {
       `[walletwright] Solflare showed ${SELECTOR} but it took no click`,
     );
   });
+});
+
+describe("a forced click", () => {
+  it("waits for a sliding sheet to settle in view before clicking", async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage({ viewport: { height: 600, width: 400 } });
+      await page.setContent(`
+        <style>
+          #sheet { position: fixed; bottom: 0; transform: translateY(150%); transition: transform 800ms; }
+          #sheet.open { transform: translateY(0); }
+        </style>
+        <div id="sheet"><button onclick="document.title = 'clicked'">Maybe later</button></div>
+        <script>requestAnimationFrame(() => requestAnimationFrame(() => sheet.classList.add("open")));</script>
+      `);
+
+      await click(page.getByRole("button", { name: "Maybe later" }), { force: true });
+
+      expect(await page.title()).toBe("clicked");
+    } finally {
+      await browser.close();
+    }
+  }, 30_000);
 });
