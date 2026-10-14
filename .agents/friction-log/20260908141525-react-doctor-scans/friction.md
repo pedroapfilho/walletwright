@@ -1,6 +1,7 @@
 ---
-title: "React Doctor scans ignored downloaded wallet extensions"
-severity: "minor"
+title: 'React Doctor scans ignored downloaded wallet extensions'
+severity: 'minor'
+issue: 'pedroapfilho/walletwright#157'
 ---
 
 ## Problem
