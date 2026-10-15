@@ -11,6 +11,14 @@ this file.
 
 Entries live in `.agents/friction-log/`, one directory each. A GitHub Action reports them as issues and deletes the entry once the issue closes, so anything still in that directory is still outstanding.
 
+## Standards
+
+This repo follows the fleet's shared standards, checked by `keel` (`~/dev/keel`).
+
+- Before editing, run `keel standards --for <paths>` for the rules that apply to the files you will touch.
+- Before finishing, run `keel check --changed --fix-hints` and fix what fails. It only sees tracked files, so run `git add -N` on new files first.
+- When a failure is unclear, `keel explain <check>` prints what the check asserts and how to fix it.
+
 ## What this repo is
 
 `walletwright` is a **Playwright wallet-automation library** for **MetaMask (EVM + Solana)**,
