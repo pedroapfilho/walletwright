@@ -1,0 +1,45 @@
+{
+  "entry": [
+    "apps/docs/components/ui/*.tsx",
+    "packages/walletwright/tsdown.config.ts",
+    "apps/demo/src/privy.tsx",
+    "packages/walletwright/src/internal/standin/extension/*.js"
+  ],
+  "ignorePatterns": [".github/ci/*.mjs"],
+  "ignoreDependencies": ["@shadcn/lint", "@vitest/coverage-v8"],
+  "ignoreExports": [
+    {
+      "file": "apps/docs/app/llms.mdx/**/route.ts",
+      "exports": ["generateStaticParams"]
+    }
+  ],
+  "typeAware": {
+    "enabled": true,
+    "require": "best-effort"
+  },
+  "rules": {
+    "private-type-leaks": "off"
+  },
+  "boundaries": {
+    "zones": [
+      {
+        "name": "app",
+        "autoDiscover": ["apps"]
+      },
+      {
+        "name": "package",
+        "patterns": ["packages/**"]
+      }
+    ],
+    "rules": [
+      {
+        "from": "package",
+        "allow": ["package"]
+      },
+      {
+        "from": "app",
+        "allow": ["package"]
+      }
+    ]
+  }
+}
