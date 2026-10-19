@@ -42,3 +42,12 @@ minimumReleaseAgeExclude:
   - "@walletwright/*"
   - astro-awesomeness
   - oxlint-config-awesomeness
+
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - "@noble/curves@1.8.0"
+  - "@noble/hashes@1.7.0"
+  - jose@4.15.9
+  - semver@6.3.1
+  - slow-redact@0.3.2
+  - ua-parser-js@1.0.41
