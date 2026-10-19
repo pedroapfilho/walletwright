@@ -17,7 +17,7 @@
     "fallow:dead": "fallow dead-code",
     "fallow:dupes": "fallow dupes",
     "fallow:health": "fallow health --score",
-    "fallow:audit": "fallow audit --base main",
+    "fallow:audit": "fallow audit",
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",
