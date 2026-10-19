@@ -77,11 +77,8 @@ const Mark = () => (
 const RootLayout = ({ children }: { children: ReactNode }) => (
   <html className="antialiased" lang="en">
     <body>
-      {/* oxlint-disable-next-line react-doctor/no-layout-shifting-interaction-state -- the padding
-      lands only alongside focus:fixed, which takes the link out of flow, so no sibling can move */}
       <a
-        className="focus:border-border focus:bg-background focus-visible:outline-ring sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-60 focus:rounded-md focus:border focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus-visible:outline-2"
-        // oxlint-disable-next-line react-doctor/anchor-target-exists -- the id is set on <main> in app/page.tsx, which the rule does not reach from this file
+        className="border-border bg-background focus-visible:outline-ring fixed top-3 left-3 z-60 -translate-y-16 rounded-md border px-4 py-2 text-sm font-medium focus:translate-y-0 focus-visible:outline-2"
         href="#main-content"
       >
         Skip to content
@@ -104,7 +101,9 @@ const RootLayout = ({ children }: { children: ReactNode }) => (
             </nav>
           </div>
         </header>
-        {children}
+        <main className="ref-measure" id="main-content" tabIndex={-1}>
+          {children}
+        </main>
         <footer className="ref-footer">
           <div className="ref-measure ref-footer-row">
             <p>Released under the MIT License.</p>

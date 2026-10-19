@@ -1,4 +1,5 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
+import Image from "next/image";
 
 const GITHUB_URL = "https://github.com/pedroapfilho/walletwright";
 
@@ -16,16 +17,14 @@ export const baseOptions = (): BaseLayoutProps => ({
   nav: {
     title: (
       <>
-        {/* eslint-disable-next-line @next/next/no-img-element -- next/image serves SVG unoptimized, so it adds nothing for this wordmark */}
-        <img
+        <Image
           alt="walletwright"
           className="block h-5 w-auto dark:hidden"
           height={20}
           src="/walletwright-logo-light.svg"
           width={150}
         />
-        {/* eslint-disable-next-line @next/next/no-img-element -- next/image serves SVG unoptimized, so it adds nothing for this wordmark */}
-        <img
+        <Image
           alt="walletwright"
           className="hidden h-5 w-auto dark:block"
           height={20}

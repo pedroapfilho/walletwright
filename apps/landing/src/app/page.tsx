@@ -19,23 +19,6 @@ import {
 } from "@/lib/content";
 import { DOCS_URL, GETTING_STARTED_URL, GITHUB_URL, NPM_URL } from "@/lib/site";
 
-const CONTRACT = `
-THESIS: the landing page is the first page of the docs, the way viem and
-wagmi open: wordmark, one sentence, install tabs, fact badges, then the API
-itself as content. Nothing is sold that is not a function you can call.
-OWN-WORLD: charcoal ground, Geist, pass-check green as the only accent,
-hairline cards, the API surface set as a reference list.
-STORY: the visitor installs before scrolling, reads the six calls that make
-up the library, and moves to the docs already knowing the shape.
-FIRST VIEWPORT: wordmark and one-line description left with three buttons;
-npm/pnpm/bun install tabs right; a badge row (npm, MIT, wallets, chains).
-FORM: grounded conventional candidate (docs-native landing, cf. viem and
-wagmi); safer-register round 1; seed 935f3678.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the
-finish review, the verdict, DESIGN.md, and every shipping raster carrying its
-provenance.
-`;
-
 type ApiEntry = { description: string; name: string };
 
 /** The public surface as documented in AGENTS.md; nothing here is speculative. */
@@ -96,153 +79,148 @@ const INSTALLS = [
 
 const LandingPage = () => (
   <>
-    {/* oxlint-disable-next-line react/no-danger -- emits the impeccable direction contract as an HTML comment that survives the production build */}
-    <div dangerouslySetInnerHTML={{ __html: `<!--${CONTRACT}-->` }} hidden />
-
-    <main className="ref-measure" id="main-content" tabIndex={-1}>
-      <section aria-label="Introduction" className="ref-hero">
-        <div>
-          <h1 className="ref-wordmark">walletwright</h1>
-          <p className="ref-lede">
-            Connect and sign with <strong>real</strong>, <strong>cached</strong>, and{" "}
-            <strong>current</strong> wallet extensions in Playwright, across EVM, Solana, and Sui.
-          </p>
-          <div className="ref-actions">
-            <a className="ref-btn ref-btn-primary" href={GETTING_STARTED_URL}>
-              Get started
-            </a>
-            <a className="ref-btn ref-btn-ghost" href={`${DOCS_URL}/comparison`}>
-              Why walletwright?
-            </a>
-            <a
-              className="ref-btn ref-btn-ghost"
-              href={GITHUB_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              GitHub
-            </a>
-          </div>
+    <section aria-label="Introduction" className="ref-hero">
+      <div>
+        <h1 className="ref-wordmark">walletwright</h1>
+        <p className="ref-lede">
+          Connect and sign with <strong>real</strong>, <strong>cached</strong>, and{" "}
+          <strong>current</strong> wallet extensions in Playwright, across EVM, Solana, and Sui.
+        </p>
+        <div className="ref-actions">
+          <a className="ref-btn ref-btn-primary" href={GETTING_STARTED_URL}>
+            Get started
+          </a>
+          <a className="ref-btn ref-btn-ghost" href={`${DOCS_URL}/comparison`}>
+            Why walletwright?
+          </a>
+          <a
+            className="ref-btn ref-btn-ghost"
+            href={GITHUB_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            GitHub
+          </a>
         </div>
+      </div>
 
-        <div>
-          <CodeTabs
-            className="ref-install"
-            label="Package manager"
-            tabs={INSTALLS.map((install) => ({
-              label: install.label,
-              panel: (
-                <CodeBlock
-                  className="ref-install-code"
-                  code={install.command}
-                  label={`Install with ${install.label}`}
-                  lang="bash"
-                  wrap
-                />
-              ),
-            }))}
-          />
-          <ul className="ref-badges" role="list">
-            <li>
-              <span>npm</span>
-              <a href={NPM_URL}>@walletwright/core</a>
-            </li>
-            <li>
-              <span>license</span>
-              <strong>MIT</strong>
-            </li>
-            <li>
-              <span>wallets</span>
-              <strong>5</strong>
-            </li>
-            <li>
-              <span>chains</span>
-              <strong>3</strong>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <div>
+        <CodeTabs
+          className="ref-install"
+          label="Package manager"
+          tabs={INSTALLS.map((install) => ({
+            label: install.label,
+            panel: (
+              <CodeBlock
+                className="ref-install-code"
+                code={install.command}
+                label={`Install with ${install.label}`}
+                lang="bash"
+                wrap
+              />
+            ),
+          }))}
+        />
+        <ul className="ref-badges" role="list">
+          <li>
+            <span>npm</span>
+            <a href={NPM_URL}>@walletwright/core</a>
+          </li>
+          <li>
+            <span>license</span>
+            <strong>MIT</strong>
+          </li>
+          <li>
+            <span>wallets</span>
+            <strong>5</strong>
+          </li>
+          <li>
+            <span>chains</span>
+            <strong>3</strong>
+          </li>
+        </ul>
+      </div>
+    </section>
 
-      <section aria-labelledby="ref-features-title" className="ref-section">
-        <h2 className="ref-visually-hidden" id="ref-features-title">
-          Features
-        </h2>
-        <ul className="ref-cards" role="list">
-          {FEATURES.map((feature) => (
-            <li className="ref-card" key={feature.title}>
-              <h3>{feature.title}</h3>
-              <p>{feature.description}</p>
+    <section aria-labelledby="ref-features-title" className="ref-section">
+      <h2 className="ref-visually-hidden" id="ref-features-title">
+        Features
+      </h2>
+      <ul className="ref-cards" role="list">
+        {FEATURES.map((feature) => (
+          <li className="ref-card" key={feature.title}>
+            <h3>{feature.title}</h3>
+            <p>{feature.description}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="ref-api-title" className="ref-section ref-two-col">
+      <div>
+        <h2 id="ref-api-title">The whole API</h2>
+        <p className="ref-body">
+          Six calls. Each wallet declares which optional actions it has driven end-to-end; the rest
+          throw a clear error instead of pretending.
+        </p>
+        <dl className="ref-api">
+          {API.map((entry) => (
+            <div className="ref-api-row" key={entry.name}>
+              <dt>
+                <code>{entry.name}</code>
+              </dt>
+              <dd>{entry.description}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      <CodeBlock className="ref-code" code={HERO_CODE} filename="connect.spec.ts" />
+    </section>
+
+    <section aria-labelledby="ref-wallets-title" className="ref-section ref-two-col">
+      <div>
+        <h2 id="ref-wallets-title">Verified wallets</h2>
+        <p className="ref-body">
+          A wallet enters the registry once its connect and sign specs pass against the demo dapp.
+          Coinbase Wallet, Trust, Backpack, Glow, Suiet, and Nightly are on the roadmap, not the
+          list.
+        </p>
+        <ul className="ref-wallets" role="list">
+          {WALLETS.map((wallet) => (
+            <li key={wallet.name}>
+              {wallet.icon}
+              <span className="ref-wallet-name">{wallet.name}</span>
+              <span className="ref-wallet-chains">{wallet.chains}</span>
+              <span className="ref-wallet-spec">{wallet.spec}</span>
             </li>
           ))}
         </ul>
-      </section>
+      </div>
+      <div>
+        <CodeBlock
+          className="ref-code"
+          code={RUN_OUTPUT}
+          label="Test run output"
+          lang="ansi"
+          wrap
+        />
+        <p className="ref-caption">{RUN_CAPTION}</p>
+      </div>
+    </section>
 
-      <section aria-labelledby="ref-api-title" className="ref-section ref-two-col">
-        <div>
-          <h2 id="ref-api-title">The whole API</h2>
-          <p className="ref-body">
-            Six calls. Each wallet declares which optional actions it has driven end-to-end; the
-            rest throw a clear error instead of pretending.
-          </p>
-          <dl className="ref-api">
-            {API.map((entry) => (
-              <div className="ref-api-row" key={entry.name}>
-                <dt>
-                  <code>{entry.name}</code>
-                </dt>
-                <dd>{entry.description}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <CodeBlock className="ref-code" code={HERO_CODE} filename="connect.spec.ts" />
-      </section>
-
-      <section aria-labelledby="ref-wallets-title" className="ref-section ref-two-col">
-        <div>
-          <h2 id="ref-wallets-title">Verified wallets</h2>
-          <p className="ref-body">
-            A wallet enters the registry once its connect and sign specs pass against the demo dapp.
-            Coinbase Wallet, Trust, Backpack, Glow, Suiet, and Nightly are on the roadmap, not the
-            list.
-          </p>
-          <ul className="ref-wallets" role="list">
-            {WALLETS.map((wallet) => (
-              <li key={wallet.name}>
-                {wallet.icon}
-                <span className="ref-wallet-name">{wallet.name}</span>
-                <span className="ref-wallet-chains">{wallet.chains}</span>
-                <span className="ref-wallet-spec">{wallet.spec}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <CodeBlock
-            className="ref-code"
-            code={RUN_OUTPUT}
-            label="Test run output"
-            lang="ansi"
-            wrap
-          />
-          <p className="ref-caption">{RUN_CAPTION}</p>
-        </div>
-      </section>
-
-      <section aria-labelledby="ref-setup-title" className="ref-section ref-two-col">
-        <div>
-          <h2 id="ref-setup-title">Setup</h2>
-          <p className="ref-body">
-            Describe each wallet once. <code>walletwright cache</code> onboards it into a profile on
-            disk; every test launches from a copy and only unlocks.
-          </p>
-          <a className="ref-link" href={GETTING_STARTED_URL}>
-            Getting started →
-          </a>
-        </div>
-        <CodeBlock className="ref-code" code={SETUP_CODE} filename="wallet-setup.ts" wrap />
-      </section>
-    </main>
+    <section aria-labelledby="ref-setup-title" className="ref-section ref-two-col">
+      <div>
+        <h2 id="ref-setup-title">Setup</h2>
+        <p className="ref-body">
+          Describe each wallet once. <code>walletwright cache</code> onboards it into a profile on
+          disk; every test launches from a copy and only unlocks.
+        </p>
+        <a className="ref-link" href={GETTING_STARTED_URL}>
+          Getting started →
+        </a>
+      </div>
+      <CodeBlock className="ref-code" code={SETUP_CODE} filename="wallet-setup.ts" wrap />
+    </section>
   </>
 );
 
