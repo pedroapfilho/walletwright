@@ -129,4 +129,28 @@ describe("a forced click", () => {
       await browser.close();
     }
   }, 30_000);
+
+  it("waits out a sheet that holds still partway through its slide", async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage({ viewport: { height: 600, width: 400 } });
+      await page.setContent(`
+        <style>#sheet { position: fixed; top: 100px; }</style>
+        <div id="sheet"><button onclick="document.title = String(this.getBoundingClientRect().top)">Maybe later</button></div>
+        <script>
+          sheet.animate([{ transform: "translateY(300px)" }, { transform: "translateY(0)" }], {
+            duration: 3000,
+            easing: "steps(3, jump-none)",
+            fill: "forwards",
+          });
+        </script>
+      `);
+
+      await click(page.getByRole("button", { name: "Maybe later" }), { force: true });
+
+      expect(await page.title()).toBe("100");
+    } finally {
+      await browser.close();
+    }
+  }, 30_000);
 });

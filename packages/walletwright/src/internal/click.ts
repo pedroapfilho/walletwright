@@ -55,6 +55,23 @@ const shows = async (control: Locator, timeoutMs: number): Promise<boolean> => {
 const PLACEMENT_INTERVAL_MS = 150;
 
 /**
+ * A slow renderer holds a sliding sheet on one frame for over a second, so an unchanged box alone
+ * reads as settled mid-slide, and Slush drops a press that lands there.
+ */
+const isAnimating = async (control: Locator): Promise<boolean> => {
+  try {
+    return await control.evaluate((element) =>
+      document.getAnimations().some((animation) => {
+        const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+        return animation.playState === "running" && target?.contains(element) === true;
+      }),
+    );
+  } catch {
+    return true;
+  }
+};
+
+/**
  * Wait for the control to sit inside the viewport and stop moving. A forced click skips the
  * stability check, so on a sheet that slides in it lands while the control is still off-screen, and
  * a scroll into view can dismiss the sheet instead.
@@ -72,7 +89,7 @@ const settlesInView = async (control: Locator, timeoutMs: number): Promise<void>
         (viewport === null ||
           (box.y + box.height <= viewport.height && box.x + box.width <= viewport.width));
       const current = inView ? JSON.stringify(box) : "";
-      const settled = current !== "" && current === previous;
+      const settled = current !== "" && current === previous && !(await isAnimating(control));
       previous = current;
       return settled;
     },
