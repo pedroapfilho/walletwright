@@ -58,6 +58,21 @@ describe.concurrent("launch", { timeout: 60_000 }, () => {
     ).rejects.toThrow("no cache for this setup");
   });
 
+  it("requires a new cache after the default release changes", async ({ expect }) => {
+    const definition = standin.definition;
+    if (definition.source.kind !== "release") throw new Error("expected a release source");
+    await expect(
+      launchHeadless({
+        ...definition,
+        source: { ...definition.source, defaultVersion: "2.0.0" },
+      }),
+    ).rejects.toThrow("no cache for this setup");
+    await using launched = await launchHeadless(definition, { ...setup, version: "1.0.0" });
+    expect(await launched.wallet.home.getByText("Unlocked", { exact: true }).isVisible()).toBe(
+      true,
+    );
+  });
+
   it("refuses headless for a wallet without verified headless approvals", async ({ expect }) => {
     await expect(
       launchHeadless({

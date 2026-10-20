@@ -17,9 +17,9 @@ const PREVIOUS_SUFFIX = ".previous";
 export type EngineSetup = Omit<WalletSetup, "wallet"> & { wallet: string };
 
 /** Stable per-setup profile directory name, so the same wallet+seed+password reuses one cache. */
-export const profileKey = (setup: EngineSetup): string =>
+export const profileKey = (setup: EngineSetup, archiveName: string): string =>
   createHash("sha256")
-    .update(`${setup.wallet}:${setup.version ?? "default"}:${setup.seedPhrase}:${setup.password}`)
+    .update(`${setup.wallet}:${archiveName}:${setup.seedPhrase}:${setup.password}`)
     .digest("hex")
     .slice(0, 20);
 
@@ -45,9 +45,10 @@ export const restorePreviousProfile = async (profileDir: string): Promise<void> 
  */
 export const locateProfile = async (
   setup: EngineSetup,
+  archiveName: string,
 ): Promise<{ cacheDir: string; profileDir: string }> => {
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
-  const profileDir = path.join(cacheDir, profileKey(setup));
+  const profileDir = path.join(cacheDir, profileKey(setup, archiveName));
   await restorePreviousProfile(profileDir);
   return { cacheDir, profileDir };
 };
