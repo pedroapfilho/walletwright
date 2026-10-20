@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { OnboardedWallet, WalletDefinition } from "../types";
 
-import { extensionArchive, prepareExtension } from "./extension";
+import { extensionArchive } from "./extension";
 import { type EngineSetup, extensionStateDir, locateProfile, publishProfile } from "./profile";
 import { openSession, type WalletSession } from "./session";
 import { gotoWithRetry, waitUntilOrThrow } from "./wait";
@@ -103,10 +103,14 @@ export const build = async (
   { headless = false }: { headless?: boolean } = {},
 ): Promise<string> => {
   const archive = extensionArchive(definition, setup);
-  const { cacheDir, profileDir } = await locateProfile(setup, archive.name);
-  const extensionPath = await prepareExtension(archive, cacheDir);
+  const { cacheDir, profileDir } = locateProfile(setup, archive.name);
   const { session } = await openSession(
-    { definition, extensionPath, headless, profile: { parent: cacheDir, prefix: BUILD_PREFIX } },
+    {
+      definition,
+      extension: { ...archive, cacheDir },
+      headless,
+      profile: { parent: cacheDir, prefix: BUILD_PREFIX },
+    },
     (opened) => onboard(definition, setup, opened),
   );
   await session.close(async () => {

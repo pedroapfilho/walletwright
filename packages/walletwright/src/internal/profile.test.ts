@@ -8,7 +8,7 @@ import type { WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
 import { extensionArchive } from "./extension";
-import { profileKey, publishProfile, restorePreviousProfile } from "./profile";
+import { copyProfile, profileKey, publishProfile } from "./profile";
 
 const baseSetup: WalletSetup = {
   password: "correct-horse-battery-staple",
@@ -56,7 +56,9 @@ describe("profileKey", () => {
 
   it("selects a different profile when an omitted version resolves to a new default", () => {
     const definition = wallets.metamask;
-    if (definition.source.kind !== "release") throw new Error("expected a release source");
+    if (definition.source.kind !== "release") {
+      throw new Error("expected a release source");
+    }
     const current = extensionArchive(definition, baseSetup);
     const updated = extensionArchive(
       {
@@ -71,7 +73,9 @@ describe("profileKey", () => {
   it("shares the profile for an explicit and default version of the same release", () => {
     const implicit = extensionArchive(wallets.metamask, baseSetup);
     const source = wallets.metamask.source;
-    if (source.kind !== "release") throw new Error("expected a release source");
+    if (source.kind !== "release") {
+      throw new Error("expected a release source");
+    }
     const explicitSetup = { ...baseSetup, version: source.defaultVersion };
     const explicit = extensionArchive(wallets.metamask, explicitSetup);
     expect(profileKey(explicitSetup, explicit.name)).toBe(profileKey(baseSetup, implicit.name));
@@ -102,7 +106,7 @@ describe("publishProfile", () => {
     );
 
     await expect(readFile(path.join(profileDir, "state"), "utf8")).resolves.toBe("old");
-    expect(await readdir(cacheDir)).toEqual(["profile"]);
+    expect(await readdir(cacheDir)).toEqual([".locks", "profile"]);
   });
 
   it("recovers a previous profile left by an interrupted publication", async () => {
@@ -112,9 +116,9 @@ describe("publishProfile", () => {
     await mkdir(previous);
     await writeFile(path.join(previous, "state"), "old");
 
-    await restorePreviousProfile(profileDir);
+    await copyProfile(profileDir, path.join(cacheDir, "copy"));
 
     await expect(readFile(path.join(profileDir, "state"), "utf8")).resolves.toBe("old");
-    expect(await readdir(cacheDir)).toEqual(["profile"]);
+    expect(await readdir(cacheDir)).toEqual([".locks", "copy", "profile"]);
   });
 });

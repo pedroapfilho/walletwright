@@ -108,6 +108,9 @@ const page = await launched.context.newPage();
 - MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom,
   Rabby, Solflare, and Slush use the Web Store build current at their first download, which cannot
   be pinned, so they refuse a `version`.
+- Profile keys include the resolved extension release. After upgrading from an older cache-key
+  format, or changing the default release, rebuild the cache before running tests. An explicit
+  version and the same default release share a profile.
 - The cache lives in `.walletwright/` (override it with `WalletSetup.cacheDir`). Add that directory to
   `.gitignore`.
 

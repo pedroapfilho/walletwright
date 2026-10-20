@@ -6,6 +6,7 @@ import AdmZip from "adm-zip";
 
 import type { ExtensionArchive } from "../types";
 
+import { withArtifactLock } from "./cache-lock";
 import { pathExists } from "./fs";
 
 const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
@@ -74,12 +75,14 @@ export const downloadAndExtractExtension = async (
       throw new Error(`[walletwright] extracted ${name} but no manifest.json found in ${outDir}`);
     }
 
-    if (await pathExists(path.join(outDir, "manifest.json"))) {
-      return outDir; // another worker published while we were downloading
-    }
-    await rm(outDir, { force: true, recursive: true });
-    await rename(staging, outDir);
-    return outDir;
+    return await withArtifactLock(outDir, async () => {
+      if (await pathExists(path.join(outDir, "manifest.json"))) {
+        return outDir;
+      }
+      await rm(outDir, { force: true, recursive: true });
+      await rename(staging, outDir);
+      return outDir;
+    });
   } finally {
     await rm(staging, { force: true, recursive: true }).catch(() => {});
   }

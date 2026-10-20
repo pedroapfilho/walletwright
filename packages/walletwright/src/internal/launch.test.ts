@@ -60,7 +60,9 @@ describe.concurrent("launch", { timeout: 60_000 }, () => {
 
   it("requires a new cache after the default release changes", async ({ expect }) => {
     const definition = standin.definition;
-    if (definition.source.kind !== "release") throw new Error("expected a release source");
+    if (definition.source.kind !== "release") {
+      throw new Error("expected a release source");
+    }
     await expect(
       launchHeadless({
         ...definition,

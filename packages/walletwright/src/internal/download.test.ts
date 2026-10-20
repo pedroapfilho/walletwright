@@ -206,7 +206,7 @@ describe("downloadAndExtractExtension", () => {
       url,
     });
 
-    expect(await readdir(cacheDir)).toEqual(["staged-extension"]);
+    expect(await readdir(cacheDir)).toEqual([".locks", "staged-extension"]);
   });
 
   it("does not publish a partial extraction when the archive escapes mid-extract", async () => {

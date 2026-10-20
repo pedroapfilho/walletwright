@@ -53,7 +53,8 @@ packages/walletwright/src/
     cache.ts          build: onboard once, persist a profile
     launch.ts         launch: unlock a copy of the profile
     session.ts        openSession(): Chromium + extension on a throwaway profile, both phases
-    profile.ts        profile keys and paths, atomic publish and recovery
+    profile.ts        profile keys and paths, protected copy, publish and recovery
+    cache-lock.ts     per-artifact ownership across processes
     extension.ts      the extension archive a setup runs, extension-id derivation
     download.ts       fetch + extract an extension archive
     unlock-screen.ts  the shared unlock flow every wallet's unlockScreen drives
@@ -76,8 +77,8 @@ Three phases, each owned by one engine module. A test touches only the first (on
 ```
 buildCache(setup)                       once, ahead of the tests (headless ok)
   wallets[setup.wallet]                 resolved once; the engine only sees the definition
-  prepareExtension  ─ download + extract the definition's source into .walletwright/
-  openSession(staging)                  channel: "chromium", then prepareContext
+  extensionArchive                     resolve the concrete release before naming its profile
+  openSession(staging + archive)        download/extract, Chromium, then prepareContext
   goto onboarding, retry until registered
   importWallet(seed, password)          the wallet's own onboarding flow, up to its last screen
   wait until durable                    isPersisted, or storage changed then still for 2s
@@ -98,12 +99,17 @@ createWallet(...)                       the Wallet you drive in the test
   accounts.* / network.* / settings.*
 ```
 
-`buildCache` is idempotent per `(wallet, version, seedPhrase, password)`: that tuple hashes to the
-profile directory name (`profileKey` in `internal/profile.ts`), so re-running with the same setup
-reuses the profile. Each `launchWallet` copies that profile to a throwaway directory, so
-parallel workers never share a profile and the cache is never mutated. The copy is removed by the
-returned `close()`, on every failure path inside `launchWallet`, and as a fallback when the context
-closes.
+`buildCache` explicitly rebuilds a profile in private staging, then replaces the prior cache only
+when onboarding, persistence and finalization succeed. The wallet, resolved archive name, seed and
+password determine its directory (`profileKey` in `internal/profile.ts`). A release default bump
+therefore selects a new profile and requires a cache build, just like an explicit version change.
+Web Store wallets keep using their first downloaded extraction until it is removed.
+
+Each `launchWallet` recovers and copies a complete published profile while holding the same artifact
+lock as publication, so it cannot undo an active rebuild or copy half of each generation. The lock
+is released before Chromium starts, and parallel workers run independent copies. The copy is removed
+by the returned `close()`, on every failure path inside `launchWallet`, and as a fallback when the
+context closes.
 
 <Callout type="info">
   Both phases launch the `chromium` channel, because Playwright's default headless build is the
@@ -368,8 +374,17 @@ id as a plain string, so nothing downstream depends on browser state.
 ## The cache
 
 `buildCache` writes an onboarded profile to `.walletwright/<profileKey>`, where `profileKey` is the
-first 20 hex characters of `sha256("<wallet>:<version>:<seed>:<password>")`. Same setup, same
-directory, so onboarding runs once. Change any of those four and you get a distinct profile.
+first 20 hex characters of `sha256("<wallet>:<resolved-archive-name>:<seed>:<password>")`. The same
+effective release and credentials select the same directory, whether the version is explicit or
+omitted. Calling `buildCache` always onboards a replacement; `launchWallet` reuses the prepared cache.
+Profiles created before this archive-based key need to be rebuilt.
+
+Recovery, replacement and profile copying share one per-artifact transaction boundary. Downloads and
+onboarding stay outside it in private staging. Extension publication rechecks for a completed winner
+under the same ownership and never replaces an extraction already in use. Ownership uses the OS lock
+of the existing `classic-level` dependency; it releases on process exit, including a crash. Lock
+metadata remains in `.walletwright/.locks/` between owners and must not be removed while caches are
+in use. A caller waits up to 60 seconds for ownership, then reports the artifact it could not lock.
 
 Reaching a wallet's last onboarding screen does not put its state on disk. Wallets persist on a
 debounce, and MetaMask writes its vault about 1.3s after that screen, so the build closes the

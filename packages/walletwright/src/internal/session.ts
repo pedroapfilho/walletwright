@@ -1,11 +1,13 @@
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { type BrowserContext, chromium } from "@playwright/test";
 
-import type { WalletDefinition } from "../types";
+import type { ExtensionArchive, WalletDefinition } from "../types";
 
+import { downloadAndExtractExtension } from "./download";
 import { extensionIdFromPath } from "./extension";
+import { copyProfile } from "./profile";
 
 /** Chromium running the wallet's extension on a throwaway profile directory. */
 export type WalletSession = {
@@ -21,7 +23,7 @@ export type WalletSession = {
 
 type SessionOptions = {
   definition: WalletDefinition;
-  extensionPath: string;
+  extension: ExtensionArchive & { cacheDir: string };
   headless: boolean;
   /** Where the throwaway directory is created, and the profile it starts as a copy of, if any. */
   profile: { copyOf?: string; parent: string; prefix: string };
@@ -78,17 +80,19 @@ const bindSession = (
  * before `start` returns closes the browser and removes the directory.
  */
 export const openSession = async <Started>(
-  { definition, extensionPath, headless, profile }: SessionOptions,
+  { definition, extension, headless, profile }: SessionOptions,
   start: (session: WalletSession) => Promise<Started>,
 ): Promise<{ session: WalletSession; started: Started }> => {
-  const extensionId = await extensionIdFromPath(extensionPath);
+  await mkdir(profile.parent, { recursive: true });
   const userDataDir = await mkdtemp(path.join(profile.parent, profile.prefix));
 
   let session: WalletSession | undefined;
   try {
     if (profile.copyOf !== undefined) {
-      await cp(profile.copyOf, userDataDir, { recursive: true });
+      await copyProfile(profile.copyOf, userDataDir);
     }
+    const extensionPath = await downloadAndExtractExtension(extension);
+    const extensionId = await extensionIdFromPath(extensionPath);
     const context = await chromium.launchPersistentContext(userDataDir, {
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
       // The default headless build is the headless shell, which cannot load an extension at all.
