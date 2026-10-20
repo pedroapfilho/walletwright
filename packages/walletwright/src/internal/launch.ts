@@ -6,8 +6,7 @@ import type { Wallet, WalletDefinition } from "../types";
 
 import { createApprovals } from "./approval";
 import { createWallet, type StepRunner } from "./controller";
-import { prepareExtension } from "./extension";
-import { pathExists } from "./fs";
+import { extensionArchive } from "./extension";
 import { type EngineSetup, locateProfile } from "./profile";
 import { openSession } from "./session";
 import { createUnlockScreen } from "./unlock-screen";
@@ -57,19 +56,14 @@ export const launch = async (
       `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
     );
   }
-  const { cacheDir, profileDir } = await locateProfile(setup);
-  if (!(await pathExists(profileDir))) {
-    throw new Error(
-      `[walletwright] no cache for this setup at ${profileDir}. Build it first with buildCache() or \`walletwright cache\`.`,
-    );
-  }
-  const extensionPath = await prepareExtension(definition, setup, cacheDir);
+  const archive = extensionArchive(definition, setup);
+  const { cacheDir, profileDir } = locateProfile(setup, archive.name);
   const screen = createUnlockScreen(definition);
 
   const { session, started: home } = await openSession(
     {
       definition,
-      extensionPath,
+      extension: { ...archive, cacheDir },
       headless,
       profile: { copyOf: profileDir, parent: os.tmpdir(), prefix: RUN_PREFIX },
     },

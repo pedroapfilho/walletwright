@@ -52,7 +52,7 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
     const profileDir = await build(standin.definition, setup, { headless: true });
 
     expect(await listCache(setup.cacheDir)).toEqual(
-      [path.basename(profileDir), EXTENSION_DIR].toSorted(),
+      [".locks", path.basename(profileDir), EXTENSION_DIR].toSorted(),
     );
   });
 
@@ -130,8 +130,47 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
     expect(keptUntilPublish).toBe(true);
     expect(await pathExists(marker)).toBe(false);
     expect(await listCache(setup.cacheDir)).toEqual(
-      [path.basename(profileDir), EXTENSION_DIR].toSorted(),
+      [".locks", path.basename(profileDir), EXTENSION_DIR].toSorted(),
     );
+  });
+
+  it("launches from the old snapshot while a rebuild finalizes, then keeps that copy usable", async ({
+    expect,
+  }) => {
+    const setup = await makeSetup();
+    const profile = await build(standin.definition, setup, { headless: true });
+    await writeFile(path.join(profile, "old-generation"), "old");
+    const finalizing = Promise.withResolvers<undefined>();
+    const resume = Promise.withResolvers<undefined>();
+    const rebuild = build(
+      {
+        ...standin.definition,
+        finalizeCache: async () => {
+          finalizing.resolve(undefined);
+          await resume.promise;
+        },
+      },
+      setup,
+      { headless: true },
+    );
+    await finalizing.promise;
+    try {
+      await using launched = await launch(standin.definition, setup, {
+        headless: true,
+        step: runDirectly,
+      });
+      const copy = await userDataDirOf(launched.context);
+      expect(await pathExists(path.join(copy, "old-generation"))).toBe(true);
+      resume.resolve(undefined);
+      await rebuild;
+      expect(await pathExists(path.join(profile, "old-generation"))).toBe(false);
+      const request = await standin.request(launched.context, "ready");
+      await launched.wallet.approve();
+      expect(await request.answer()).toBe("approved");
+    } finally {
+      resume.resolve(undefined);
+      await rebuild;
+    }
   });
 
   it("leaves the previous profile in place when a rebuild fails", async ({ expect }) => {
@@ -150,7 +189,7 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
 
     expect(await pathExists(marker)).toBe(true);
     expect(await listCache(setup.cacheDir)).toEqual(
-      [path.basename(profileDir), EXTENSION_DIR].toSorted(),
+      [".locks", path.basename(profileDir), EXTENSION_DIR].toSorted(),
     );
   });
 
@@ -180,6 +219,6 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
 
     expect(closed).toBe(true);
     expect(await pathExists(staging)).toBe(false);
-    expect(await listCache(setup.cacheDir)).toEqual([EXTENSION_DIR]);
+    expect(await listCache(setup.cacheDir)).toEqual([".locks", EXTENSION_DIR]);
   });
 });

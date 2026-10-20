@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import type { ExtensionArchive, WalletDefinition } from "../types";
 
-import { chromeWebStoreCrxUrl, downloadAndExtractExtension } from "./download";
+import { chromeWebStoreCrxUrl } from "./download";
 import type { EngineSetup } from "./profile";
 
 /**
@@ -32,14 +32,6 @@ export const extensionArchive = (
     url: chromeWebStoreCrxUrl(source.id),
   };
 };
-
-/** Download and unpack the definition's extension into `cacheDir`, returning its path. */
-export const prepareExtension = (
-  definition: WalletDefinition,
-  setup: EngineSetup,
-  cacheDir: string,
-): Promise<string> =>
-  downloadAndExtractExtension({ cacheDir, ...extensionArchive(definition, setup) });
 
 /** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
 export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {
