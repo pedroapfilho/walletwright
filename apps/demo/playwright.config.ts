@@ -1,11 +1,6 @@
 import { execFileSync } from "node:child_process";
 
 import { defineConfig, devices } from "@playwright/test";
-import { loadEnv } from "vite";
-
-for (const [key, value] of Object.entries(loadEnv("", import.meta.dirname, "VITE_"))) {
-  process.env[key] ??= value;
-}
 
 const getPortlessUrl = (name: string) => {
   if (process.env.CI) {

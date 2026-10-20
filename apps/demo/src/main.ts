@@ -24,7 +24,7 @@ type PhantomWindow = {
   solana?: SolanaProvider;
 };
 
-type WalletBrowserWindow = {
+type WalletBrowserWindow = Window & {
   ethereum?: Eip1193Provider;
   phantom?: PhantomWindow;
 };

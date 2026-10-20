@@ -2,7 +2,6 @@
   "entry": [
     "apps/docs/components/ui/*.tsx",
     "packages/walletwright/tsdown.config.ts",
-    "apps/demo/src/privy.tsx",
     "packages/walletwright/src/internal/standin/extension/*.js"
   ],
   "ignorePatterns": [".github/ci/*.mjs"],
