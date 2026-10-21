@@ -1,5 +1,13 @@
 # @walletwright/core
 
+## 0.6.2
+
+### Patch Changes
+
+- 8eaa77d: Key profiles by the resolved extension archive so default release updates require a matching cache.
+  Serialize profile recovery, copying and replacement, and extension publication across processes.
+  Existing profiles using the previous key format must be rebuilt.
+
 ## 0.6.1
 
 ### Patch Changes
