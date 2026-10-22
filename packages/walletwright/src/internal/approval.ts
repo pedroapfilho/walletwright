@@ -22,12 +22,14 @@ const BUDGETS = {
   /** A read of one control that may unmount under it. */
   read: 500,
 } as const;
+
 const PASS_INTERVAL_MS = 250;
 
 const DEFAULT_URL_MATCH = "notification.html";
 
 /** MetaMask's own popup dimensions, which its layout is built for. */
 const APPROVAL_WINDOW = { height: 592, width: 360 };
+
 /** Far enough from the edge that a popup this size lands fully on any usable display. */
 const APPROVAL_WINDOW_OFFSET = 50;
 
@@ -58,12 +60,15 @@ export const frontDapp = async (context: BrowserContext): Promise<void> => {
 /** Move the window on-screen; headless and unsupported CDP targets are ignored. */
 const placeApprovalWindow = async (page: Page): Promise<void> => {
   await page.setViewportSize(APPROVAL_WINDOW).catch(() => {});
+
   try {
     const session = await page.context().newCDPSession(page);
     const { targetInfo } = await session.send("Target.getTargetInfo");
+
     const { windowId } = await session.send("Browser.getWindowForTarget", {
       targetId: targetInfo.targetId,
     });
+
     await session.send("Browser.setWindowBounds", {
       bounds: { left: APPROVAL_WINDOW_OFFSET, top: APPROVAL_WINDOW_OFFSET },
       windowId,
@@ -87,13 +92,16 @@ const nextControl = async (
       .textContent({ timeout: BUDGETS.read })
       .then((text) => text?.trim())
       .catch(() => undefined);
+
     if (label === undefined || clicked.has(label) || !(await isShowing(control))) {
       continue;
     }
+
     if (await control.isEnabled({ timeout: BUDGETS.read }).catch(() => false)) {
       return { control, label };
     }
   }
+
   return undefined;
 };
 
@@ -106,9 +114,11 @@ const unanswered = (
   if (clicked.size > 0) {
     return `'s approval window stayed open after ${[...clicked].map((label) => `"${label}"`).join(", ")}`;
   }
+
   if (refusal !== undefined) {
     return ` refused every click on its ${intent} control`;
   }
+
   return ` never offered an enabled ${intent} control`;
 };
 
@@ -138,6 +148,7 @@ export const createApprovals = ({
     screens = [],
     urlMatch = DEFAULT_URL_MATCH,
   } = approval;
+
   const { click } = clicksFor(wallet);
   const settleMs = clickStrategy.kind === "locator" ? (clickStrategy.settleMs ?? 0) : 0;
 
@@ -150,8 +161,10 @@ export const createApprovals = ({
         undefined,
         { timeout: BUDGETS.click },
       );
+
       return;
     }
+
     await click(control, { settleMs, timeoutMs: BUDGETS.click });
   };
 
@@ -174,19 +187,24 @@ export const createApprovals = ({
               page.url().startsWith(`chrome-extension://${extensionId}`) &&
               page.url().includes(urlMatch),
           );
+
         for (const candidate of candidates) {
           await candidate.waitForLoadState("domcontentloaded").catch(() => {});
+
           if (await awaitsAnswer(candidate)) {
             return candidate;
           }
         }
+
         return undefined;
       },
       { timeoutMs },
     );
+
     if (popup !== undefined) {
       await placeApprovalWindow(popup);
     }
+
     return popup;
   };
 
@@ -194,11 +212,13 @@ export const createApprovals = ({
   const pressOrRefusal = async (popup: Page, control: Locator): Promise<Error | undefined> => {
     try {
       await press(control);
+
       return undefined;
     } catch (error) {
       if (popup.isClosed()) {
         return undefined;
       }
+
       return error instanceof Error ? error : new Error(String(error));
     }
   };
@@ -224,25 +244,31 @@ export const createApprovals = ({
       if (await asksForPassword(popup)) {
         await sleep(settleMs);
         await reauthenticate(popup);
+
         return undefined;
       }
+
       for (const screen of pending) {
         if (await screen.shows(popup)) {
           pending.delete(screen);
           await screen.pass(popup);
+
           return undefined;
         }
       }
+
       return nextControl(controls(popup), clicked);
     };
 
     while (Date.now() < deadline && !popup.isClosed()) {
       try {
         const next = await nextClick();
+
         if (next !== undefined) {
           tried = true;
           clicked.add(next.label);
           const error = await pressOrRefusal(popup, next.control);
+
           if (error !== undefined) {
             clicked.delete(next.label);
             refusal = error;
@@ -253,11 +279,14 @@ export const createApprovals = ({
           throw error;
         }
       }
+
       await sleep(PASS_INTERVAL_MS);
     }
+
     if (popup.isClosed()) {
       return tried ? "answered" : "replaced";
     }
+
     throw new Error(
       `[walletwright] ${wallet}${unanswered(intent, clicked, refusal)} (gave up after ${formatTimeout(BUDGETS.answer)})`,
       { cause: refusal },
@@ -268,18 +297,23 @@ export const createApprovals = ({
     await frontDapp(context);
     const appear = optional ? BUDGETS.appearOptional : BUDGETS.appear;
     let popup = await acquire(appear);
+
     if (popup === undefined) {
       if (optional) {
         return; // e.g. Phantom auto-approves an already-trusted site (no window)
       }
+
       const open = context.pages().map((page) => page.url());
       throw new Error(
         `[walletwright] ${wallet}'s approval window did not appear (gave up after ${formatTimeout(appear)}). Open pages: ${open.join(" | ") || "none"}`,
       );
     }
+
     const deadline = Date.now() + BUDGETS.answer;
+
     while ((await answerWindow(popup, intent, deadline)) === "replaced") {
       popup = await acquire(Math.max(0, deadline - Date.now()));
+
       if (popup === undefined) {
         throw new Error(
           `[walletwright] ${wallet}'s approval window closed before it was answered, and no window replaced it`,

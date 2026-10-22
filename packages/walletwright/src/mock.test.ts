@@ -32,6 +32,7 @@ describe("createRpcHandler", () => {
 
   it("signs a raw-hex personal_sign message that verifies and matches the UTF-8 signature", async () => {
     const hexMessage = "0x68656c6c6f"; // "hello"
+
     const hexSignature = (await handle({
       method: "personal_sign",
       params: [hexMessage, account.address],
@@ -49,11 +50,13 @@ describe("createRpcHandler", () => {
       method: "personal_sign",
       params: ["hello", account.address],
     })) as `0x${string}`;
+
     expect(hexSignature).toBe(utf8Signature);
   });
 
   it("signs a message that merely starts with 0x via the UTF-8 branch", async () => {
     const message = "0x is a prefix";
+
     const signature = (await handle({
       method: "personal_sign",
       params: [message, account.address],

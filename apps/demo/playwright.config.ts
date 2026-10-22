@@ -6,6 +6,7 @@ const getPortlessUrl = (name: string) => {
   if (process.env.CI) {
     return undefined;
   }
+
   try {
     return execFileSync("portless", ["get", name], {
       encoding: "utf8",

@@ -53,6 +53,7 @@ const connectEnabled = async (popup: Page): Promise<boolean> => {
 export const staleConnectPage: ApprovalScreen = {
   pass: async (popup) => {
     const enabled = await waitUntil(() => connectEnabled(popup), { timeoutMs: STALE_CONNECT_MS });
+
     if (enabled === undefined) {
       await popup.reload();
     }

@@ -1,4 +1,5 @@
 "use client";
+
 import { usePathname } from "fumadocs-core/framework";
 import { Check, ChevronDown, Copy, ExternalLinkIcon, TextIcon } from "lucide-react";
 import { type ComponentProps, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -42,18 +43,23 @@ const MarkdownCopyButton = ({
   const handleClick = (): void => {
     startTransition(async () => {
       const cached = cache.get(markdownUrl);
+
       const promise =
         cached ??
         (async () => {
           const res = await fetch(markdownUrl);
+
           if (!res.ok) {
             throw new Error(`fetching ${markdownUrl} failed with ${res.status}`);
           }
+
           return res.text();
         })();
+
       if (!cached) {
         cache.set(markdownUrl, promise);
       }
+
       try {
         await navigator.clipboard.write([
           new ClipboardItem({
@@ -67,6 +73,7 @@ const MarkdownCopyButton = ({
         } catch {
           cache.delete(markdownUrl);
         }
+
         showStatus("failed");
         console.warn("[walletwright docs] copying the page Markdown failed", error);
       }
@@ -113,9 +120,11 @@ const ViewOptionsPopover = ({
   markdownUrl?: string;
 }) => {
   const pathname = usePathname();
+
   const items = useMemo(() => {
     const pageUrl =
       typeof window === "undefined" ? pathname : new URL(pathname, window.location.origin);
+
     const q = `Read ${pageUrl}, I want to ask questions about it.`;
 
     return [

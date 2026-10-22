@@ -15,11 +15,13 @@ const serve = async (bytes: Buffer): Promise<{ close: () => Promise<void>; url: 
     res.writeHead(200, { "content-type": "application/octet-stream" });
     res.end(bytes);
   });
+
   await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
   const port = typeof address === "object" && address ? address.port : 0;
+
   return {
     close: () =>
       new Promise<void>((resolve) => {
@@ -37,6 +39,7 @@ const servers: Array<{ close: () => Promise<void> }> = [];
 const makeCacheDir = async (): Promise<string> => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "walletwright-download-test-"));
   cacheDirs.push(dir);
+
   return dir;
 };
 
@@ -53,6 +56,7 @@ describe("downloadAndExtractExtension", () => {
     servers.push({ close });
 
     const cacheDir = await makeCacheDir();
+
     const outDir = await downloadAndExtractExtension({
       cacheDir,
       format: "zip",
@@ -125,6 +129,7 @@ describe("downloadAndExtractExtension", () => {
     servers.push({ close });
 
     const cacheDir = await makeCacheDir();
+
     const outDir = await downloadAndExtractExtension({
       cacheDir,
       format: "zip",
@@ -161,6 +166,7 @@ describe("downloadAndExtractExtension", () => {
     servers.push({ close });
 
     const cacheDir = await makeCacheDir();
+
     const outDir = await downloadAndExtractExtension({
       cacheDir,
       format: "zip",

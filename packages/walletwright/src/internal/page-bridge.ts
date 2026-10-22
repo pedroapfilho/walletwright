@@ -36,4 +36,5 @@ const installPageBridge = async <Request, Response, Data>(
 };
 
 export { installPageBridge };
+
 export type { BridgeCall };

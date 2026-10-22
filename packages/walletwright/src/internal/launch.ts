@@ -34,11 +34,13 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
     (page.url() === "about:blank" || page.url().startsWith("chrome-extension://"));
 
   const closing: Array<Promise<void>> = [];
+
   for (const page of context.pages()) {
     if (isStray(page)) {
       closing.push(page.close());
     }
   }
+
   await Promise.allSettled(closing);
 };
 
@@ -56,6 +58,7 @@ export const launch = async (
       `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
     );
   }
+
   const archive = extensionArchive(definition, setup);
   const { cacheDir, profileDir } = locateProfile(setup, archive.name);
   const screen = createUnlockScreen(definition);
@@ -71,11 +74,13 @@ export const launch = async (
       const page = await screen.reachUnlockScreen(context, extensionId);
       await screen.unlock(page, setup.password);
       await closeStrayPages(context, page);
+
       return page;
     },
   );
 
   const close = (): Promise<void> => session.close();
+
   return {
     close,
     context: session.context,

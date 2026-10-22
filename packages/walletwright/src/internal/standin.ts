@@ -46,9 +46,11 @@ export const userDataDirOf = async (context: BrowserContext): Promise<string> =>
   await page.goto("chrome://version");
   const profilePath = await page.locator("#profile_path").textContent();
   await page.close();
+
   if (profilePath === null) {
     throw new Error("chrome://version reported no profile path");
   }
+
   return path.dirname(profilePath);
 };
 
@@ -57,6 +59,7 @@ export const serveStandin = async (): Promise<Standin> => {
   const zip = new AdmZip();
   zip.addLocalFolder(path.join(FIXTURE_DIR, "extension"));
   const archive = zip.toBuffer();
+
   const files = new Map([
     ["/standin.zip", { body: archive, type: "application/zip" }],
     [
@@ -67,19 +70,25 @@ export const serveStandin = async (): Promise<Standin> => {
 
   const server = createServer((request, response) => {
     const file = files.get(new URL(request.url ?? "/", "http://127.0.0.1").pathname);
+
     if (file === undefined) {
       response.writeHead(404).end();
+
       return;
     }
+
     response.writeHead(200, { "content-type": file.type }).end(file.body);
   });
+
   await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
+
   if (address === null || typeof address === "string") {
     throw new Error("stand-in server has no port");
   }
+
   const origin = `http://127.0.0.1:${address.port}`;
   const sha256 = createHash("sha256").update(archive).digest("hex");
 
@@ -124,9 +133,11 @@ export const serveStandin = async (): Promise<Standin> => {
     const dapp = await context.newPage();
     await dapp.goto(`${origin}/dapp.html?mode=${mode}`);
     const answer = dapp.locator("#answer:not(:empty)");
+
     return {
       answer: async () => {
         await answer.waitFor({ timeout: ANSWER_TIMEOUT_MS });
+
         return answer.textContent();
       },
     };

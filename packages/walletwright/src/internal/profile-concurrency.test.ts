@@ -15,6 +15,7 @@ beforeEach(() => {
   vi.spyOn(fs, "rename");
   syncBuiltinESMExports();
 });
+
 const directories: Array<string> = [];
 
 const fixture = async () => {
@@ -23,6 +24,7 @@ const fixture = async () => {
   const profile = path.join(root, "profile");
   const staging = path.join(root, "staging");
   const copy = path.join(root, "copy");
+
   for (const [dir, state] of [
     [profile, "old"],
     [staging, "new"],
@@ -31,6 +33,7 @@ const fixture = async () => {
     await fs.writeFile(path.join(dir, "first"), state);
     await fs.writeFile(path.join(dir, "second"), state);
   }
+
   return { copy, profile, root, staging };
 };
 
@@ -51,6 +54,7 @@ const nextContention = (): Promise<void> => {
       throw error;
     }
   });
+
   return waiting.promise;
 };
 
@@ -76,6 +80,7 @@ describe("profile transactions", () => {
     await moved.promise;
     const waiting = nextContention();
     const copying = copyProfile(profile, copy);
+
     try {
       await waiting;
       expect(await snapshot(`${profile}.previous`)).toEqual(["old", "old"]);
@@ -83,6 +88,7 @@ describe("profile transactions", () => {
       resume.resolve(undefined);
       await Promise.all([publishing, copying]);
     }
+
     expect(await snapshot(copy)).toEqual(["new", "new"]);
   });
 
@@ -101,6 +107,7 @@ describe("profile transactions", () => {
     await started.promise;
     const waiting = nextContention();
     const publishing = publishProfile(staging, profile);
+
     try {
       await waiting;
       expect(await snapshot(profile)).toEqual(["old", "old"]);
@@ -108,6 +115,7 @@ describe("profile transactions", () => {
       resume.resolve(undefined);
       await Promise.all([copying, publishing]);
     }
+
     expect(await snapshot(copy)).toEqual(["old", "old"]);
     expect(await snapshot(profile)).toEqual(["new", "new"]);
   });
@@ -129,6 +137,7 @@ describe("profile transactions", () => {
     await moved.promise;
     const waiting = nextContention();
     const next = publishProfile(second, profile);
+
     try {
       await waiting;
       expect(await snapshot(`${profile}.previous`)).toEqual(["old", "old"]);
@@ -136,6 +145,7 @@ describe("profile transactions", () => {
       resume.resolve(undefined);
       await Promise.all([first, next]);
     }
+
     expect(await snapshot(profile)).toEqual(["second", "second"]);
     expect(await fs.readdir(root)).toEqual([".locks", "profile"]);
   });

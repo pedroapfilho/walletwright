@@ -17,8 +17,10 @@ const PASSWORD_HASH_KEY = "password_hash";
 const PASSPHRASE_KEY_PREFIX = "mnemonic__";
 
 const FORCED = { force: true } as const;
+
 /** Slush mounts its welcome controls before wiring their handlers, and an early click is a no-op. */
 const WELCOME_CONTROL = { ...FORCED, settleMs: 1000 } as const;
+
 /** Its approval window reports controls visible about two seconds before their handlers wire up. */
 const APPROVAL_SETTLE_MS = 2000;
 
@@ -38,6 +40,7 @@ const walletPersisted = (page: Page): Promise<boolean> =>
   page.evaluate(
     async ({ databaseName, passphrasePrefix, required, storeName }) => {
       const databases = await indexedDB.databases();
+
       if (!databases.some((database) => database.name === databaseName)) {
         return false;
       }
@@ -56,10 +59,12 @@ const walletPersisted = (page: Page): Promise<boolean> =>
         if (!database.objectStoreNames.contains(storeName)) {
           return false;
         }
+
         const request = database
           .transaction(storeName, "readonly")
           .objectStore(storeName)
           .getAllKeys();
+
         const keys = await new Promise<Array<IDBValidKey>>((resolve, reject) => {
           request.addEventListener("success", () => {
             resolve(request.result);
@@ -68,7 +73,9 @@ const walletPersisted = (page: Page): Promise<boolean> =>
             reject(request.error ?? new Error(`Unable to read ${storeName}`));
           });
         });
+
         const names = keys.filter((key) => typeof key === "string");
+
         return (
           required.every((name) => names.includes(name)) &&
           names.some((name) => name.startsWith(passphrasePrefix))
@@ -93,6 +100,7 @@ const walletPersisted = (page: Page): Promise<boolean> =>
 const openPassphraseImport = async (page: Page): Promise<void> => {
   const firstWord = page.getByLabel("Word 1", { exact: true });
   let failure: unknown;
+
   for (let attempt = 0; attempt < PASSPHRASE_SCREEN_ATTEMPTS; attempt++) {
     try {
       await click(labelled(page, "Get started"), WELCOME_CONTROL);
@@ -103,13 +111,16 @@ const openPassphraseImport = async (page: Page): Promise<void> => {
       // wait for the row to open over it.
       await click(page.locator('a[href$="#/ImportPassphrase"]'));
       await firstWord.waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS });
+
       return;
     } catch (error) {
       failure = error;
     }
+
     await page.goto(page.url().split("#")[0] ?? page.url());
     await sleep(2000);
   }
+
   throw new Error(
     `[walletwright] Slush never opened the passphrase import screen after ${PASSPHRASE_SCREEN_ATTEMPTS} attempts`,
     { cause: failure },
@@ -133,9 +144,11 @@ export const slush: WalletDefinition = {
     await openPassphraseImport(page);
 
     const words = seedPhrase.trim().split(/\s+/v);
+
     for (let i = 0; i < words.length; i++) {
       await page.getByLabel(`Word ${i + 1}`, { exact: true }).fill(words[i] ?? "");
     }
+
     await click(page.getByRole("button", { exact: true, name: "Import" }));
 
     await page.getByPlaceholder("Password", { exact: true }).fill(password);

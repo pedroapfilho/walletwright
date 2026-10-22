@@ -28,26 +28,32 @@ it("rechecks the winner under ownership without deleting an extraction already i
   const firstBytes = zip.toBuffer();
   zip.addFile("manifest.json", Buffer.from('{"name":"second"}'));
   const secondBytes = zip.toBuffer();
+
   const server = createServer((_request, response) => {
     requests += 1;
     response.end(requests === 1 ? firstBytes : secondBytes);
   });
+
   await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
+
   if (address === null || typeof address === "string") {
     throw new Error("missing port");
   }
+
   const options = {
     cacheDir,
     format: "zip" as const,
     name: "extension",
     url: `http://127.0.0.1:${address.port}/ext.zip`,
   };
+
   vi.mocked(fs.stat).mockImplementation(async (...args: Parameters<typeof actual.stat>) => {
     if (args[0] === path.join(outDir, "manifest.json")) {
       checks += 1;
+
       if (checks === 2) {
         try {
           await actual.stat(args[0]);
@@ -60,6 +66,7 @@ it("rechecks the winner under ownership without deleting an extraction already i
         }
       }
     }
+
     return actual.stat(...args);
   });
   const open = ClassicLevel.prototype.open;
@@ -71,10 +78,12 @@ it("rechecks the winner under ownership without deleting an extraction already i
       throw error;
     }
   });
+
   const first = downloadAndExtractExtension({
     ...options,
     sha256: createHash("sha256").update(firstBytes).digest("hex"),
   });
+
   try {
     await checked.promise;
     second = downloadAndExtractExtension({
@@ -92,6 +101,7 @@ it("rechecks the winner under ownership without deleting an extraction already i
     const manifest = await fs.open(path.join(outDir, "manifest.json"), "r");
     const published = await manifest.stat();
     await fs.writeFile(path.join(outDir, "in-use"), "browser owns this extraction");
+
     try {
       expect(await second).toBe(outDir);
       const current = await actual.stat(path.join(outDir, "manifest.json"));

@@ -11,6 +11,7 @@ const asKind = (name: string): WalletKind => {
   if (!isWalletKind(name)) {
     throw new Error(`usage: pnpm test:cache [${KINDS.join("|")}] (unknown wallet: ${name})`);
   }
+
   return name;
 };
 

@@ -55,11 +55,13 @@ const rename = async (
 const switchTo = async ({ home }: WalletActionContext, index: number): Promise<void> => {
   await openAccountMenu(home);
   await click(home.getByTestId("account-cell-avatar").nth(index));
+
   const menuClosed = await home
     .getByTestId("add-multichain-account-button")
     .waitFor({ state: "hidden", timeout: 10_000 })
     .then(() => true)
     .catch(() => false);
+
   if (!menuClosed) {
     throw new Error(`[walletwright] accounts.switch(${index}) did not switch (menu stayed open)`);
   }

@@ -24,9 +24,11 @@ export const phantom: WalletDefinition = {
     await sleep(1500);
 
     const words = seedPhrase.trim().split(/\s+/v);
+
     for (let i = 0; i < words.length; i++) {
       await testId(`secret-recovery-phrase-word-input-${i}`).fill(words[i] ?? "");
     }
+
     await click(testId("onboarding-form-submit-button"));
 
     await testId("onboarding-form-secondary-button").waitFor({ state: "visible", timeout: 60_000 });
@@ -51,6 +53,7 @@ export const phantom: WalletDefinition = {
         .first()
         .isVisible()
         .catch(() => false);
+
       return rendered;
     },
     submit: async (page) => {

@@ -25,9 +25,11 @@ export const downloadAndExtractExtension = async (
   const { cacheDir, format, name, sha256, url } = options;
   const cacheRoot = path.resolve(cacheDir);
   const outDir = path.resolve(cacheDir, name);
+
   if (outDir === cacheRoot || !outDir.startsWith(cacheRoot + path.sep)) {
     throw new Error(`[walletwright] invalid extension name: ${name}`);
   }
+
   if (await pathExists(path.join(outDir, "manifest.json"))) {
     return outDir;
   }
@@ -35,15 +37,18 @@ export const downloadAndExtractExtension = async (
   await mkdir(cacheDir, { recursive: true });
 
   const response = await fetch(url, { redirect: "follow" });
+
   if (!response.ok) {
     throw new Error(
       `[walletwright] failed to download ${url}: ${response.status} ${response.statusText}`,
     );
   }
+
   const bytes = Buffer.from(await response.arrayBuffer());
 
   if (sha256 !== undefined) {
     const actual = createHash("sha256").update(bytes).digest("hex");
+
     if (actual !== sha256.toLowerCase()) {
       throw new Error(
         `[walletwright] ${name} failed integrity check: expected ${sha256}, got ${actual}`,
@@ -52,23 +57,30 @@ export const downloadAndExtractExtension = async (
   }
 
   let zipBytes = bytes;
+
   if (format === "crx") {
     const start = bytes.indexOf(ZIP_SIGNATURE);
+
     if (start === -1) {
       throw new Error(`[walletwright] ${url} is not a valid CRX (no ZIP header found)`);
     }
+
     zipBytes = bytes.subarray(start);
   }
 
   const staging = await mkdtemp(path.join(cacheRoot, STAGING_PREFIX));
+
   try {
     const zip = new AdmZip(zipBytes);
+
     for (const entry of zip.getEntries()) {
       const target = path.resolve(staging, entry.entryName);
+
       if (target !== staging && !target.startsWith(staging + path.sep)) {
         throw new Error(`[walletwright] refusing to extract ${entry.entryName}: escapes ${outDir}`);
       }
     }
+
     zip.extractAllTo(staging, /* overwrite */ true);
 
     if (!(await pathExists(path.join(staging, "manifest.json")))) {
@@ -79,8 +91,10 @@ export const downloadAndExtractExtension = async (
       if (await pathExists(path.join(outDir, "manifest.json"))) {
         return outDir;
       }
+
       await rm(outDir, { force: true, recursive: true });
       await rename(staging, outDir);
+
       return outDir;
     });
   } finally {

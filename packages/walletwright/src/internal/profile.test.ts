@@ -21,6 +21,7 @@ const tempDirs: Array<string> = [];
 const makeTempDir = async (): Promise<string> => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "walletwright-profile-test-"));
   tempDirs.push(dir);
+
   return dir;
 };
 
@@ -56,10 +57,13 @@ describe("profileKey", () => {
 
   it("selects a different profile when an omitted version resolves to a new default", () => {
     const definition = wallets.metamask;
+
     if (definition.source.kind !== "release") {
       throw new Error("expected a release source");
     }
+
     const current = extensionArchive(definition, baseSetup);
+
     const updated = extensionArchive(
       {
         ...definition,
@@ -67,15 +71,18 @@ describe("profileKey", () => {
       },
       baseSetup,
     );
+
     expect(profileKey(baseSetup, updated.name)).not.toBe(profileKey(baseSetup, current.name));
   });
 
   it("shares the profile for an explicit and default version of the same release", () => {
     const implicit = extensionArchive(wallets.metamask, baseSetup);
     const source = wallets.metamask.source;
+
     if (source.kind !== "release") {
       throw new Error("expected a release source");
     }
+
     const explicitSetup = { ...baseSetup, version: source.defaultVersion };
     const explicit = extensionArchive(wallets.metamask, explicitSetup);
     expect(profileKey(explicitSetup, explicit.name)).toBe(profileKey(baseSetup, implicit.name));

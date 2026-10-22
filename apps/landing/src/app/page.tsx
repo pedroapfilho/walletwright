@@ -63,6 +63,7 @@ const WALLET_ICONS = [
 
 const WALLETS: Array<Wallet> = WALLET_ICONS.map(({ icon, name }) => {
   const pairs = VERIFIED_PAIRS.filter((pair) => pair.wallet === name);
+
   return {
     chains: pairs.map((pair) => pair.ecosystem).join(" · "),
     icon,

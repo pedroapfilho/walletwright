@@ -20,7 +20,9 @@ const openState = async (profileDir: string): Promise<ClassicLevel> => {
     keyEncoding: "utf8",
     valueEncoding: "utf8",
   });
+
   await db.open();
+
   return db;
 };
 
@@ -29,10 +31,13 @@ const seedProfile = async (state: Record<string, unknown>): Promise<string> => {
   profileDirs.push(profileDir);
   await mkdir(extensionStateDir(profileDir, EXTENSION_ID), { recursive: true });
   const db = await openState(profileDir);
+
   for (const [key, value] of Object.entries(state)) {
     await db.put(key, JSON.stringify(value));
   }
+
   await db.close();
+
   return profileDir;
 };
 

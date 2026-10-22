@@ -38,11 +38,13 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
     .grantPermissions(["clipboard-read", "clipboard-write"])
     .catch(() => {});
   const list = seedPhrase.trim().split(/\s+/v);
+
   const lastFilled = async (): Promise<boolean> => {
     const value = await words
       .nth(list.length - 1)
       .inputValue()
       .catch(() => "");
+
     return value.trim().length > 0;
   };
 
@@ -50,6 +52,7 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
   await page.evaluate((phrase) => navigator.clipboard.writeText(phrase), seedPhrase.trim());
   await page.keyboard.press("ControlOrMeta+v");
   const pasted = await waitUntil(lastFilled, { timeoutMs: SEED_PASTE_TIMEOUT_MS });
+
   if (pasted === undefined) {
     for (let index = 0; index < list.length; index++) {
       const box = words.nth(index);
@@ -57,6 +60,7 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
       await box.fill(list[index] ?? "");
     }
   }
+
   await click(page.getByRole("button", { exact: true, name: "Next" }).first());
 
   await waitForRoute(page, "set-password");

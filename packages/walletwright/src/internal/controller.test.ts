@@ -7,6 +7,7 @@ import type { Approvals } from "./approval";
 import { createWallet, runDirectly, type StepRunner } from "./controller";
 
 const stubContext = { pages: () => [] } as unknown as BrowserContext;
+
 const stubHome = {
   bringToFront: () => Promise.resolve(),
   isClosed: () => false,
@@ -69,6 +70,7 @@ const recordingActions = (calls: Array<string>): WalletDefinition["actions"] =>
             typeof method === "string"
               ? () => {
                   calls.push(`${group}.${method}`);
+
                   return Promise.resolve();
                 }
               : undefined,
@@ -135,6 +137,7 @@ describe("createWallet", () => {
 
   it("fails fast when the wallet home page is closed, without invoking the action", async () => {
     const settingsLock = vi.fn();
+
     const wallet = makeWallet({ settings: { lock: settingsLock } }, {
       isClosed: () => true,
     } as unknown as Page);
@@ -145,6 +148,7 @@ describe("createWallet", () => {
 
   it("runs every capability call as a step named after its path", async () => {
     const titles: Array<string> = [];
+
     const wallet = makeWallet(recordingActions([]), stubHome, async (title, body) => {
       titles.push(title);
       await body();
@@ -161,8 +165,10 @@ describe("createWallet", () => {
 
   it("reports an approval alias under its own name, not the call it delegates to", async () => {
     const titles: Array<string> = [];
+
     const wallet = makeWallet({}, stubHome, (title) => {
       titles.push(title);
+
       return Promise.resolve();
     });
 

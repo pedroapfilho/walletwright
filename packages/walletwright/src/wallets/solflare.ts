@@ -14,9 +14,11 @@ const importWallet = async (page: Page, seedPhrase: string, password: string): P
 
   const words = seedPhrase.trim().split(/\s+/v);
   await page.getByTestId("input-recovery-phrase-1").waitFor({ state: "visible", timeout: 30_000 });
+
   for (let index = 0; index < words.length; index++) {
     await page.getByTestId(`input-recovery-phrase-${index + 1}`).fill(words[index] ?? "");
   }
+
   await click(page.getByTestId("btn-continue"));
 
   await page.getByTestId("input-new-password").waitFor({ state: "visible", timeout: 30_000 });

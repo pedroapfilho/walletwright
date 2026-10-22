@@ -11,6 +11,7 @@ import { gotoWithRetry, waitUntilOrThrow } from "./wait";
 const NAVIGATION_TIMEOUT_MS = 15_000;
 const PERSIST_TIMEOUT_MS = 60_000;
 const PERSIST_INTERVAL_MS = 500;
+
 /**
  * Longer than a wallet takes to start its debounced write after its last onboarding screen (measured
  * locally: Rabby 0.8s, MetaMask 1.3s), so storage that changed and then held still this long is done.
@@ -34,20 +35,24 @@ const listStorage = async (profileDir: string, extensionId: string): Promise<str
       `chrome-extension_${extensionId}_0.indexeddb.leveldb`,
     ),
   ];
+
   const files = await Promise.all(
     stores.map(async (dir) => {
       const names = await readdir(dir).catch(() => []);
+
       return Promise.all(
         names.map(async (name) => {
           const size = await stat(path.join(dir, name)).then(
             (file) => file.size,
             () => -1,
           );
+
           return `${dir}/${name}:${size}`;
         }),
       );
     }),
   );
+
   return files.flat().join("\n");
 };
 
@@ -63,12 +68,15 @@ const storageSettles = async (
   const before = await listStorage(profileDir, extensionId);
   let listing = before;
   let changedAt = Date.now();
+
   return async () => {
     const current = await listStorage(profileDir, extensionId);
+
     if (current !== listing) {
       listing = current;
       changedAt = Date.now();
     }
+
     return listing !== before && Date.now() - changedAt >= STORAGE_QUIET_MS;
   };
 };
@@ -81,6 +89,7 @@ const onboard = async (
   const page =
     context.pages().find((candidate) => candidate.url() === "about:blank") ??
     (await context.newPage());
+
   await gotoWithRetry(page, `chrome-extension://${extensionId}/${definition.onboardingPage}`, {
     label: `${definition.extensionName} onboarding page`,
     timeoutMs: NAVIGATION_TIMEOUT_MS,
@@ -88,6 +97,7 @@ const onboard = async (
 
   const isPersisted: (onboarded: OnboardedWallet) => Promise<boolean> =
     definition.isPersisted ?? (await storageSettles(userDataDir, extensionId));
+
   await definition.importWallet(page, setup.seedPhrase, setup.password);
   await waitUntilOrThrow(() => isPersisted({ extensionId, page, profileDir: userDataDir }), {
     intervalMs: PERSIST_INTERVAL_MS,
@@ -104,6 +114,7 @@ export const build = async (
 ): Promise<string> => {
   const archive = extensionArchive(definition, setup);
   const { cacheDir, profileDir } = locateProfile(setup, archive.name);
+
   const { session } = await openSession(
     {
       definition,
@@ -113,9 +124,11 @@ export const build = async (
     },
     (opened) => onboard(definition, setup, opened),
   );
+
   await session.close(async () => {
     await definition.finalizeCache?.(session.userDataDir, session.extensionId);
     await publishProfile(session.userDataDir, profileDir);
   });
+
   return profileDir;
 };

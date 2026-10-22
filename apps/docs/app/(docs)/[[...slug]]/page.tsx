@@ -16,6 +16,7 @@ type PageProps = {
 const Page = async ({ params }: PageProps) => {
   const { slug } = await params;
   const page = source.getPage(slug);
+
   if (!page) {
     notFound();
   }
@@ -46,6 +47,7 @@ export const generateStaticParams = () => source.generateParams();
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const { slug } = await params;
   const page = source.getPage(slug);
+
   if (!page) {
     notFound();
   }

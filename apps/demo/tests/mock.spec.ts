@@ -21,5 +21,6 @@ test("connect and sign against the mock wallet", async ({ page }) => {
     message: "Hello walletwright",
     signature: ((await signature.textContent()) ?? "") as `0x${string}`,
   });
+
   expect(valid).toBe(true);
 });

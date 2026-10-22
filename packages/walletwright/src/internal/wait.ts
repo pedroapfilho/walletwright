@@ -24,14 +24,18 @@ export const waitUntil = async <T>(
   { intervalMs = DEFAULT_INTERVAL_MS, timeoutMs }: WaitOptions,
 ): Promise<T | undefined> => {
   const deadline = Date.now() + timeoutMs;
+
   for (;;) {
     const result = await check();
+
     if (result !== undefined && result !== false) {
       return result;
     }
+
     if (Date.now() >= deadline) {
       return undefined;
     }
+
     await sleep(intervalMs);
   }
 };
@@ -41,11 +45,13 @@ export const waitUntilOrThrow = async <T>(
   options: WaitOptions & { message: string },
 ): Promise<T> => {
   const result = await waitUntil(check, options);
+
   if (result === undefined) {
     throw new Error(
       `[walletwright] ${options.message} (gave up after ${formatTimeout(options.timeoutMs)})`,
     );
   }
+
   return result;
 };
 

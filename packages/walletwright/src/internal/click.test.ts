@@ -15,11 +15,13 @@ const fakeControl = ({
 } = {}) => {
   const clicked = vi.fn(click);
   const waited = vi.fn(waitFor);
+
   const control = {
     click: clicked,
     toString: () => SELECTOR,
     waitFor: waited,
   } as unknown as Locator;
+
   return { clicked, control, waited };
 };
 
@@ -65,6 +67,7 @@ describe("click", () => {
 
   it("settles between the control showing and the click", async () => {
     vi.useFakeTimers();
+
     try {
       const { clicked, control } = fakeControl();
 
@@ -111,6 +114,7 @@ describe("clickIfShown", () => {
 describe("a forced click", () => {
   it("waits for a sliding sheet to settle in view before clicking", async () => {
     const browser = await chromium.launch();
+
     try {
       const page = await browser.newPage({ viewport: { height: 600, width: 400 } });
       await page.setContent(`
@@ -132,6 +136,7 @@ describe("a forced click", () => {
 
   it("waits out a sheet that holds still partway through its slide", async () => {
     const browser = await chromium.launch();
+
     try {
       const page = await browser.newPage({ viewport: { height: 600, width: 400 } });
       await page.setContent(`

@@ -5,6 +5,7 @@ const alt = "walletwright: Playwright wallet automation";
 const contentType = "image/png";
 const size = { height: 630, width: 1200 };
 const COLORS = { background: "#0a0a0a", ink: "#fafafa" };
+
 const OpengraphImage = () =>
   new ImageResponse(
     <svg height={630} viewBox="0 0 1200 630" width={1200}>
@@ -37,5 +38,7 @@ const OpengraphImage = () =>
     </svg>,
     size,
   );
+
 export { alt, contentType, size };
+
 export default OpengraphImage;
