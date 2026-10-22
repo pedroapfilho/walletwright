@@ -20,4 +20,5 @@ const NotFound = () => (
 );
 
 export { metadata };
+
 export default NotFound;

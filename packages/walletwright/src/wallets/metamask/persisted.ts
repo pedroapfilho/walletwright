@@ -9,6 +9,7 @@ import { extensionStateDir } from "../../internal/profile";
 import type { OnboardedWallet } from "../../types";
 
 const keyringSchema = z.object({ vault: z.string().min(1) });
+
 const dataSchema = z.union([
   z.object({ KeyringController: keyringSchema }),
   z.object({ data: z.object({ KeyringController: keyringSchema }) }),
@@ -16,10 +17,13 @@ const dataSchema = z.union([
 
 const holdsVault = async (db: ClassicLevel): Promise<boolean> => {
   const perController = await db.get("KeyringController");
+
   if (perController !== undefined) {
     return keyringSchema.safeParse(JSON.parse(perController)).success;
   }
+
   const data = await db.get("data");
+
   return data !== undefined && dataSchema.safeParse(JSON.parse(data)).success;
 };
 
@@ -33,17 +37,21 @@ export const isMetaMaskPersisted = async ({
   profileDir,
 }: OnboardedWallet): Promise<boolean> => {
   const copy = await mkdtemp(path.join(os.tmpdir(), "walletwright-metamask-state-"));
+
   try {
     await cp(extensionStateDir(profileDir, extensionId), copy, {
       filter: (source) => path.basename(source) !== "LOCK",
       recursive: true,
     });
+
     const db = new ClassicLevel(copy, {
       createIfMissing: false,
       keyEncoding: "utf8",
       valueEncoding: "utf8",
     });
+
     await db.open();
+
     try {
       return await holdsVault(db);
     } finally {

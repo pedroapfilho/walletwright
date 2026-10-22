@@ -1,5 +1,6 @@
 const ROUTE_AFTER_MS = 1500;
 const IDLE_FOR_MS = 8000;
+
 /** Longer than the engine's pass interval, so a control clicked twice gets caught. */
 const SIGN_BUSY_MS = 1000;
 const CONFIRM_ENABLES_AFTER_MS = 500;
@@ -11,6 +12,7 @@ const id = params.get("request");
 const heading = (text) => {
   const element = document.createElement("h1");
   element.textContent = text;
+
   return element;
 };
 
@@ -18,9 +20,11 @@ const button = (label, { disabled = false, onClick } = {}) => {
   const element = document.createElement("button");
   element.textContent = label;
   element.disabled = disabled;
+
   if (onClick) {
     element.addEventListener("click", onClick);
   }
+
   return element;
 };
 
@@ -46,6 +50,7 @@ const showRequest = ({ disabled = false } = {}) => {
  */
 const showSteps = () => {
   let signed = false;
+
   const showConfirm = () => {
     const confirm = button("Confirm", { disabled: true, onClick: () => answer("approved") });
     main.replaceChildren(heading("Confirm"), confirm, rejectButton());
@@ -53,14 +58,18 @@ const showSteps = () => {
       confirm.disabled = false;
     }, CONFIRM_ENABLES_AFTER_MS);
   };
+
   const sign = () => {
     if (signed) {
       void answer("re-issued");
+
       return;
     }
+
     signed = true;
     setTimeout(showConfirm, SIGN_BUSY_MS);
   };
+
   main.replaceChildren(heading("Review"), button("Sign", { onClick: sign }), rejectButton());
 };
 
@@ -72,18 +81,22 @@ const showReauth = ({ accepts }) => {
     field.setAttribute("aria-label", "Password");
     const form = document.createElement("form");
     form.append(field, button("Unlock"));
+
     const submit = async () => {
       const { password } = await chrome.storage.local.get("password");
+
       if (accepts && field.value === password) {
         await answer("approved");
       }
     };
+
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       void submit();
     });
     main.replaceChildren(heading("Password"), form);
   };
+
   main.replaceChildren(
     heading("Request"),
     button("Approve", { onClick: askPassword }),
@@ -105,6 +118,7 @@ const showNotice = () => {
  * request) before routing, and `respawn` keeps its buttons disabled until the background replaces it.
  */
 const mode = params.get("mode");
+
 if (mode === "late") {
   setTimeout(showRequest, ROUTE_AFTER_MS);
 } else if (mode === "idle") {

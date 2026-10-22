@@ -27,6 +27,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await standin.close();
+
   if (setup.cacheDir !== undefined) {
     await rm(setup.cacheDir, { force: true, recursive: true });
   }

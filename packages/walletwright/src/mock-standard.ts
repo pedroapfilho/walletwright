@@ -27,27 +27,35 @@ const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvw
 
 const encodeBase58 = (bytes: Uint8Array): string => {
   let leadingZeros = 0;
+
   while (leadingZeros < bytes.length && bytes[leadingZeros] === 0) {
     leadingZeros += 1;
   }
+
   const digits: Array<number> = [];
+
   for (const byte of bytes) {
     let carry = byte;
+
     for (const [index, digit] of digits.entries()) {
       carry += digit * 256;
       digits[index] = carry % 58;
       carry = Math.floor(carry / 58);
     }
+
     while (carry > 0) {
       digits.push(carry % 58);
       carry = Math.floor(carry / 58);
     }
   }
+
   const prefix = "1".repeat(leadingZeros);
+
   const body = digits
     .toReversed()
     .map((digit) => BASE58_ALPHABET[digit])
     .join("");
+
   return prefix + body;
 };
 
@@ -60,6 +68,7 @@ const privateKeyFromSeed = (seed: Buffer) =>
 
 const rawPublicKey = (seed: Buffer): Buffer => {
   const spki = createPublicKey(privateKeyFromSeed(seed)).export({ format: "der", type: "spki" });
+
   return spki.subarray(-32);
 };
 
@@ -71,6 +80,7 @@ const SVM_CHAINS = ["solana:mainnet", "solana:devnet"] as const;
 
 /** `message` is required: defaulting it would sign the empty message instead of rejecting. */
 type StandardRequest = { message: Array<number>; method: string };
+
 type StandardInfo = {
   address: string;
   chains: ReadonlyArray<string>;
@@ -86,6 +96,7 @@ const createStandardHandler =
       case "solana:signMessage": {
         return Promise.resolve(signEd25519(seed, Uint8Array.from(message)));
       }
+
       default: {
         return Promise.reject(
           new Error(`[walletwright/mock-standard] unsupported method: ${method}`),
@@ -101,6 +112,7 @@ const mountStandardWallet = (
   const publicKeyBytes = Uint8Array.from(
     (info.publicKeyHex.match(/.{2}/gv) ?? []).map((byte) => Number.parseInt(byte, 16)),
   );
+
   const account = {
     address: info.address,
     chains: info.chains,
@@ -108,6 +120,7 @@ const mountStandardWallet = (
     label: info.name,
     publicKey: publicKeyBytes,
   };
+
   const wallet = {
     accounts: [account],
     chains: info.chains,
@@ -141,11 +154,13 @@ const mountStandardWallet = (
   const callback = (api: { register: (w: typeof wallet) => void }) => {
     api.register(wallet);
   };
+
   try {
     window.dispatchEvent(new CustomEvent("wallet-standard:register-wallet", { detail: callback }));
   } catch {
     // The app may not be listening yet; the app-ready handler below covers that case.
   }
+
   window.addEventListener("wallet-standard:app-ready", (event) => {
     // SAFETY: Wallet Standard dispatches this named event with the register callback contract.
     callback((event as CustomEvent<{ register: (w: typeof wallet) => void }>).detail);
@@ -163,9 +178,11 @@ const installMockStandardWallet = async (
 ): Promise<MockStandardAccount> => {
   const { name = "Walletwright Mock", seedHex = DEFAULT_SEED_HEX } = options;
   const seed = Buffer.from(seedHex, "hex");
+
   if (seed.length !== 32) {
     throw new Error("[walletwright/mock-standard] seedHex must be 32 bytes");
   }
+
   const publicKey = rawPublicKey(seed);
   const address = encodeBase58(publicKey);
   const publicKeyHex = publicKey.toString("hex");
@@ -185,4 +202,5 @@ const installMockStandardWallet = async (
 };
 
 export { createStandardHandler, encodeBase58, installMockStandardWallet, privateKeyFromSeed };
+
 export type { MockStandardAccount, MockStandardWalletOptions };

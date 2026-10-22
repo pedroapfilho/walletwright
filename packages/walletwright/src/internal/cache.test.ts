@@ -30,6 +30,7 @@ afterAll(async () => {
 const makeSetup = async (): Promise<EngineSetup & { cacheDir: string }> => {
   const cacheDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-cache-test-"));
   tempDirs.push(cacheDir);
+
   return {
     cacheDir,
     password: "stand-in-password",
@@ -40,6 +41,7 @@ const makeSetup = async (): Promise<EngineSetup & { cacheDir: string }> => {
 
 const listCache = async (cacheDir: string): Promise<Array<string>> => {
   const entries = await readdir(cacheDir);
+
   return entries.toSorted();
 };
 
@@ -64,6 +66,7 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
     });
 
     const launched = await launch(standin.definition, setup, { headless: true, step: runDirectly });
+
     try {
       expect(await launched.wallet.home.getByText("Unlocked", { exact: true }).isVisible()).toBe(
         true,
@@ -86,6 +89,7 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
         ...standin.definition,
         finalizeCache: () => {
           checksBeforeFinalize = checked.length;
+
           return Promise.resolve();
         },
         isPersisted: async ({ page, profileDir }) => {
@@ -93,6 +97,7 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
             page: new URL(page.url()).pathname,
             profileDir: await realpath(profileDir),
           });
+
           return checked.length === 3;
         },
         prepareContext: async (context) => {
@@ -142,6 +147,7 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
     await writeFile(path.join(profile, "old-generation"), "old");
     const finalizing = Promise.withResolvers<undefined>();
     const resume = Promise.withResolvers<undefined>();
+
     const rebuild = build(
       {
         ...standin.definition,
@@ -153,12 +159,15 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
       setup,
       { headless: true },
     );
+
     await finalizing.promise;
+
     try {
       await using launched = await launch(standin.definition, setup, {
         headless: true,
         step: runDirectly,
       });
+
       const copy = await userDataDirOf(launched.context);
       expect(await pathExists(path.join(copy, "old-generation"))).toBe(true);
       resume.resolve(undefined);

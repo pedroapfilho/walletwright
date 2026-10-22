@@ -26,14 +26,17 @@ export const withArtifactLock = async <T>(
       break;
     } catch (error) {
       const cause = error instanceof Error ? error.cause : undefined;
+
       if (!(cause instanceof Error && "code" in cause && cause.code === "LEVEL_LOCKED")) {
         throw error;
       }
+
       if (Date.now() >= deadline) {
         throw new Error(`[walletwright] timed out waiting for cache ownership at ${artifact}`, {
           cause: error,
         });
       }
+
       await setTimeout(25);
     }
   }

@@ -12,6 +12,7 @@ const RELOAD_ATTEMPTS = 5;
 const RELOAD_SETTLE_TIMEOUT_MS = 5000;
 const PROBE_INTERVAL_MS = 500;
 const PASSWORD_CLEARED_TIMEOUT_MS = 15_000;
+
 /**
  * Short on purpose. `unlock` is normally handed a page `reachUnlockScreen` already settled, so this
  * budget only matters when it is called on its own (the `settings.unlock` path), where a wallet with a
@@ -51,7 +52,9 @@ export const createUnlockScreen = ({
     if (await asksForPassword(page)) {
       return "locked";
     }
+
     const unlocked = await isUnlocked?.(page).catch(() => false);
+
     return unlocked === true ? "unlocked" : undefined;
   };
 
@@ -66,10 +69,12 @@ export const createUnlockScreen = ({
     });
 
     let state = await settleWithin(page, FIRST_SETTLE_TIMEOUT_MS);
+
     for (let attempt = 0; attempt < RELOAD_ATTEMPTS && state === undefined; attempt++) {
       await page.reload().catch(() => {});
       state = await settleWithin(page, RELOAD_SETTLE_TIMEOUT_MS);
     }
+
     if (state === undefined) {
       throw new Error(
         `[walletwright] ${wallet} never reached its unlock screen (gave up after ${formatTimeout(
@@ -77,6 +82,7 @@ export const createUnlockScreen = ({
         )})`,
       );
     }
+
     return page;
   };
 
@@ -84,11 +90,13 @@ export const createUnlockScreen = ({
     const field = page.locator(PASSWORD_FIELD);
     await field.fill(password);
     await (submit === undefined ? field.press("Enter") : submit(page, field));
+
     // A window that closes on the password, as Slush's approval does, has no field left to show.
     const cleared = await field
       .waitFor({ state: "hidden", timeout: PASSWORD_CLEARED_TIMEOUT_MS })
       .then(() => true)
       .catch(() => page.isClosed());
+
     if (!cleared) {
       throw new Error(
         `[walletwright] ${wallet} did not take the password (its password field was still showing after ${formatTimeout(
@@ -101,9 +109,11 @@ export const createUnlockScreen = ({
   const unlock = async (page: Page, password: string): Promise<void> => {
     // Through `settleWithin`, so there is one answer to "what state is this page in" and it waits.
     const state = await settleWithin(page, UNLOCK_SETTLE_TIMEOUT_MS);
+
     if (state === "unlocked") {
       return;
     }
+
     if (state === undefined) {
       throw new Error(
         `[walletwright] ${wallet} showed neither an unlock screen nor an unlocked wallet`,

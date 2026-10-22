@@ -18,7 +18,9 @@ type MockWalletOptions = {
 const DEFAULT_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 type Rpc = { method: string; params?: ReadonlyArray<unknown> };
+
 type RpcResult = ReadonlyArray<string> | string | null;
+
 type Eip6963Info = { icon: string; name: string; rdns: string };
 
 /** MetaMask's own check: a 0x-prefixed hex chain id with no leading zeros. */
@@ -36,29 +38,36 @@ const isHexMessage = (value: string): value is `0x${string}` => /^0x[\da-fA-F]*$
  */
 const createRpcHandler = (account: PrivateKeyAccount, chainIdHex: string) => {
   let currentChainIdHex = chainIdHex;
+
   return ({ method, params = [] }: Rpc): Promise<RpcResult> => {
     switch (method) {
       case "eth_requestAccounts":
       case "eth_accounts": {
         return Promise.resolve([account.address]);
       }
+
       case "eth_chainId": {
         return Promise.resolve(currentChainIdHex);
       }
+
       case "personal_sign": {
         const [message] = params;
+
         if (typeof message !== "string") {
           return Promise.reject(
             new Error("[walletwright/mock] personal_sign expects a string message"),
           );
         }
+
         return account.signMessage({
           message: isHexMessage(message) ? { raw: message } : message,
         });
       }
+
       case "wallet_switchEthereumChain":
       case "wallet_addEthereumChain": {
         const parsed = chainParameterSchema.safeParse(params[0]);
+
         if (!parsed.success) {
           return Promise.reject(
             new Error(
@@ -66,9 +75,12 @@ const createRpcHandler = (account: PrivateKeyAccount, chainIdHex: string) => {
             ),
           );
         }
+
         currentChainIdHex = parsed.data.chainId.toLowerCase();
+
         return Promise.resolve(null);
       }
+
       default: {
         return Promise.reject(new Error(`[walletwright/mock] unsupported method: ${method}`));
       }
@@ -87,6 +99,7 @@ const mountEip1193Provider = (
     removeListener: () => provider,
     request: (rpc: Rpc) => call(rpc),
   };
+
   // SAFETY: EIP-1193 providers own window.ethereum, which the DOM library does not declare.
   (window as Window & { ethereum?: typeof provider }).ethereum = provider;
 
@@ -97,6 +110,7 @@ const mountEip1193Provider = (
       }),
     );
   };
+
   window.addEventListener("eip6963:requestProvider", announce);
   announce();
 };
@@ -120,8 +134,10 @@ const installMockWallet = async (
     handle: createRpcHandler(account, toHex(chainId)),
     mount: mountEip1193Provider,
   });
+
   return account.address;
 };
 
 export { createRpcHandler, installMockWallet };
+
 export type { MockWalletOptions };

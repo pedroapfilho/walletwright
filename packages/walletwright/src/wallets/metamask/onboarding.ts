@@ -18,11 +18,13 @@ export const importWallet = async (
 
   const srpField = page.getByTestId("srp-input-import__srp-note");
   const confirmEnabled = page.locator('[data-testid="import-srp-confirm"]:not([disabled])');
+
   const accepted = await waitUntil(
     async () => {
       await click(srpField);
       await srpField.fill("");
       await srpField.pressSequentially(seedPhrase, { delay: 50 });
+
       return confirmEnabled
         .waitFor({ state: "visible", timeout: SRP_CONFIRM_TIMEOUT_MS })
         .then(() => true)
@@ -30,9 +32,11 @@ export const importWallet = async (
     },
     { intervalMs: 0, timeoutMs: SRP_RETYPE_TIMEOUT_MS },
   );
+
   if (accepted === undefined) {
     throw new Error("[walletwright] MetaMask rejected the seed phrase (confirm stayed disabled)");
   }
+
   await click(confirmEnabled);
 
   await page.getByTestId("create-password-new-input").fill(password);

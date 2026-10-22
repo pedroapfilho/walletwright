@@ -6,6 +6,7 @@ import type { BridgeCall } from "./page-bridge";
 import { installPageBridge } from "./page-bridge";
 
 type Probe = { call: BridgeCall<string, string>; uuid: string };
+
 type ProbeWindow = Window & { probes?: Record<string, Probe> };
 
 const mountProbe = (call: Probe["call"], name: string, uuid: string) => {
@@ -20,6 +21,7 @@ const installProbe = (target: BrowserContext | Page, name: string, handle: Probe
 const openPage = async (context: BrowserContext) => {
   const page = await context.newPage();
   await page.goto("data:text/html,<title>bridge</title>");
+
   return page;
 };
 
@@ -61,6 +63,7 @@ describe("installPageBridge", () => {
 
     const probes = await page.evaluate(async () => {
       const { first, second } = (window as ProbeWindow).probes ?? {};
+
       return {
         answers: await Promise.all([first?.call("x"), second?.call("x")]),
         uuids: [first?.uuid, second?.uuid],

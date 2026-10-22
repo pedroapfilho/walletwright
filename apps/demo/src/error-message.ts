@@ -9,6 +9,7 @@ const errorMessageSchema = z.object({ message: z.string() });
 
 const toErrorMessage = <Value>(error: Value): string => {
   const result = errorMessageSchema.safeParse(error);
+
   return result.success ? result.data.message : String(error);
 };
 

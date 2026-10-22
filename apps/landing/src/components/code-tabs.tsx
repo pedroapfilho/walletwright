@@ -37,9 +37,11 @@ const CodeTabs = ({ className, label, tabs }: CodeTabsProps) => {
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const target = keyTargets.get(event.key);
+
     if (target === undefined) {
       return;
     }
+
     event.preventDefault();
     focusTab(target(index));
   };

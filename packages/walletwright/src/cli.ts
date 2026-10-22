@@ -65,6 +65,7 @@ type Command =
   | { headless: boolean; kind: "cache"; setups: ReadonlyArray<WalletSetup> };
 
 const nonEmptyStringSchema = z.string().min(1);
+
 /**
  * Strict, so a misspelled key fails instead of being dropped. `cli.test.ts` pins its output to
  * `WalletSetup`, so a field added to one and not the other fails the typecheck.
@@ -76,6 +77,7 @@ const walletSetupSchema = z.strictObject({
   version: nonEmptyStringSchema.optional(),
   wallet: z.enum(walletKinds),
 });
+
 const moduleSchema = z.record(z.string(), z.unknown());
 
 const isNonEmptyString = (value: string | undefined): value is string =>
@@ -86,23 +88,29 @@ const loadSetups = async (file: string): Promise<Array<WalletSetup>> => {
   const exported = moduleSchema.parse(await import(pathToFileURL(path.resolve(file)).href));
   const seen = new Set<unknown>();
   const setups: Array<WalletSetup> = [];
+
   for (const [name, value] of Object.entries(exported)) {
     // The field's presence marks a candidate; the full schema validates its value below.
     if (seen.has(value) || typeof value !== "object" || value === null || !("wallet" in value)) {
       continue;
     }
+
     seen.add(value);
     const result = walletSetupSchema.safeParse(value);
+
     if (!result.success) {
       throw new Error(
         `[walletwright] ${file}: export "${name}" is not a valid WalletSetup\n${z.prettifyError(result.error)}`,
       );
     }
+
     setups.push(result.data);
   }
+
   if (setups.length === 0) {
     throw new Error(`[walletwright] ${file} exports no WalletSetup`);
   }
+
   return setups;
 };
 
@@ -111,41 +119,51 @@ const walletFlag = (value: string | undefined): WalletKind | undefined => {
   if (!isNonEmptyString(value)) {
     return undefined;
   }
+
   if (!isWalletKind(value)) {
     throw new Error(
       `[walletwright] unknown --wallet "${value}". Expected one of: ${walletKinds.join(", ")}.`,
     );
   }
+
   return value;
 };
 
 const resolveSetups = async (flags: Flags): Promise<Array<WalletSetup>> => {
   const withCacheDir = (setup: WalletSetup): WalletSetup =>
     isNonEmptyString(flags["cache-dir"]) ? { ...setup, cacheDir: flags["cache-dir"] } : setup;
+
   const wallet = walletFlag(flags.wallet);
 
   if (isNonEmptyString(flags.setup)) {
     const redundant = SETUP_CONFLICTS.filter((name) => flags[name] !== undefined);
+
     if (redundant.length > 0) {
       throw new Error(
         `[walletwright] --setup carries the credentials, so --${redundant.join(", --")} would be ignored. Pass one or the other.`,
       );
     }
+
     const setups = await loadSetups(flags.setup);
     const selected = setups.filter((setup) => wallet === undefined || setup.wallet === wallet);
+
     if (selected.length === 0) {
       throw new Error(`[walletwright] ${flags.setup} exports no ${wallet} WalletSetup`);
     }
+
     return selected.map(withCacheDir);
   }
 
   const { password, seed } = flags;
+
   if (wallet === undefined || !isNonEmptyString(seed) || !isNonEmptyString(password)) {
     throw new Error(
       "[walletwright] provide --setup <file> or --wallet/--seed/--password. See --help.",
     );
   }
+
   const base: WalletSetup = { password, seedPhrase: seed, wallet };
+
   return [
     withCacheDir(isNonEmptyString(flags.version) ? { ...base, version: flags.version } : base),
   ];
@@ -153,6 +171,7 @@ const resolveSetups = async (flags: Flags): Promise<Array<WalletSetup>> => {
 
 const parseArgv = async (argv: Array<string>): Promise<Command> => {
   let parsed;
+
   try {
     parsed = parseArgs({ allowPositionals: true, args: argv, options: OPTIONS, strict: true });
   } catch (error) {
@@ -169,9 +188,11 @@ const parseArgv = async (argv: Array<string>): Promise<Command> => {
   if (flags.help === true || command === undefined || command === "help") {
     return { kind: "help" };
   }
+
   if (command !== "cache") {
     throw new Error(`[walletwright] unknown command "${command}". Run \`walletwright --help\`.`);
   }
+
   if (extra.length > 0) {
     throw new Error(
       `[walletwright] unexpected argument "${extra[0]}". Run \`walletwright --help\`.`,
@@ -183,8 +204,10 @@ const parseArgv = async (argv: Array<string>): Promise<Command> => {
 
 const main = async (): Promise<void> => {
   const command = await parseArgv(process.argv.slice(2));
+
   if (command.kind === "help") {
     process.stdout.write(HELP);
+
     return;
   }
 

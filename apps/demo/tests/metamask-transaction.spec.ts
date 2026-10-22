@@ -16,7 +16,9 @@ const receiptStatus = async (hash: string): Promise<string | undefined> => {
     headers: { "content-type": "application/json" },
     method: "POST",
   });
+
   const { result } = (await response.json()) as { result?: { status?: string } };
+
   return result?.status;
 };
 

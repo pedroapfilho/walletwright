@@ -9,6 +9,7 @@ import { formatTimeout, sleep, waitUntil } from "./wait";
  * machines rather than broken flows.
  */
 const REQUIRED_TIMEOUT_MS = 30_000;
+
 /**
  * An optional control is an interstitial some wallet versions or runs show and others skip, so a run
  * that skips it pays this whole budget. It follows a step the flow already waited on, which is why a
@@ -43,11 +44,13 @@ type Clicks = {
 const shows = async (control: Locator, timeoutMs: number): Promise<boolean> => {
   try {
     await control.waitFor({ state: "visible", timeout: timeoutMs });
+
     return true;
   } catch (error) {
     if (error instanceof errors.TimeoutError) {
       return false;
     }
+
     throw error;
   }
 };
@@ -63,6 +66,7 @@ const isAnimating = async (control: Locator): Promise<boolean> => {
     return await control.evaluate((element) =>
       document.getAnimations().some((animation) => {
         const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+
         return animation.playState === "running" && target?.contains(element) === true;
       }),
     );
@@ -82,15 +86,18 @@ const settlesInView = async (control: Locator, timeoutMs: number): Promise<void>
   await waitUntil(
     async () => {
       const box = await control.boundingBox().catch(() => null);
+
       const inView =
         box !== null &&
         box.y >= 0 &&
         box.x >= 0 &&
         (viewport === null ||
           (box.y + box.height <= viewport.height && box.x + box.width <= viewport.width));
+
       const current = inView ? JSON.stringify(box) : "";
       const settled = current !== "" && current === previous && !(await isAnimating(control));
       previous = current;
+
       return settled;
     },
     { intervalMs: PLACEMENT_INTERVAL_MS, timeoutMs },
@@ -106,10 +113,13 @@ const clicksFor = (wallet: string): Clicks => {
     if (!(await shows(control, timeoutMs))) {
       return false;
     }
+
     if (force) {
       await settlesInView(control, timeoutMs);
     }
+
     await sleep(settleMs);
+
     try {
       await control.click({ force, timeout: timeoutMs });
     } catch (error) {
@@ -117,6 +127,7 @@ const clicksFor = (wallet: string): Clicks => {
         cause: error,
       });
     }
+
     return true;
   };
 

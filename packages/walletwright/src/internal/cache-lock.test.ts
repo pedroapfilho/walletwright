@@ -16,6 +16,7 @@ const children: Array<ChildProcess> = [];
 const artifactPath = async (): Promise<string> => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "walletwright-lock-test-"));
   directories.push(dir);
+
   return path.join(dir, "profile");
 };
 
@@ -36,6 +37,7 @@ const worker = (artifact: string, movePrevious = false) => {
     });
     process.disconnect();
   `;
+
   const child = spawn(
     process.execPath,
     ["--input-type=module", "--eval", script, artifact, movePrevious ? "move" : "hold"],
@@ -43,6 +45,7 @@ const worker = (artifact: string, movePrevious = false) => {
       stdio: ["ignore", "ignore", "pipe", "ipc"],
     },
   );
+
   children.push(child);
   const entered = Promise.withResolvers<undefined>();
   const blocked = Promise.withResolvers<undefined>();
@@ -54,19 +57,24 @@ const worker = (artifact: string, movePrevious = false) => {
     if (message === "entered") {
       entered.resolve(undefined);
     }
+
     if (message === "blocked") {
       blocked.resolve(undefined);
     }
   });
+
   const exited = (async () => {
     const [code, signal] = await once(child, "exit");
+
     return { code, signal, stderr };
   })();
+
   return { blocked: blocked.promise, child, entered: entered.promise, exited };
 };
 
 afterEach(async () => {
   vi.restoreAllMocks();
+
   for (const child of children.splice(0)) {
     if (child.exitCode === null && child.signalCode === null) {
       const exited = once(child, "exit");
@@ -74,6 +82,7 @@ afterEach(async () => {
       await exited;
     }
   }
+
   await Promise.all(directories.splice(0).map((dir) => rm(dir, { force: true, recursive: true })));
 });
 

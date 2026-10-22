@@ -33,16 +33,20 @@ const previousProfileDir = (profileDir: string): string => `${profileDir}${PREVI
 /** Put back a profile that an interrupted publication left at its recovery path. */
 const restorePreviousProfile = async (profileDir: string): Promise<void> => {
   const previous = previousProfileDir(profileDir);
+
   if (await pathExists(profileDir)) {
     await rm(previous, { force: true, recursive: true });
+
     return;
   }
+
   await renameIfExists(previous, profileDir);
 };
 
 /** Resolve storage paths without reading or mutating a published profile. */
 export const locateProfile = (setup: EngineSetup, archiveName: string) => {
   const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
+
   return { cacheDir, profileDir: path.join(cacheDir, profileKey(setup, archiveName)) };
 };
 
@@ -50,11 +54,13 @@ export const locateProfile = (setup: EngineSetup, archiveName: string) => {
 export const copyProfile = (profileDir: string, destination: string): Promise<void> =>
   withArtifactLock(profileDir, async () => {
     await restorePreviousProfile(profileDir);
+
     if (!(await pathExists(profileDir))) {
       throw new Error(
         `[walletwright] no cache for this setup at ${profileDir}. Build it first with buildCache() or \`walletwright cache\`.`,
       );
     }
+
     await cp(profileDir, destination, { recursive: true });
   });
 
@@ -73,14 +79,17 @@ export const publishProfile = (staging: string, profileDir: string): Promise<voi
           await rename(previous, profileDir);
         } catch (rollbackError) {
           const publishMessage = error instanceof Error ? error.message : String(error);
+
           const rollbackMessage =
             rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+
           throw new Error(
             `[walletwright] failed to publish cache at ${profileDir}: ${publishMessage}; rollback failed: ${rollbackMessage}`,
             { cause: rollbackError },
           );
         }
       }
+
       throw error;
     }
 

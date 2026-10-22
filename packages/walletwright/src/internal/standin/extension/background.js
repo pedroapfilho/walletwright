@@ -23,9 +23,12 @@ const openPopup = async (id, mode) => {
     setTimeout(() => {
       void chrome.tabs.update(window.tabs[0].id, { url: popupUrl(id, mode) });
     }, LATE_NAVIGATION_MS);
+
     return;
   }
+
   const window = await chrome.windows.create({ ...POPUP, url: popupUrl(id, mode) });
+
   if (mode === "respawn") {
     setTimeout(() => {
       void respawn(window.id, id);
@@ -38,12 +41,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const id = crypto.randomUUID();
     pending.set(id, sendResponse);
     void openPopup(id, message.mode);
+
     return true;
   }
+
   if (message.type === "answer") {
     pending.get(message.id)?.(message.answer);
     pending.delete(message.id);
     sendResponse(true);
   }
+
   return false;
 });

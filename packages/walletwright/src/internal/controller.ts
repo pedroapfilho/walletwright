@@ -61,9 +61,11 @@ export const createWallet = ({
       if (!fn) {
         throw new Error(`[walletwright] ${definition.extensionName} does not support ${name}()`);
       }
+
       if (home.isClosed()) {
         throw new Error(`[walletwright] wallet home page is closed; cannot run ${name}()`);
       }
+
       await home.bringToFront().catch(() => {});
       await fn(ctx, ...args);
       await frontDapp(context);

@@ -56,6 +56,7 @@ describe("extensionIdFromPath", () => {
       extensionIdFromPath(fakePath),
       extensionIdFromPath(fakePath),
     ]);
+
     expect(ids).toHaveLength(2);
     expect(ids[0]).toEqual(ids[1]);
   });
@@ -65,6 +66,7 @@ describe("extensionIdFromPath", () => {
       extensionIdFromPath("/tmp/walletwright-does-not-exist-abc"),
       extensionIdFromPath(fakePath),
     ]);
+
     expect(ids).toHaveLength(2);
     expect(ids[0]).not.toEqual(ids[1]);
   });

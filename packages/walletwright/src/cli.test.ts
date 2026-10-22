@@ -21,6 +21,7 @@ const makeTempDir = (): string => {
   const prefix = path.join(tmpdir(), "walletwright-cli-");
   const dir = realpathSync(mkdtempSync(prefix));
   tempDirs.push(dir);
+
   return dir;
 };
 
@@ -111,6 +112,7 @@ describe("parseArgv", () => {
 const writeSetupModule = (source: string): string => {
   const file = path.join(makeTempDir(), "setup.mjs");
   writeFileSync(file, source);
+
   return file;
 };
 

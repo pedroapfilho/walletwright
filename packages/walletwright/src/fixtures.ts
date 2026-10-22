@@ -27,6 +27,7 @@ const reportAsStep: StepRunner = (title, body) => base.step(title, body, { box: 
  */
 export const createWalletFixtures = (setup: WalletSetup) => {
   const definition = wallets[setup.wallet];
+
   return base.extend<LaunchFixture & WalletFixtures>({
     context: [
       async ({ walletLaunch }, use) => {
@@ -46,6 +47,7 @@ export const createWalletFixtures = (setup: WalletSetup) => {
           headless: headless && definition.approval.headless === true,
           step: reportAsStep,
         });
+
         await use(launched);
         await launched.close();
       },

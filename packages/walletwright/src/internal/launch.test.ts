@@ -31,6 +31,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await standin.close();
+
   if (setup.cacheDir !== undefined) {
     await rm(setup.cacheDir, { force: true, recursive: true });
   }
@@ -60,9 +61,11 @@ describe.concurrent("launch", { timeout: 60_000 }, () => {
 
   it("requires a new cache after the default release changes", async ({ expect }) => {
     const definition = standin.definition;
+
     if (definition.source.kind !== "release") {
       throw new Error("expected a release source");
     }
+
     await expect(
       launchHeadless({
         ...definition,
@@ -88,6 +91,7 @@ describe.concurrent("launch", { timeout: 60_000 }, () => {
 
   it("unlocks a copy of the cached profile and removes the copy on close", async ({ expect }) => {
     let copy = "";
+
     const launched = await launchHeadless(
       reportingProfile((userDataDir) => {
         copy = userDataDir;

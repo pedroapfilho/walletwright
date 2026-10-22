@@ -10,6 +10,7 @@ import { DEMO_TESTS_URL, DOCS_URL, GITHUB_URL, NPM_URL, SITE_URL } from "@/lib/s
 
 const DESCRIPTION =
   "walletwright drives real MetaMask, Phantom, Rabby, Solflare, and Slush extensions in Playwright tests. Connect and sign on EVM, Solana, and Sui, with no mocks.";
+
 const TITLE = "walletwright: Playwright wallet automation";
 
 const metadata: Metadata = {
@@ -122,4 +123,5 @@ const RootLayout = ({ children }: { children: ReactNode }) => (
 );
 
 export { metadata, viewport };
+
 export default RootLayout;

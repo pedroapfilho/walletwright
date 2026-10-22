@@ -8,6 +8,7 @@ const unlessMissing = async <T>(operation: () => Promise<T>, fallback: T): Promi
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return fallback;
     }
+
     throw error;
   }
 };
@@ -15,6 +16,7 @@ const unlessMissing = async <T>(operation: () => Promise<T>, fallback: T): Promi
 export const pathExists = (target: string): Promise<boolean> =>
   unlessMissing(async () => {
     await stat(target);
+
     return true;
   }, false);
 
@@ -22,5 +24,6 @@ export const pathExists = (target: string): Promise<boolean> =>
 export const renameIfExists = (from: string, to: string): Promise<boolean> =>
   unlessMissing(async () => {
     await rename(from, to);
+
     return true;
   }, false);
