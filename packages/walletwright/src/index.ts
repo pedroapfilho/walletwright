@@ -1,13 +1,12 @@
 export { buildCache, launchWallet } from "./engine";
 
-export type { LaunchedWallet } from "./internal/launch";
-
 export { createWalletFixtures, type WalletFixtures } from "./fixtures";
 
 export { isWalletKind, walletKinds, wallets, walletKindsByEcosystem } from "./wallets/index";
 
 export type {
   Ecosystem,
+  LaunchedWallet,
   NetworkConfig,
   Wallet,
   WalletDefinition,

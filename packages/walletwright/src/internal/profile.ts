@@ -1,32 +1,74 @@
 import { createHash } from "node:crypto";
 import { cp, rename, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
-import type { WalletSetup } from "../types";
+import type { WalletDefinition, WalletSetup } from "../types";
 
 import { withArtifactLock } from "./cache-lock";
+import type { ExtensionDownload } from "./download";
+import { extensionArchive } from "./extension";
 import { pathExists, renameIfExists } from "./fs";
 
 const DEFAULT_CACHE_DIR = ".walletwright";
 
 const PREVIOUS_SUFFIX = ".previous";
 
-/**
- * A setup as the engine runs it. The public entry points resolve `wallet` to its definition, so from
- * there on it only names the cache, and any definition can drive the engine.
- */
-export type EngineSetup = Omit<WalletSetup, "wallet"> & { wallet: string };
+/** A setup as the engine runs it: the public entry points have already resolved `wallet`. */
+export type EngineSetup = Omit<WalletSetup, "wallet">;
 
-/** Stable profile identity for the resolved release and credentials. */
+/** A throwaway profile directory: where it is created, and the profile it starts as a copy of. */
+export type ProfilePlacement = { copyOf?: string; parent: string; prefix: string };
+
+/** Everything a setup puts on disk, so the build and the run cannot resolve it differently. */
+type SetupLocation = {
+  /**
+   * Where the build onboards. Inside the cache so publishing is a `rename` on one filesystem, and
+   * dot-prefixed so it can never be mistaken for a profile key.
+   */
+  build: ProfilePlacement;
+  extension: ExtensionDownload;
+  profileDir: string;
+  /** Where a run unlocks: a copy of the published profile. */
+  run: ProfilePlacement;
+};
+
+/** Stable profile identity: the archive names the wallet and its release, then the credentials. */
 export const profileKey = (setup: EngineSetup, archiveName: string): string =>
   createHash("sha256")
-    .update(`${setup.wallet}:${archiveName}:${setup.seedPhrase}:${setup.password}`)
+    .update(`${archiveName}:${setup.seedPhrase}:${setup.password}`)
     .digest("hex")
     .slice(0, 20);
+
+/** Resolve storage paths without reading or mutating a published profile. */
+export const locate = (
+  definition: Pick<WalletDefinition, "extensionName" | "source">,
+  setup: EngineSetup,
+): SetupLocation => {
+  const archive = extensionArchive(definition, setup.version);
+  const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
+  const profileDir = path.join(cacheDir, profileKey(setup, archive.name));
+
+  return {
+    build: { parent: cacheDir, prefix: ".building-" },
+    extension: { ...archive, cacheDir },
+    profileDir,
+    run: { copyOf: profileDir, parent: os.tmpdir(), prefix: "walletwright-" },
+  };
+};
 
 /** Where Chrome persists an extension's `chrome.storage.local` inside a browser profile. */
 export const extensionStateDir = (profileDir: string, extensionId: string): string =>
   path.join(profileDir, "Default", "Local Extension Settings", extensionId);
+
+/** Where Chrome persists an extension's IndexedDB inside a browser profile. */
+export const extensionIndexedDbDir = (profileDir: string, extensionId: string): string =>
+  path.join(
+    profileDir,
+    "Default",
+    "IndexedDB",
+    `chrome-extension_${extensionId}_0.indexeddb.leveldb`,
+  );
 
 const previousProfileDir = (profileDir: string): string => `${profileDir}${PREVIOUS_SUFFIX}`;
 
@@ -41,13 +83,6 @@ const restorePreviousProfile = async (profileDir: string): Promise<void> => {
   }
 
   await renameIfExists(previous, profileDir);
-};
-
-/** Resolve storage paths without reading or mutating a published profile. */
-export const locateProfile = (setup: EngineSetup, archiveName: string) => {
-  const cacheDir = path.resolve(setup.cacheDir ?? DEFAULT_CACHE_DIR);
-
-  return { cacheDir, profileDir: path.join(cacheDir, profileKey(setup, archiveName)) };
 };
 
 /** Recover and copy one complete generation while excluding publication. */

@@ -1,8 +1,10 @@
-import { clicksFor } from "../internal/click";
+import { clicksFor, isShowing } from "../internal/click";
 import { sleep } from "../internal/wait";
 import type { WalletDefinition } from "../types";
 
-const { click } = clicksFor("Phantom");
+const PHANTOM = "Phantom";
+
+const { click, waitShown } = clicksFor(PHANTOM);
 
 export const phantom: WalletDefinition = {
   approval: {
@@ -13,9 +15,9 @@ export const phantom: WalletDefinition = {
 
   ecosystems: ["evm", "svm"],
 
-  extensionName: "Phantom",
+  extensionName: PHANTOM,
 
-  importWallet: async (page, seedPhrase, password) => {
+  importWallet: async (page, seedWords, password) => {
     const testId = (id: string) => page.locator(`[data-testid="${id}"]`);
 
     await click(page.locator("text=I already have a wallet"));
@@ -23,15 +25,13 @@ export const phantom: WalletDefinition = {
     await click(page.locator("text=Import Recovery Phrase"));
     await sleep(1500);
 
-    const words = seedPhrase.trim().split(/\s+/v);
-
-    for (let i = 0; i < words.length; i++) {
-      await testId(`secret-recovery-phrase-word-input-${i}`).fill(words[i] ?? "");
+    for (const [index, word] of seedWords.entries()) {
+      await testId(`secret-recovery-phrase-word-input-${index}`).fill(word);
     }
 
     await click(testId("onboarding-form-submit-button"));
 
-    await testId("onboarding-form-secondary-button").waitFor({ state: "visible", timeout: 60_000 });
+    await waitShown(testId("onboarding-form-secondary-button"), { timeoutMs: 60_000 });
     await click(testId("onboarding-form-submit-button"));
 
     await testId("onboarding-form-password-input").fill(password);
@@ -47,15 +47,7 @@ export const phantom: WalletDefinition = {
 
   unlockScreen: {
     entry: "popup.html",
-    isUnlocked: async (page) => {
-      const rendered = await page
-        .locator("button")
-        .first()
-        .isVisible()
-        .catch(() => false);
-
-      return rendered;
-    },
+    isUnlocked: (page) => isShowing(page.locator("button").first()),
     submit: async (page) => {
       await click(page.getByRole("button", { name: /unlock/iv }));
     },

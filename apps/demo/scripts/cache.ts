@@ -15,13 +15,12 @@ const asKind = (name: string): WalletKind => {
   return name;
 };
 
-const headless = process.argv.includes("--headless");
-const named = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+const named = process.argv.slice(2).filter((arg) => arg !== "--");
 
 const selected = named.length > 0 ? named.map(asKind) : KINDS;
 
 await buildCaches(selected, async (name) => {
   process.stdout.write(`building ${name} cache…\n`);
-  const dir = await buildCache(walletSetups[name], { headless });
+  const dir = await buildCache(walletSetups[name]);
   process.stdout.write(`  ${name} → ${dir}\n`);
 });

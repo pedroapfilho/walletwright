@@ -37,7 +37,7 @@ const API: Array<ApiEntry> = [
     name: "wallet.confirmSignature()",
   },
   {
-    description: "Rejects the pending request, on wallets that declare it.",
+    description: "Rejects the pending request.",
     name: "wallet.reject()",
   },
   {

@@ -9,6 +9,8 @@ import AdmZip from "adm-zip";
 
 import type { WalletDefinition } from "../types";
 
+import type { EngineSetup } from "./profile";
+
 const FIXTURE_DIR = fileURLToPath(new URL("standin", import.meta.url));
 const ANSWER_TIMEOUT_MS = 10_000;
 
@@ -17,7 +19,7 @@ const ANSWER_TIMEOUT_MS = 10_000;
  * documents each. `late`, `idle`, and `respawn` delay or replace the request, `steps`, `reauth`, and
  * `notice` put screens in front of its answer, and `refuse` never takes the password.
  */
-export type ApprovalMode =
+type ApprovalMode =
   | "idle"
   | "late"
   | "notice"
@@ -37,6 +39,12 @@ export type Standin = {
     mode: ApprovalMode,
   ) => Promise<{ answer: () => Promise<string | null> }>;
 };
+
+/** The credentials every engine test onboards the stand-in with. */
+export const STANDIN_CREDENTIALS = {
+  password: "stand-in-password",
+  seedPhrase: "stand in seed",
+} as const satisfies EngineSetup;
 
 const notice = (popup: Page) => popup.getByRole("button", { name: "Accept" });
 
@@ -106,8 +114,8 @@ export const serveStandin = async (): Promise<Standin> => {
     },
     ecosystems: ["evm"],
     extensionName: "Stand-in",
-    importWallet: async (page, seedPhrase, password) => {
-      await page.getByLabel("Secret recovery phrase").fill(seedPhrase);
+    importWallet: async (page, seedWords, password) => {
+      await page.getByLabel("Secret recovery phrase").fill(seedWords.join(" "));
       await page.getByLabel("Password").fill(password);
       await page.getByRole("button", { name: "Import" }).click();
       await page.getByText("Wallet ready").waitFor();

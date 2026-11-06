@@ -1,8 +1,8 @@
 import { test as base } from "@playwright/test";
 
 import type { StepRunner } from "./internal/controller";
-import { type LaunchedWallet, launch } from "./internal/launch";
-import type { Wallet, WalletSetup } from "./types";
+import { launch, runsHeadless } from "./internal/launch";
+import type { LaunchedWallet, Wallet, WalletSetup } from "./types";
 import { wallets } from "./wallets/index";
 
 export type WalletFixtures = {
@@ -44,7 +44,7 @@ export const createWalletFixtures = (setup: WalletSetup) => {
     walletLaunch: [
       async ({ headless }, use) => {
         const launched = await launch(definition, setup, {
-          headless: headless && definition.approval.headless === true,
+          headless: headless && runsHeadless(definition),
           step: reportAsStep,
         });
 

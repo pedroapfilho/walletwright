@@ -6,22 +6,22 @@ import { z } from "zod";
 
 import type { ExtensionArchive, WalletDefinition } from "../types";
 
-import { chromeWebStoreCrxUrl } from "./download";
-import type { EngineSetup } from "./profile";
+const chromeWebStoreCrxUrl = (extensionId: string): string =>
+  `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${extensionId}%26uc`;
 
 /**
  * The archive a setup runs. A release source honours `version`; a Web Store source cannot pin one,
  * so asking for it is an error rather than a setting that forks the profile cache for the same build.
  */
 export const extensionArchive = (
-  { extensionName, source }: WalletDefinition,
-  setup: EngineSetup,
+  { extensionName, source }: Pick<WalletDefinition, "extensionName" | "source">,
+  version: string | undefined,
 ): ExtensionArchive => {
   if (source.kind === "release") {
-    return source.release(setup.version ?? source.defaultVersion);
+    return source.release(version ?? source.defaultVersion);
   }
 
-  if (setup.version !== undefined) {
+  if (version !== undefined) {
     throw new Error(
       `[walletwright] ${extensionName} runs its Chrome Web Store build, which cannot be pinned; remove \`version\` from its WalletSetup.`,
     );
@@ -29,25 +29,22 @@ export const extensionArchive = (
 
   return {
     format: "crx",
-    name: `${setup.wallet}-chrome-latest`,
+    name: `webstore-${source.id}`,
     sha256: undefined,
     url: chromeWebStoreCrxUrl(source.id),
   };
 };
 
-/** Mirror Chrome's extension-id derivation; resolve symlinks because Chrome hashes the real path. */
-export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {
-  const resolved = path.resolve(extensionPath);
-  const abs = await realpath(resolved).catch(() => resolved);
-  let key: string | undefined;
+const manifestSchema = z.object({ key: z.string().optional() });
 
-  try {
-    const text = await readFile(path.join(abs, "manifest.json"), "utf8");
-    const manifest = z.object({ key: z.string().optional() }).parse(JSON.parse(text));
-    key = manifest.key;
-  } catch {
-    key = undefined;
-  }
+/**
+ * Mirror Chrome's extension-id derivation for an unpacked extension: the manifest's public `key` if
+ * it has one, otherwise the real path, since Chrome hashes the path with symlinks resolved.
+ */
+export const extensionIdFromPath = async (extensionPath: string): Promise<string> => {
+  const abs = await realpath(path.resolve(extensionPath));
+  const text = await readFile(path.join(abs, "manifest.json"), "utf8");
+  const { key } = manifestSchema.parse(JSON.parse(text));
 
   const source =
     key === undefined || key === "" ? Buffer.from(abs, "utf8") : Buffer.from(key, "base64");

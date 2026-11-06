@@ -19,40 +19,11 @@ in three phases: build a cache, launch from it, and drive the popups.
 
 ## The WalletDefinition
 
-Each wallet implements one object and the engine does the rest. To add a wallet, write one of these
-and register it.
-
-```ts
-type WalletDefinition = {
-  ecosystems: Ecosystem[]; // e.g. ["evm"], ["evm", "svm"], ["sui"]
-  extensionName: string; // display name for step titles and errors
-  source:
-    // where the extension is downloaded from
-    | { kind: "webStore"; id: string } // the Web Store build; cannot pin a version
-    | { kind: "release"; defaultVersion: string; release: (version) => ExtensionArchive };
-  onboardingPage: string; // e.g. "home.html"
-  importWallet: (page, seedPhrase, password) => Promise<void>;
-  isPersisted?: ({ page, profileDir, extensionId }) => Promise<boolean>; // the state is on disk
-  finalizeCache?: (profileDir, extensionId) => Promise<void>;
-  unlockScreen: {
-    entry: string;
-    isUnlocked?: (page) => Promise<boolean>;
-    submit?: (page, field) => Promise<void>;
-  };
-  approval: {
-    confirm: (popup) => Locator; // every control that approves, across all screens
-    cancel: (popup) => Locator; // every control that rejects
-    click?: { kind: "locator"; settleMs?: number } | { kind: "inPage" };
-    screens?: ApprovalScreen[]; // what the wallet can put in front of the request
-    urlMatch?: string; // window URL token; defaults to "notification.html"
-    headless?: boolean;
-  };
-  actions?: WalletActions; // optional capabilities: accounts, network, settings
-};
-```
-
-The optional `actions` group is how a wallet declares capabilities beyond connect and sign. See
-[Architecture](/architecture) for the capability model and how a wallet or a capability is added.
+Each wallet implements one object and the engine does the rest: where its extension comes from,
+how it onboards from a seed, how its unlock screen asks for the password, and what its approval
+window looks like. The optional `actions` group is how a wallet declares capabilities beyond connect
+and sign. [Architecture](/architecture#the-walletdefinition) has the full type, the capability
+model, and how a wallet or a capability is added.
 
 ## Details that make it work
 

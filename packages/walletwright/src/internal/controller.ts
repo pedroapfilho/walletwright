@@ -20,7 +20,6 @@ type CreateWalletOptions = {
   extensionId: string;
   /** The wallet's own page, left open after unlock, that the actions drive. */
   home: Page;
-  password: string;
   step: StepRunner;
   /** Unlock `home` again through the wallet's unlock screen. */
   unlock: () => Promise<void>;
@@ -33,11 +32,10 @@ export const createWallet = ({
   definition,
   extensionId,
   home,
-  password,
   step,
   unlock,
 }: CreateWalletOptions): Wallet => {
-  const ctx: WalletActionContext = { context, extensionId, home, password, unlock };
+  const ctx: WalletActionContext = { home, unlock };
 
   /**
    * Every public call goes through here, so each one reaches `step` under its own name. It awaits

@@ -54,9 +54,9 @@ apps/
 ## Dev workflow
 
 Root scripts run turbo: `build`, `test`, `test:coverage`, `lint`, `typecheck`, `clean`, `dev`. Root
-`test` runs only the walletwright suite: unit tests plus the engine tests, which drive a stand-in
-wallet extension in headless Chromium (`pnpm --filter @walletwright/core exec playwright install
-chromium` once; `test.yml` installs it on CI).
+`test` runs every package's tests; CI's `test.yml` runs the walletwright suite: unit tests plus the
+engine tests, which drive a stand-in wallet extension in headless Chromium (`pnpm --filter
+@walletwright/core exec playwright install chromium` once; `test.yml` installs it on CI).
 Root-only: `format`/`format:check` (oxfmt), `test:e2e` (the demo's headed specs, via
 `pnpm --filter demo`), `changeset`/`version-packages`/`release`. `e2e.yml` runs the demo specs in
 its `wallets` job and the docs app's instant-navigation suite (`pnpm --filter docs test:e2e`) in
@@ -65,7 +65,8 @@ its `docs` job.
 Run the demo end-to-end from `apps/demo`: `pnpm exec playwright install chromium`, then
 `pnpm test:cache` to onboard the wallets (or `pnpm test:cache slush` for one), then `pnpm test:e2e`
 to connect and sign. `test:cache` derives its wallet list from `wallet-setup.ts`, and CI calls the
-same script. Run it headed
+same script. It builds Slush first and alone, since its headed onboarding needs the display to
+itself on the CI runner, then the rest in parallel. Run it headed
 (see below). The network and transaction specs also need a local chain on `127.0.0.1:8545` (chain
 id `31337`), e.g. Foundry's `anvil` seeded with the public test mnemonic.
 
@@ -77,8 +78,8 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   resolve the setup's `WalletKind` to its definition once and pass the definition down. Nothing
   under `internal/` reads the registry, so any definition can drive the engine, which is how the
   engine tests drive the stand-in.
-- `build` (`internal/cache.ts`) navigates to onboarding, runs `importWallet` (which ends once its
-  last screen shows, with no trailing sleep), waits until the profile is durable (item 24), closes,
+- `build` (`internal/cache.ts`) navigates to onboarding, runs `importWallet` with the seed split
+  into its words once for every wallet (it ends once its last screen shows, with no trailing sleep), waits until the profile is durable (item 24), closes,
   then runs `finalizeCache` and publishes the profile while the browser is closed.
 - `launch` (`internal/launch.ts`) reaches the definition's `unlockScreen` on a copy of the cached
   profile, unlocks it (`internal/unlock-screen.ts`), and returns a `Wallet`.
@@ -86,9 +87,13 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   profile directory (fresh staging for the build, a copy of the cache for the run) with
   `prepareContext` applied, so the build and the run cannot load the wallet differently. The session
   owns the context and the directory together and disposes both on every failure path; the build
-  keeps its staging through `finalizeCache` and publish, the run removes its copy on close. Profile
-  paths and atomic publish live in `internal/profile.ts`; the archive a setup runs (`source`, plus
-  the refusal of `version` for Web Store wallets) in `internal/extension.ts`.
+  keeps its staging through `finalizeCache` and publish, the run removes its copy on close.
+  `locate(definition, setup)` (`internal/profile.ts`) resolves everything a setup puts on disk, the
+  extension archive, the profile directory, the build's staging and the run's copy, and both phases
+  call it. The archive name (`metamask-chrome-<version>`, `webstore-<id>`) names the wallet, so the
+  profile key needs only it and the credentials. Atomic publish and recovery live there too; the
+  archive a setup runs (`source`, plus the refusal of `version` for Web Store wallets) in
+  `internal/extension.ts`.
 - `createApprovals(...)` (`internal/approval.ts`) owns every approval, from the window opening to
   it closing: it finds the window the wallet opened and places it, passes the wallet's declared
   `screens` (each at most once), re-authenticates through the shared unlock flow when the window
@@ -107,12 +112,16 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   the import site: `metamask.ts` assembles, `metamask/onboarding.ts` and `metamask/approve.ts` and
   `metamask/actions/*.ts` implement.
 - Onboarding, `unlockScreen.submit`, and actions click the wallet's own UI through
-  `clicksFor(wallet)` (`internal/click.ts`), which has two intents. `click` is a control the flow
+  `clicksFor(NAME)` (`internal/click.ts`), bound to the same constant as the definition's
+  `extensionName` (MetaMask's lives in `metamask/clicks.ts`), which has two intents. `click` is a control the flow
   needs: it waits for it to show, clicks, and throws `[walletwright] <Wallet> never showed <control>`
   on timeout. `clickIfShown` is an interstitial a run may skip: absence within its budget resolves
-  `false`, but a control that shows and then refuses the click throws. `force` and `settleMs` are
+  `false`, but a control that shows and then refuses the click throws. `waitShown` waits for a
+  control without clicking it and fails with the same error as `click`. `force` and `settleMs` are
   options, and the budgets (30s required, 10s optional) live in that module. Approval clicks go
-  through it too, unless the wallet declares the in-page click strategy (Rabby).
+  through it too, unless the wallet declares the in-page click strategy (Rabby). Checks the engine
+  polls (an approval screen's `shows`, `isUnlocked`) read through its `isShowing` and `isEnabled`,
+  which answer at once and read a page that went as "not showing".
 
 Beyond connect and sign, capabilities are **optional and per-wallet**. `WalletDefinition.actions`
 groups them (`accounts`, `network`, `settings`, and later `tokens`). The engine mirrors what a wallet declares onto `Wallet` and throws
@@ -241,7 +250,8 @@ window, which is what `approval.urlMatch` keys on. Worth knowing:
   (cancels are `btn-cancel` / `btn-reject`), so `approval.confirm` and `approval.cancel` union each
   pair.
 - Verified end-to-end via `apps/demo`, driving the name-agnostic Wallet-Standard Solana section
-  (`#mockSvmConnect` / `#mockSvmSign`); the spec is `tests/solflare.spec.ts`.
+  (`#svmConnect` / `#svmSign`) that MetaMask's Solana spec and the mock use too; the spec is
+  `tests/solflare.spec.ts`.
 - **Headed only.** Headless, the dapp gets `Connection rejected` about two seconds after the connect
   click, before any approval UI exists and whether or not the engine opens `confirm_popup.html`, so
   the rejection is Solflare's own. It does not declare `approval.headless`, so the fixtures always
@@ -326,7 +336,8 @@ Each item below cost real debugging time. Don't "simplify" them away.
 5. **MetaMask gets stuck on "wallet is ready".** After import, the "Open wallet" step goes through the
    MV3 service worker and hangs under automation, leaving `completedOnboarding=false`, so the cached
    wallet ignores dapp requests. The fix writes `completedOnboarding=true` straight into the leveldb
-   (`wallets/metamask/onboarding-patch.ts`, via `classic-level`) as MetaMask's `finalizeCache`.
+   (`wallets/metamask/storage.ts`, via `classic-level`) as MetaMask's `finalizeCache`. The same
+   module reads the vault for `isPersisted`, so MetaMask's two storage layouts live in one place.
 6. **Phantom and Slush block the famous public test seed.** Phantom flags `test test … junk` as
    malicious and drops the connection. Use a fresh, unfunded mnemonic for both.
 7. **Confirm-button selectors differ.** MetaMask: connect `confirm-btn`, sign `confirm-footer-button`
@@ -428,14 +439,25 @@ Each item below cost real debugging time. Don't "simplify" them away.
     that writes nothing until well after its last screen from passing on silence. The default is a
     heuristic: prefer a declared check wherever a wallet's real state is cheap to read.
 
+25. **MetaMask's seed field needs real keystrokes, and can still drop them.** `fill` does not fire
+    the input events MetaMask validates on, so onboarding types the phrase key by key, and a dropped
+    key leaves its confirm disabled. It retypes until confirm enables, within one 40s budget rather
+    than a retry count (`wallets/metamask/onboarding.ts`).
+26. **Phantom's onboarding pauses 1s and 1.5s between its first two screens.** The pauses date from
+    the first version and were never measured against a wait on the next screen. Remove them only
+    after a headed `pnpm test:cache phantom` passes without them, several times.
+27. **Slush reopens its welcome screen when a welcome click lands too early.** On a slow runner a
+    click can land before Slush responds and leave the page where it was, so opening the passphrase
+    import reloads the welcome screen and starts over, up to three times (`openPassphraseImport`).
+
 ## Conventions
 
 - TypeScript ESM, extensionless relative imports, exports at the end of public modules, arrow
   functions, `type` over `interface`. Strict mode, zero TS/lint/format errors.
-- Lint with oxlint (the `oxlint-config-awesomeness` preset), format with oxfmt. `oxlint.config.ts`
-  turns off rules that don't fit a Node browser-driver: `no-await-in-loop` (the polling loops are
-  intentional) and the React/Next/doctor presets (for example `rules-of-hooks` false-positives on
-  Playwright's `use` fixture argument).
+- Lint with oxlint (the `oxlint-config-awesomeness` preset, which already leaves `no-await-in-loop`
+  off, so the polling loops lint clean), format with oxfmt. `oxlint.config.ts` turns off the
+  React/Next/doctor rules that don't fit a Node browser-driver (for example `rules-of-hooks`
+  false-positives on Playwright's `use` fixture argument).
 - Publishable package contract (mirror `packages/walletwright`): `exports`, `files: ["dist"]`,
   `publishConfig.access: public`, a tsdown ESM build with `dts`, `prepack`/`prepare` running the
   build, MIT.

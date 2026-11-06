@@ -1,16 +1,14 @@
 import type { Page } from "@playwright/test";
 
-import { clicksFor } from "../../../internal/click";
 import type { NetworkActions, NetworkConfig, WalletActionContext } from "../../../types";
-
-const { click } = clicksFor("MetaMask");
+import { click, waitShown } from "../clicks";
 
 const closeButton = (home: Page) =>
   home.getByTestId("modal-header-close-button").filter({ visible: true }).first();
 
 const openNetworkManager = async (home: Page): Promise<void> => {
   await click(home.getByTestId("sort-by-networks"));
-  await closeButton(home).waitFor({ state: "visible" });
+  await waitShown(closeButton(home));
 };
 
 const add = async ({ home }: WalletActionContext, config: NetworkConfig): Promise<void> => {
@@ -28,7 +26,7 @@ const add = async ({ home }: WalletActionContext, config: NetworkConfig): Promis
   await home.getByTestId("rpc-url-input-test").fill(config.rpcUrl);
   await click(home.getByTestId("page-container-footer-next"));
 
-  await home.getByTestId("network-form-network-name").waitFor();
+  await waitShown(home.getByTestId("network-form-network-name"));
   await click(home.getByTestId("page-container-footer-next"));
 
   await click(closeButton(home));

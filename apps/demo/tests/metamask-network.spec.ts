@@ -1,12 +1,12 @@
-import { connectMetamask, metamaskTest } from "./fixtures";
+import { LOCAL_CHAIN, LOCAL_CHAIN_HEX } from "../src/requests";
+
+import { connectEvm, EVM_SIGNATURE, metamaskTest } from "./fixtures";
 
 const test = metamaskTest;
 const { expect } = test;
 
-const LOCAL_CHAIN_HEX = "0x7a69";
-
 test("dapp-initiated add-and-switch via wallet_addEthereumChain", async ({ page, wallet }) => {
-  await connectMetamask(page, wallet);
+  await connectEvm(page, wallet);
 
   await page.locator("#switchChainButton").click();
   await wallet.approve();
@@ -14,14 +14,9 @@ test("dapp-initiated add-and-switch via wallet_addEthereumChain", async ({ page,
 });
 
 test("wallet-UI network.add, then the dapp switches onto it", async ({ page, wallet }) => {
-  await connectMetamask(page, wallet);
+  await connectEvm(page, wallet);
 
-  await wallet.network.add({
-    chainId: 31_337,
-    name: "Walletwright Local",
-    rpcUrl: "http://127.0.0.1:8545",
-    symbol: "ETH",
-  });
+  await wallet.network.add(LOCAL_CHAIN);
 
   await page.locator("#switchChainButton").click();
   await wallet.approve();
@@ -29,5 +24,5 @@ test("wallet-UI network.add, then the dapp switches onto it", async ({ page, wal
 
   await page.locator("#signButton").click();
   await wallet.confirmSignature();
-  await expect(page.locator("#signature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
+  await expect(page.locator("#signature")).toHaveText(EVM_SIGNATURE);
 });

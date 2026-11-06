@@ -9,13 +9,16 @@ The core API is exported from the package root; `@walletwright/core/chain`, `@wa
 import {
   buildCache,
   createWalletFixtures,
+  isWalletKind,
   launchWallet,
   wallets,
   walletKinds,
   walletKindsByEcosystem,
   type Ecosystem,
+  type LaunchedWallet,
   type NetworkConfig,
   type Wallet,
+  type WalletFixtures,
   type WalletSetup,
   type WalletKind,
   type WalletDefinition,
@@ -79,7 +82,7 @@ It needs a cache built for the same `setup`, via `buildCache` or the CLI.
 
 ```ts
 type Wallet = {
-  connectToDapp: () => Promise<void>;
+  connectToDapp: (options?: { optional?: boolean }) => Promise<void>;
   confirmSignature: () => Promise<void>;
   confirmTransaction: () => Promise<void>;
   approve: (options?: { optional?: boolean }) => Promise<void>;
@@ -143,9 +146,9 @@ declared throws rather than silently doing nothing:
 [walletwright] Slush does not support settings.lock()
 ```
 
-Every wallet declares `reject`. `settings`, `network.add`, and `accounts` are MetaMask-only today:
-Phantom, Rabby, Solflare, and Slush drive connect, sign, and reject end to end but declare none of
-the other optional capabilities yet, so calling those on them throws.
+Connect, sign, and reject work on every wallet; they drive the approval window the wallet declares.
+`settings`, `network.add`, and `accounts` are MetaMask-only today: Phantom, Rabby, Solflare, and
+Slush declare none of these optional capabilities yet, so calling them throws.
 
 There is no `network.switch`. MetaMask 13.x scopes the active chain **per dapp** and no longer has a
 wallet-side network selector, so switching is dapp-initiated: the dapp calls
@@ -155,7 +158,8 @@ chains; in MetaMask 13.x it hangs with no popup and no error. See the network re
 
 ## `launchWallet(setup, options?)`
 
-The standalone launcher, without Playwright fixtures. It returns `{ close, context, wallet }`. Call
+The standalone launcher, without Playwright fixtures. It returns a `LaunchedWallet`,
+`{ close, context, wallet }`. Call
 `close()` when you are done: it closes the browser and then awaits removal of the throwaway profile
 copy, which `context.close()` alone cannot guarantee before the process exits.
 

@@ -1,4 +1,4 @@
-import { phantomTest } from "./fixtures";
+import { EVM_SIGNATURE, phantomTest } from "./fixtures";
 
 const test = phantomTest;
 const { expect } = test;
@@ -12,7 +12,7 @@ test("Phantom: connect + sign on EVM and Solana", async ({ page, wallet }) => {
 
   await page.locator("#phantomEvmSign").click();
   await wallet.confirmSignature();
-  await expect(page.locator("#phantomEvmSignature")).toHaveText(/^0x[0-9a-fA-F]{130}$/);
+  await expect(page.locator("#phantomEvmSignature")).toHaveText(EVM_SIGNATURE);
 
   await page.locator("#phantomSvmConnect").click();
   await wallet.connectToDapp({ optional: true });
