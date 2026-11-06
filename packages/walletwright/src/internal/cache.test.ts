@@ -9,7 +9,7 @@ import { runDirectly } from "./controller";
 import { pathExists } from "./fs";
 import { launch } from "./launch";
 import type { EngineSetup } from "./profile";
-import { type Standin, serveStandin, userDataDirOf } from "./standin";
+import { STANDIN_CREDENTIALS, type Standin, serveStandin, userDataDirOf } from "./standin";
 
 const EXTENSION_DIR = "standin-1.0.0";
 
@@ -31,12 +31,7 @@ const makeSetup = async (): Promise<EngineSetup & { cacheDir: string }> => {
   const cacheDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-cache-test-"));
   tempDirs.push(cacheDir);
 
-  return {
-    cacheDir,
-    password: "stand-in-password",
-    seedPhrase: "stand in seed",
-    wallet: "standin",
-  };
+  return { cacheDir, ...STANDIN_CREDENTIALS };
 };
 
 const listCache = async (cacheDir: string): Promise<Array<string>> => {

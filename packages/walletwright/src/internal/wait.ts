@@ -1,9 +1,10 @@
 import type { Page } from "@playwright/test";
 
 const DEFAULT_INTERVAL_MS = 200;
-const DEFAULT_NAVIGATION_INTERVAL_MS = 1000;
+const NAVIGATION_INTERVAL_MS = 1000;
+const NAVIGATION_TIMEOUT_MS = 15_000;
 
-export type WaitOptions = {
+type WaitOptions = {
   /** Gap between checks. */
   intervalMs?: number;
   /** Total budget. `check` runs at least once, and never again once the budget has elapsed. */
@@ -56,24 +57,26 @@ export const waitUntilOrThrow = async <T>(
 };
 
 /**
- * A `chrome-extension://` URL fails with `ERR_BLOCKED_BY_CLIENT` until the extension registers,
- * which takes seconds after launch, so reaching an extension page is a poll rather than a one-shot.
+ * Open one of the extension's own pages. A `chrome-extension://` URL fails with
+ * `ERR_BLOCKED_BY_CLIENT` until the extension registers, which takes seconds after launch, so
+ * reaching one is a poll rather than a one-shot.
  */
-export const gotoWithRetry = async (
+export const gotoExtensionPage = async (
   page: Page,
-  url: string,
-  {
-    intervalMs = DEFAULT_NAVIGATION_INTERVAL_MS,
-    label,
-    timeoutMs,
-  }: WaitOptions & { label: string },
+  { extensionId, path, wallet }: { extensionId: string; path: string; wallet: string },
 ): Promise<void> => {
+  const url = `chrome-extension://${extensionId}/${path}`;
+
   await waitUntilOrThrow(
     () =>
       page
         .goto(url, { waitUntil: "domcontentloaded" })
         .then(() => true)
         .catch(() => undefined),
-    { intervalMs, message: `${label} never loaded (${url})`, timeoutMs },
+    {
+      intervalMs: NAVIGATION_INTERVAL_MS,
+      message: `${wallet} ${path} never loaded (${url})`,
+      timeoutMs: NAVIGATION_TIMEOUT_MS,
+    },
   );
 };

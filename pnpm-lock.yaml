@@ -173,9 +173,6 @@ importers:
       '@web3icons/react':
         specifier: ^4.1.22
         version: 4.1.22(react@19.3.0)
-      cn:
-        specifier: ^0.4.0
-        version: 0.4.0
       hast-util-to-jsx-runtime:
         specifier: ^2.3.6
         version: 2.3.6

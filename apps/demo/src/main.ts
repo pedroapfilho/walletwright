@@ -1,12 +1,28 @@
 import { z } from "zod";
 
-import { toErrorMessage } from "./error-message";
-import { connectStandard, findStandardWallet } from "./wallet-standard";
+import { LOCAL_CHAIN, LOCAL_CHAIN_HEX, SOLANA_MESSAGE } from "./requests";
+import {
+  connectStandard,
+  findStandardWallet,
+  signSolanaMessage,
+  signSuiMessage,
+  toHex,
+} from "./wallet-standard";
 import type { StandardAccount, StandardWallet } from "./wallet-standard";
 
 const jsonSchema = z.json();
 const stringSchema = z.string();
 const stringArraySchema = z.array(stringSchema);
+
+/**
+ * Wallets reject with an EIP-1193 error object (`{ code: 4001, message }`), not an `Error`, so
+ * `String(error)` renders "[object Object]" for the commonest failure a dapp shows. An `Error` has
+ * `.message` too, so reading it first needs no `instanceof` branch.
+ */
+const errorTextSchema = z
+  .object({ message: z.string() })
+  .transform(({ message }) => message)
+  .or(z.unknown().transform(String));
 
 type JsonValue = z.infer<typeof jsonSchema>;
 
@@ -19,413 +35,250 @@ type SolanaProvider = {
   signMessage: (message: Uint8Array, encoding?: string) => Promise<{ signature: Uint8Array }>;
 };
 
-type PhantomWindow = {
-  ethereum?: Eip1193Provider;
-  solana?: SolanaProvider;
-};
-
 type WalletBrowserWindow = Window & {
   ethereum?: Eip1193Provider;
-  phantom?: PhantomWindow;
+  phantom?: { ethereum?: Eip1193Provider; solana?: SolanaProvider };
 };
 
-const getElement = (selector: string): HTMLElement => {
-  const element = document.querySelector(selector);
+/** A connected section: the account it shows, and how it signs as that account. */
+type Connection = { address: string; sign: () => Promise<string> };
 
-  if (!(element instanceof HTMLElement)) {
+type SectionIds = {
+  account: string;
+  connect: string;
+  error: string;
+  sign: string;
+  signature: string;
+};
+
+const walletWindow = (): WalletBrowserWindow => window;
+
+const element = <T extends HTMLElement>(selector: string, type: new () => T): T => {
+  const found = document.querySelector(selector);
+
+  if (!(found instanceof type)) {
     throw new Error(`Missing element: ${selector}`);
   }
 
-  return element;
+  return found;
 };
 
-const getButton = (selector: string): HTMLButtonElement => {
-  const element = document.querySelector(selector);
-
-  if (!(element instanceof HTMLButtonElement)) {
-    throw new Error(`Missing button: ${selector}`);
-  }
-
-  return element;
+const show = (selector: string, text: string) => {
+  element(selector, HTMLElement).textContent = text;
 };
 
-const getInput = (selector: string): HTMLInputElement => {
-  const element = document.querySelector(selector);
-
-  if (!(element instanceof HTMLInputElement)) {
-    throw new Error(`Missing input: ${selector}`);
-  }
-
-  return element;
-};
-
+/** Providers inject a moment after the page loads, so a click waits for them briefly. */
 const waitFor = async <T>(get: () => T | undefined): Promise<T> => {
   for (let i = 0; i < 50; i++) {
     const value = get();
 
-    if (value) {
+    if (value !== undefined) {
       return value;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
   }
 
   throw new Error("Provider not found");
 };
 
-const toHex = (bytes: Uint8Array): string =>
-  `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
-
-const getWalletWindow = (): WalletBrowserWindow => {
-  return window;
+const onClick = (selector: string, handler: () => Promise<void>) => {
+  element(selector, HTMLButtonElement).addEventListener("click", () => {
+    void handler();
+  });
 };
 
-const getEthereum = () => waitFor(() => getWalletWindow().ethereum);
-let mmAccount = "";
+/** Wire a section's connect and sign buttons, and return its current connection. */
+const wireSection = (
+  ids: SectionIds,
+  connect: () => Promise<Connection>,
+): (() => Connection | undefined) => {
+  let connection: Connection | undefined;
 
-const showError = <Value>(error: Value, target = "#error") => {
-  getElement(target).textContent = toErrorMessage(error);
-};
-
-type SectionSlots = { account: string; sign: string; signature: string };
-
-const renderAccount = (slots: SectionSlots, account: string) => {
-  getElement(slots.account).textContent = account;
-  getElement(slots.signature).textContent = "";
-  getButton(slots.sign).disabled = account === "";
-};
-
-const MM_SLOTS: SectionSlots = {
-  account: "#accounts",
-  sign: "#signButton",
-  signature: "#signature",
-};
-
-const handleConnect = async () => {
-  getElement("#error").textContent = "";
-
-  try {
-    const accounts = stringArraySchema.parse(
-      await (await getEthereum()).request({ method: "eth_requestAccounts" }),
-    );
-
-    mmAccount = accounts[0] ?? "";
-  } catch (error) {
-    mmAccount = "";
-    showError(error);
-  }
-
-  renderAccount(MM_SLOTS, mmAccount);
-  getElement("#txHash").textContent = "";
-};
-
-const handleSign = async () => {
-  getElement("#error").textContent = "";
-  getElement("#signature").textContent = "";
-
-  try {
-    const signature = stringSchema.parse(
-      await (
-        await getEthereum()
-      ).request({
-        method: "personal_sign",
-        params: [getInput("#message").value, mmAccount],
-      }),
-    );
-
-    getElement("#signature").textContent = signature;
-  } catch (error) {
-    showError(error);
-  }
-};
-
-const LOCAL_CHAIN = {
-  chainId: "0x7a69",
-  chainName: "Walletwright Local",
-  nativeCurrency: { decimals: 18, name: "Ether", symbol: "ETH" },
-  rpcUrls: ["http://127.0.0.1:8545"],
-};
-
-const refreshChainId = async () => {
-  const chainId = stringSchema.parse(
-    await (await getEthereum()).request({ method: "eth_chainId" }),
-  );
-
-  getElement("#chainId").textContent = chainId;
-};
-
-const handleSwitchChain = async () => {
-  getElement("#error").textContent = "";
-
-  try {
-    await (
-      await getEthereum()
-    ).request({ method: "wallet_addEthereumChain", params: [LOCAL_CHAIN] });
-    await refreshChainId();
-  } catch (error) {
-    showError(error);
-  }
-};
-
-const handleSendTx = async () => {
-  getElement("#error").textContent = "";
-  getElement("#txHash").textContent = "";
-
-  try {
-    const hash = stringSchema.parse(
-      await (
-        await getEthereum()
-      ).request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: mmAccount,
-            to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-            value: "0x38d7ea4c68000",
-          },
-        ],
-      }),
-    );
-
-    getElement("#txHash").textContent = hash;
-  } catch (error) {
-    showError(error);
-  }
-};
-
-const getPhantomEvm = () => waitFor(() => getWalletWindow().phantom?.ethereum);
-let phantomEvmAccount = "";
-
-const PHANTOM_EVM_SLOTS: SectionSlots = {
-  account: "#phantomEvmAccount",
-  sign: "#phantomEvmSign",
-  signature: "#phantomEvmSignature",
-};
-
-const handlePhantomEvmConnect = async () => {
-  getElement("#phantomEvmError").textContent = "";
-
-  try {
-    const accounts = stringArraySchema.parse(
-      await (await getPhantomEvm()).request({ method: "eth_requestAccounts" }),
-    );
-
-    phantomEvmAccount = accounts[0] ?? "";
-  } catch (error) {
-    phantomEvmAccount = "";
-    showError(error, "#phantomEvmError");
-  }
-
-  renderAccount(PHANTOM_EVM_SLOTS, phantomEvmAccount);
-};
-
-const handlePhantomEvmSign = async () => {
-  getElement("#phantomEvmError").textContent = "";
-  getElement("#phantomEvmSignature").textContent = "";
-
-  try {
-    const signature = stringSchema.parse(
-      await (
-        await getPhantomEvm()
-      ).request({
-        method: "personal_sign",
-        params: ["Hello Phantom EVM", phantomEvmAccount],
-      }),
-    );
-
-    getElement("#phantomEvmSignature").textContent = signature;
-  } catch (error) {
-    showError(error, "#phantomEvmError");
-  }
-};
-
-const getPhantomSolana = () => waitFor(() => getWalletWindow().phantom?.solana);
-
-const PHANTOM_SVM_SLOTS: SectionSlots = {
-  account: "#phantomSvmAccount",
-  sign: "#phantomSvmSign",
-  signature: "#phantomSvmSignature",
-};
-
-let phantomSvmAccount = "";
-
-const handlePhantomSvmConnect = async () => {
-  getElement("#phantomSvmError").textContent = "";
-
-  try {
-    const { publicKey } = await (await getPhantomSolana()).connect();
-    phantomSvmAccount = publicKey.toString();
-  } catch (error) {
-    phantomSvmAccount = "";
-    showError(error, "#phantomSvmError");
-  }
-
-  renderAccount(PHANTOM_SVM_SLOTS, phantomSvmAccount);
-};
-
-const handlePhantomSvmSign = async () => {
-  getElement("#phantomSvmError").textContent = "";
-  getElement("#phantomSvmSignature").textContent = "";
-
-  try {
-    const message = new TextEncoder().encode("Hello Phantom Solana");
-    const { signature } = await (await getPhantomSolana()).signMessage(message, "utf8");
-    getElement("#phantomSvmSignature").textContent = toHex(signature);
-  } catch (error) {
-    showError(error, "#phantomSvmError");
-  }
-};
-
-type StandardSection = {
-  ids: { account: string; connect: string; error: string; sign: string; signature: string };
-  label: string;
-  match: (wallet: StandardWallet) => boolean;
-  sign: (wallet: StandardWallet, account: StandardAccount) => Promise<string>;
-};
-
-const signSolanaMessage = async (
-  wallet: StandardWallet,
-  account: StandardAccount,
-  message: string,
-): Promise<string> => {
-  // SAFETY: Solana Wallet Standard identifies this feature by name and fixes its method contract.
-  const feature = wallet.features["solana:signMessage"] as {
-    signMessage: (input: {
-      account: StandardAccount;
-      message: Uint8Array;
-    }) => Promise<ReadonlyArray<{ signature: Uint8Array }>>;
+  const showAccount = (address: string) => {
+    show(ids.account, address);
+    show(ids.signature, "");
+    element(ids.sign, HTMLButtonElement).disabled = address === "";
   };
 
-  const outputs = await feature.signMessage({
-    account,
-    message: new TextEncoder().encode(message),
-  });
-
-  const output = outputs.at(0);
-
-  if (!output?.signature) {
-    throw new Error("solana:signMessage returned no signature");
-  }
-
-  return toHex(output.signature);
-};
-
-const signSuiMessage = async (
-  wallet: StandardWallet,
-  account: StandardAccount,
-  message: string,
-): Promise<string> => {
-  // SAFETY: Sui Wallet Standard identifies this feature by name and fixes its method contract.
-  const feature = wallet.features["sui:signPersonalMessage"] as {
-    signPersonalMessage: (input: {
-      account: StandardAccount;
-      message: Uint8Array;
-    }) => Promise<{ signature: string }>;
-  };
-
-  const { signature } = await feature.signPersonalMessage({
-    account,
-    message: new TextEncoder().encode(message),
-  });
-
-  if (typeof signature !== "string" || !signature) {
-    throw new Error("sui:signPersonalMessage returned no signature");
-  }
-
-  return signature;
-};
-
-const wireStandardSection = ({ ids, label, match, sign }: StandardSection): void => {
-  const getWallet = () => waitFor(() => findStandardWallet(match));
-  let connected: StandardAccount | undefined;
-
-  const handleSectionConnect = async () => {
-    getElement(ids.error).textContent = "";
+  onClick(ids.connect, async () => {
+    show(ids.error, "");
 
     try {
-      connected = await connectStandard(await getWallet());
+      connection = await connect();
     } catch (error) {
-      connected = undefined;
-      showError(error, ids.error);
+      connection = undefined;
+      show(ids.error, errorTextSchema.parse(error));
     }
 
-    renderAccount(ids, connected?.address ?? "");
-  };
+    showAccount(connection?.address ?? "");
+  });
 
-  const handleSectionSign = async () => {
-    getElement(ids.error).textContent = "";
-    getElement(ids.signature).textContent = "";
+  onClick(ids.sign, async () => {
+    show(ids.error, "");
+    show(ids.signature, "");
 
     try {
-      const account = connected;
-
-      if (!account) {
-        throw new Error(`connect ${label} before signing`);
+      if (!connection) {
+        throw new Error("connect a wallet before signing");
       }
 
-      getElement(ids.signature).textContent = await sign(await getWallet(), account);
+      show(ids.signature, await connection.sign());
     } catch (error) {
-      showError(error, ids.error);
+      show(ids.error, errorTextSchema.parse(error));
     }
-  };
+  });
 
-  getElement(ids.connect).addEventListener("click", handleSectionConnect);
-  getElement(ids.sign).addEventListener("click", handleSectionSign);
+  return () => connection;
 };
 
-getElement("#connectButton").addEventListener("click", handleConnect);
+const eip1193 =
+  (provider: () => Eip1193Provider | undefined, message: () => string) =>
+  async (): Promise<Connection> => {
+    const ethereum = await waitFor(provider);
 
-getElement("#signButton").addEventListener("click", handleSign);
+    const [address = ""] = stringArraySchema.parse(
+      await ethereum.request({ method: "eth_requestAccounts" }),
+    );
 
-getElement("#switchChainButton").addEventListener("click", handleSwitchChain);
+    return {
+      address,
+      sign: async () =>
+        stringSchema.parse(
+          await ethereum.request({ method: "personal_sign", params: [message(), address] }),
+        ),
+    };
+  };
 
-getElement("#sendTxButton").addEventListener("click", handleSendTx);
+const standard =
+  (
+    chainPrefix: string,
+    sign: (wallet: StandardWallet, account: StandardAccount) => Promise<string>,
+  ) =>
+  async (): Promise<Connection> => {
+    const wallet = await waitFor(() => findStandardWallet(chainPrefix));
+    const account = await connectStandard(wallet);
 
-getElement("#phantomEvmConnect").addEventListener("click", handlePhantomEvmConnect);
+    return { address: account.address, sign: () => sign(wallet, account) };
+  };
 
-getElement("#phantomEvmSign").addEventListener("click", handlePhantomEvmSign);
-
-getElement("#phantomSvmConnect").addEventListener("click", handlePhantomSvmConnect);
-
-getElement("#phantomSvmSign").addEventListener("click", handlePhantomSvmSign);
-
-wireStandardSection({
-  ids: {
-    account: "#mmSvmAccount",
-    connect: "#mmSvmConnect",
-    error: "#mmSvmError",
-    sign: "#mmSvmSign",
-    signature: "#mmSvmSignature",
+const evm = wireSection(
+  {
+    account: "#accounts",
+    connect: "#connectButton",
+    error: "#error",
+    sign: "#signButton",
+    signature: "#signature",
   },
-  label: "MetaMask (Solana)",
-  match: (wallet) =>
-    wallet.name === "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
-  sign: (wallet, account) => signSolanaMessage(wallet, account, "Hello walletwright Solana"),
+  eip1193(
+    () => walletWindow().ethereum,
+    () => element("#message", HTMLInputElement).value,
+  ),
+);
+
+/** A request on the `window.ethereum` section's provider, reported in its error slot. */
+const onEvmRequest = (selector: string, run: (ethereum: Eip1193Provider) => Promise<void>) => {
+  onClick(selector, async () => {
+    show("#error", "");
+
+    try {
+      await run(await waitFor(() => walletWindow().ethereum));
+    } catch (error) {
+      show("#error", errorTextSchema.parse(error));
+    }
+  });
+};
+
+onEvmRequest("#switchChainButton", async (ethereum) => {
+  await ethereum.request({
+    method: "wallet_addEthereumChain",
+    params: [
+      {
+        chainId: LOCAL_CHAIN_HEX,
+        chainName: LOCAL_CHAIN.name,
+        nativeCurrency: { decimals: 18, name: "Ether", symbol: LOCAL_CHAIN.symbol },
+        rpcUrls: [LOCAL_CHAIN.rpcUrl],
+      },
+    ],
+  });
+  show("#chainId", stringSchema.parse(await ethereum.request({ method: "eth_chainId" })));
 });
 
-wireStandardSection({
-  ids: {
-    account: "#mockSvmAccount",
-    connect: "#mockSvmConnect",
-    error: "#mockSvmError",
-    sign: "#mockSvmSign",
-    signature: "#mockSvmSignature",
-  },
-  label: "Mock (Solana)",
-  match: (wallet) =>
-    wallet.name !== "MetaMask" && wallet.chains.some((chain) => chain.startsWith("solana:")),
-  sign: (wallet, account) => signSolanaMessage(wallet, account, "Hello walletwright Mock Solana"),
+onEvmRequest("#sendTxButton", async (ethereum) => {
+  show("#txHash", "");
+
+  const hash = await ethereum.request({
+    method: "eth_sendTransaction",
+    params: [
+      {
+        from: evm()?.address ?? "",
+        to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        value: "0x38d7ea4c68000",
+      },
+    ],
+  });
+
+  show("#txHash", stringSchema.parse(hash));
 });
 
-wireStandardSection({
-  ids: {
+wireSection(
+  {
+    account: "#phantomEvmAccount",
+    connect: "#phantomEvmConnect",
+    error: "#phantomEvmError",
+    sign: "#phantomEvmSign",
+    signature: "#phantomEvmSignature",
+  },
+  eip1193(
+    () => walletWindow().phantom?.ethereum,
+    () => "Hello Phantom EVM",
+  ),
+);
+
+wireSection(
+  {
+    account: "#phantomSvmAccount",
+    connect: "#phantomSvmConnect",
+    error: "#phantomSvmError",
+    sign: "#phantomSvmSign",
+    signature: "#phantomSvmSignature",
+  },
+  async () => {
+    const solana = await waitFor(() => walletWindow().phantom?.solana);
+    const { publicKey } = await solana.connect();
+
+    return {
+      address: publicKey.toString(),
+      sign: async () => {
+        const message = new TextEncoder().encode("Hello Phantom Solana");
+        const { signature } = await solana.signMessage(message, "utf8");
+
+        return toHex(signature);
+      },
+    };
+  },
+);
+
+wireSection(
+  {
+    account: "#svmAccount",
+    connect: "#svmConnect",
+    error: "#svmError",
+    sign: "#svmSign",
+    signature: "#svmSignature",
+  },
+  standard("solana:", (wallet, account) => signSolanaMessage(wallet, account, SOLANA_MESSAGE)),
+);
+
+wireSection(
+  {
     account: "#suiAccount",
     connect: "#suiConnect",
     error: "#suiError",
     sign: "#suiSign",
     signature: "#suiSignature",
   },
-  label: "Slush (Sui)",
-  match: (wallet) => wallet.chains.some((chain) => chain.startsWith("sui:")),
-  sign: (wallet, account) => signSuiMessage(wallet, account, "Hello walletwright Sui"),
-});
+  standard("sui:", (wallet, account) => signSuiMessage(wallet, account, "Hello walletwright Sui")),
+);

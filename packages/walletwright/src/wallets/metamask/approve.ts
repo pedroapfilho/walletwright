@@ -1,10 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { clicksFor } from "../../internal/click";
+import { isEnabled, isShowing } from "../../internal/click";
 import { waitUntil } from "../../internal/wait";
 import type { ApprovalScreen, ApprovalWindow } from "../../types";
 
-const { click } = clicksFor("MetaMask");
+import { click } from "./clicks";
 
 const NOTICE = ".snap-install-warning";
 
@@ -22,28 +22,15 @@ const thirdPartyNotice: ApprovalScreen = {
       .catch(() => {});
     await click(notice.getByRole("button", { name: "Accept" }));
   },
-  shows: async (popup) => {
-    try {
-      return await popup.locator(NOTICE).first().isVisible();
-    } catch {
-      return false;
-    }
-  },
+  shows: (popup) => isShowing(popup.locator(NOTICE)),
 };
 
 /** How long a connect page may keep Connect disabled before it counts as rendered too early. */
 const STALE_CONNECT_MS = 3000;
-const READ_TIMEOUT_MS = 500;
 
 const connectButton = (popup: Page): Locator => popup.getByTestId("confirm-btn");
 
-const connectEnabled = async (popup: Page): Promise<boolean> => {
-  try {
-    return await connectButton(popup).isEnabled({ timeout: READ_TIMEOUT_MS });
-  } catch {
-    return false;
-  }
-};
+const connectEnabled = (popup: Page): Promise<boolean> => isEnabled(connectButton(popup));
 
 /**
  * MetaMask can render a connect page before enabling the requested network (seen with Solana): no
@@ -60,9 +47,7 @@ export const staleConnectPage: ApprovalScreen = {
   },
   shows: async (popup) =>
     popup.url().includes("#/connect/") &&
-    (await connectButton(popup)
-      .isVisible()
-      .catch(() => false)) &&
+    (await isShowing(connectButton(popup))) &&
     !(await connectEnabled(popup)),
 };
 
@@ -78,8 +63,7 @@ export const approval: ApprovalWindow = {
       .or(popup.locator('[data-testid="page-container-footer-cancel"]'))
       .or(popup.locator('[data-testid$="-cancel-snap-footer-button"]')),
   confirm: (popup) =>
-    popup
-      .getByTestId("confirm-btn")
+    connectButton(popup)
       .or(popup.getByTestId("confirm-footer-button"))
       .or(popup.locator('[data-testid="page-container-footer-next"]'))
       .or(popup.locator('[data-testid$="-confirm-snap-footer-button"]')),

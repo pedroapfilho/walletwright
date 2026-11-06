@@ -9,17 +9,16 @@
   <body>
     <!--
     Every element id, control type, disabled default, and the #message value
-    is a Playwright selector contract with tests/ (see AGENTS.md).
+    is a Playwright selector contract with tests/.
     -->
     <header class="masthead">
       <h1>walletwright Test Dapp</h1>
     </header>
 
     <main class="floor">
-      <section aria-labelledby="station-mm-evm" class="station">
+      <section aria-labelledby="station-evm" class="station">
         <header class="station-head">
-          <h2 id="station-mm-evm">MetaMask <span class="chain">EVM</span></h2>
-          <p class="spec-ref">tests/metamask*.spec.ts · tests/fixtures.ts</p>
+          <h2 id="station-evm">window.ethereum <span class="chain">EVM</span></h2>
         </header>
 
         <div class="controls">
@@ -59,7 +58,7 @@
           </p>
         </div>
 
-        <p class="row row-error" aria-live="polite">
+        <p class="row" aria-live="polite">
           <span class="row-label">Error</span>
           <span class="value error" id="error"></span>
         </p>
@@ -68,7 +67,6 @@
       <section aria-labelledby="station-phantom-evm" class="station">
         <header class="station-head">
           <h2 id="station-phantom-evm">Phantom <span class="chain">EVM</span></h2>
-          <p class="spec-ref">tests/phantom.spec.ts</p>
         </header>
         <div class="controls">
           <button id="phantomEvmConnect">Connect Phantom (EVM)</button>
@@ -82,7 +80,7 @@
           <span class="row-label">Signature</span>
           <span class="value" id="phantomEvmSignature"></span>
         </p>
-        <p class="row row-error" aria-live="polite">
+        <p class="row" aria-live="polite">
           <span class="row-label">Error</span>
           <span class="value error" id="phantomEvmError"></span>
         </p>
@@ -91,7 +89,6 @@
       <section aria-labelledby="station-phantom-svm" class="station">
         <header class="station-head">
           <h2 id="station-phantom-svm">Phantom <span class="chain">Solana</span></h2>
-          <p class="spec-ref">tests/phantom.spec.ts</p>
         </header>
         <div class="controls">
           <button id="phantomSvmConnect">Connect Phantom (Solana)</button>
@@ -105,66 +102,41 @@
           <span class="row-label">Signature</span>
           <span class="value" id="phantomSvmSignature"></span>
         </p>
-        <p class="row row-error" aria-live="polite">
+        <p class="row" aria-live="polite">
           <span class="row-label">Error</span>
           <span class="value error" id="phantomSvmError"></span>
-        </p>
-      </section>
-
-      <section aria-labelledby="station-mm-svm" class="station">
-        <header class="station-head">
-          <h2 id="station-mm-svm">MetaMask <span class="chain">Solana</span></h2>
-          <p class="spec-ref">tests/metamask-solana.spec.ts</p>
-        </header>
-        <div class="controls">
-          <button id="mmSvmConnect">Connect MetaMask (Solana)</button>
-          <button id="mmSvmSign" disabled>Sign Message</button>
-        </div>
-        <p class="row" aria-live="polite">
-          <span class="row-label">Account</span>
-          <span class="value" id="mmSvmAccount"></span>
-        </p>
-        <p class="row" aria-live="polite">
-          <span class="row-label">Signature</span>
-          <span class="value" id="mmSvmSignature"></span>
-        </p>
-        <p class="row row-error" aria-live="polite">
-          <span class="row-label">Error</span>
-          <span class="value error" id="mmSvmError"></span>
         </p>
       </section>
 
       <section aria-labelledby="station-standard-svm" class="station">
         <header class="station-head">
           <h2 id="station-standard-svm">Wallet Standard <span class="chain">Solana</span></h2>
-          <p class="spec-ref">tests/solflare.spec.ts · tests/mock-standard.spec.ts</p>
         </header>
         <p class="aside">
-          Connects the first non-MetaMask Solana wallet: Solflare in the headed spec, the ed25519
-          mock in CI.
+          Connects the first Solana wallet the page sees: MetaMask or Solflare in the headed specs,
+          the ed25519 mock in CI.
         </p>
         <div class="controls">
-          <button id="mockSvmConnect">Connect Mock (Solana)</button>
-          <button id="mockSvmSign" disabled>Sign Message</button>
+          <button id="svmConnect">Connect (Solana)</button>
+          <button id="svmSign" disabled>Sign Message</button>
         </div>
         <p class="row" aria-live="polite">
           <span class="row-label">Account</span>
-          <span class="value" id="mockSvmAccount"></span>
+          <span class="value" id="svmAccount"></span>
         </p>
         <p class="row" aria-live="polite">
           <span class="row-label">Signature</span>
-          <span class="value" id="mockSvmSignature"></span>
+          <span class="value" id="svmSignature"></span>
         </p>
-        <p class="row row-error" aria-live="polite">
+        <p class="row" aria-live="polite">
           <span class="row-label">Error</span>
-          <span class="value error" id="mockSvmError"></span>
+          <span class="value error" id="svmError"></span>
         </p>
       </section>
 
       <section aria-labelledby="station-sui" class="station">
         <header class="station-head">
           <h2 id="station-sui">Slush <span class="chain">Sui</span></h2>
-          <p class="spec-ref">tests/slush.spec.ts</p>
         </header>
         <div class="controls">
           <button id="suiConnect">Connect Slush (Sui)</button>
@@ -178,7 +150,7 @@
           <span class="row-label">Signature</span>
           <span class="value" id="suiSignature"></span>
         </p>
-        <p class="row row-error" aria-live="polite">
+        <p class="row" aria-live="polite">
           <span class="row-label">Error</span>
           <span class="value error" id="suiError"></span>
         </p>

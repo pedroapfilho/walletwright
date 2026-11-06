@@ -123,13 +123,9 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/demo/**/*.ts", "apps/demo/**/*.tsx"],
+      files: ["apps/demo/**/*.ts"],
       rules: {
-        "no-misused-promises": "off",
-        "no-unnecessary-type-parameters": "off",
         "no-unsafe-type-assertion": "off",
-        "strict-boolean-expressions": "off",
-        "strict-void-return": "off",
       },
     },
   ],

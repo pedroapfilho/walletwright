@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { cn } from "@/lib/cn";
-
 type CopyButtonProps = {
-  className?: string;
   label: string;
   value: string;
 };
@@ -24,7 +21,7 @@ const ICON_PROPS = {
   xmlns: "http://www.w3.org/2000/svg",
 } as const;
 
-const CopyButton = ({ className, label, value }: CopyButtonProps) => {
+const CopyButton = ({ label, value }: CopyButtonProps) => {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -52,10 +49,7 @@ const CopyButton = ({ className, label, value }: CopyButtonProps) => {
     <>
       <button
         aria-label={label}
-        className={cn(
-          "focus-visible:outline-ring relative inline-flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
-          className,
-        )}
+        className="focus-visible:outline-ring relative inline-flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
         onClick={() => {
           void handleCopy();
         }}

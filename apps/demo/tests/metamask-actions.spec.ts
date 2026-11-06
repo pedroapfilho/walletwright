@@ -1,9 +1,7 @@
-import { connectMetamask, metamaskTest } from "./fixtures";
+import { connectEvm, metamaskTest } from "./fixtures";
 
 const test = metamaskTest;
 const { expect } = test;
-
-const ACCOUNT = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
 
 test("MetaMask: reject a connection request", async ({ page, wallet }) => {
   await page.goto("/");
@@ -16,8 +14,7 @@ test("MetaMask: reject a connection request", async ({ page, wallet }) => {
 });
 
 test("MetaMask: reject a signature request", async ({ page, wallet }) => {
-  await connectMetamask(page, wallet);
-  await expect(page.locator("#accounts")).toHaveText(ACCOUNT);
+  await connectEvm(page, wallet);
 
   await page.locator("#signButton").click();
   await wallet.rejectSignature();

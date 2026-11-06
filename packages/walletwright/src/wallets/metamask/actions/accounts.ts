@@ -1,19 +1,17 @@
 import type { Page } from "@playwright/test";
 
-import { clicksFor } from "../../../internal/click";
 import type { AccountActions, WalletActionContext } from "../../../types";
-
-const { click } = clicksFor("MetaMask");
+import { click, waitShown } from "../clicks";
 
 const openAccountMenu = async (home: Page): Promise<void> => {
   await click(home.getByTestId("account-menu-icon"));
-  await home.getByTestId("add-multichain-account-button").waitFor({ state: "visible" });
+  await waitShown(home.getByTestId("add-multichain-account-button"));
 };
 
 /** The menu is a popover with no close affordance; going home is the reliable way out. */
 const closeAccountMenu = async (home: Page): Promise<void> => {
   await home.goto(`${home.url().split("#")[0]}#/`);
-  await home.getByTestId("account-menu-icon").waitFor({ state: "visible" });
+  await waitShown(home.getByTestId("account-menu-icon"));
 };
 
 const add = async ({ home }: WalletActionContext): Promise<void> => {
@@ -21,7 +19,7 @@ const add = async ({ home }: WalletActionContext): Promise<void> => {
   const cells = home.getByTestId("account-cell-avatar");
   const before = await cells.count();
   await click(home.getByTestId("add-multichain-account-button"));
-  await cells.nth(before).waitFor({ state: "visible", timeout: 15_000 });
+  await waitShown(cells.nth(before), { timeoutMs: 15_000 });
   await closeAccountMenu(home);
 };
 
@@ -33,7 +31,7 @@ const importPrivateKey = async (
   await click(home.getByTestId("account-list-add-wallet-button"));
   await click(home.getByTestId("choose-wallet-type-import-account"));
   const confirm = home.getByTestId("import-account-confirm-button");
-  await confirm.waitFor({ state: "visible" });
+  await waitShown(confirm);
   await home.locator("input").first().fill(privateKey);
   await click(confirm);
   await confirm.waitFor({ state: "hidden", timeout: 15_000 });

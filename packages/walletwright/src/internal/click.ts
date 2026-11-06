@@ -17,6 +17,9 @@ const REQUIRED_TIMEOUT_MS = 30_000;
  */
 const OPTIONAL_TIMEOUT_MS = 10_000;
 
+/** A read of one control that may unmount under it. */
+const READ_TIMEOUT_MS = 500;
+
 type ClickOptions = {
   /** Skip Playwright's actionability checks, for controls that are not native buttons (Slush). */
   force?: boolean;
@@ -34,6 +37,43 @@ type Clicks = {
    * clicked. A control that shows and then refuses the click still throws.
    */
   clickIfShown: (control: Locator, options?: ClickOptions) => Promise<boolean>;
+  /** Wait for a control the flow needs to show, without clicking it. Throws if it never does. */
+  waitShown: (control: Locator, options?: Pick<ClickOptions, "timeoutMs">) => Promise<void>;
+};
+
+/**
+ * Whether any match shows right now, for a poll that must not wait: a union's first match in DOM
+ * order can be a hidden variant, and the page can go while we ask.
+ */
+const isShowing = async (control: Locator): Promise<boolean> => {
+  try {
+    return await control.filter({ visible: true }).first().isVisible();
+  } catch {
+    return false;
+  }
+};
+
+/** The control's trimmed text, for telling controls apart; a control that went has none. */
+const labelOf = async (control: Locator): Promise<string | undefined> => {
+  try {
+    const text = await control.textContent({ timeout: READ_TIMEOUT_MS });
+
+    return text?.trim();
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Whether the first showing match is enabled, read within `READ_TIMEOUT_MS`, so it reads the
+ * element `isShowing` saw; a control that went reads disabled.
+ */
+const isEnabled = async (control: Locator): Promise<boolean> => {
+  try {
+    return await control.filter({ visible: true }).first().isEnabled({ timeout: READ_TIMEOUT_MS });
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -41,7 +81,7 @@ type Clicks = {
  * late-mounting control reads absent. Only a timeout counts as absence: a strict-mode violation or
  * a closed page is a real failure and surfaces as one.
  */
-const shows = async (control: Locator, timeoutMs: number): Promise<boolean> => {
+const showsWithin = async (control: Locator, timeoutMs: number): Promise<boolean> => {
   try {
     await control.waitFor({ state: "visible", timeout: timeoutMs });
 
@@ -110,7 +150,7 @@ const clicksFor = (wallet: string): Clicks => {
     control,
     { force = false, settleMs = 0, timeoutMs = OPTIONAL_TIMEOUT_MS } = {},
   ) => {
-    if (!(await shows(control, timeoutMs))) {
+    if (!(await showsWithin(control, timeoutMs))) {
       return false;
     }
 
@@ -131,18 +171,30 @@ const clicksFor = (wallet: string): Clicks => {
     return true;
   };
 
+  const neverShowed = (control: Locator, timeoutMs: number): Error =>
+    new Error(
+      `[walletwright] ${wallet} never showed ${String(control)} (gave up after ${formatTimeout(timeoutMs)})`,
+    );
+
   const click: Clicks["click"] = async (
     control,
     { timeoutMs = REQUIRED_TIMEOUT_MS, ...options } = {},
   ) => {
     if (!(await clickIfShown(control, { ...options, timeoutMs }))) {
-      throw new Error(
-        `[walletwright] ${wallet} never showed ${String(control)} (gave up after ${formatTimeout(timeoutMs)})`,
-      );
+      throw neverShowed(control, timeoutMs);
     }
   };
 
-  return { click, clickIfShown };
+  const waitShown: Clicks["waitShown"] = async (
+    control,
+    { timeoutMs = REQUIRED_TIMEOUT_MS } = {},
+  ) => {
+    if (!(await showsWithin(control, timeoutMs))) {
+      throw neverShowed(control, timeoutMs);
+    }
+  };
+
+  return { click, clickIfShown, waitShown };
 };
 
-export { clicksFor };
+export { clicksFor, isEnabled, isShowing, labelOf, showsWithin };

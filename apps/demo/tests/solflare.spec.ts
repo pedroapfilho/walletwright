@@ -1,4 +1,4 @@
-import { solflareTest } from "./fixtures";
+import { SOLANA_ADDRESS, SOLANA_SIGNATURE, solflareTest } from "./fixtures";
 
 const test = solflareTest;
 const { expect } = test;
@@ -6,11 +6,11 @@ const { expect } = test;
 test("Solflare: connect + sign on Solana", async ({ page, wallet }) => {
   await page.goto("/");
 
-  await page.locator("#mockSvmConnect").click();
+  await page.locator("#svmConnect").click();
   await wallet.connectToDapp();
-  await expect(page.locator("#mockSvmAccount")).toHaveText(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+  await expect(page.locator("#svmAccount")).toHaveText(SOLANA_ADDRESS);
 
-  await page.locator("#mockSvmSign").click();
+  await page.locator("#svmSign").click();
   await wallet.confirmSignature();
-  await expect(page.locator("#mockSvmSignature")).toHaveText(/^0x[0-9a-f]{128}$/);
+  await expect(page.locator("#svmSignature")).toHaveText(SOLANA_SIGNATURE);
 });

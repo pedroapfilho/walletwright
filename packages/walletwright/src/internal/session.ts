@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { type BrowserContext, chromium } from "@playwright/test";
 
-import type { ExtensionArchive, WalletDefinition } from "../types";
+import type { WalletDefinition } from "../types";
 
-import { downloadAndExtractExtension } from "./download";
+import { downloadAndExtractExtension, type ExtensionDownload } from "./download";
 import { extensionIdFromPath } from "./extension";
-import { copyProfile } from "./profile";
+import { copyProfile, type ProfilePlacement } from "./profile";
 
 /** Chromium running the wallet's extension on a throwaway profile directory. */
 export type WalletSession = {
@@ -22,11 +22,10 @@ export type WalletSession = {
 };
 
 type SessionOptions = {
-  definition: WalletDefinition;
-  extension: ExtensionArchive & { cacheDir: string };
+  definition: Pick<WalletDefinition, "prepareContext">;
+  extension: ExtensionDownload;
   headless: boolean;
-  /** Where the throwaway directory is created, and the profile it starts as a copy of, if any. */
-  profile: { copyOf?: string; parent: string; prefix: string };
+  profile: ProfilePlacement;
 };
 
 const removeDir = (dir: string): Promise<void> => rm(dir, { force: true, recursive: true });

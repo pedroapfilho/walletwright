@@ -18,10 +18,11 @@ const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
  */
 const STAGING_PREFIX = ".staging-";
 
+/** An extension archive, and the cache directory it unpacks into. */
+export type ExtensionDownload = ExtensionArchive & { cacheDir: string };
+
 /** Download and validate an extension archive, then publish its extraction atomically from staging. */
-export const downloadAndExtractExtension = async (
-  options: ExtensionArchive & { cacheDir: string },
-): Promise<string> => {
+export const downloadAndExtractExtension = async (options: ExtensionDownload): Promise<string> => {
   const { cacheDir, format, name, sha256, url } = options;
   const cacheRoot = path.resolve(cacheDir);
   const outDir = path.resolve(cacheDir, name);
@@ -101,7 +102,3 @@ export const downloadAndExtractExtension = async (
     await rm(staging, { force: true, recursive: true }).catch(() => {});
   }
 };
-
-/** Build the Chrome Web Store CRX download URL for an extension id. */
-export const chromeWebStoreCrxUrl = (extensionId: string): string =>
-  `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${extensionId}%26uc`;

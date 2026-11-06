@@ -1,7 +1,7 @@
 import { build } from "./internal/cache";
 import { runDirectly } from "./internal/controller";
-import { type LaunchedWallet, launch } from "./internal/launch";
-import type { WalletSetup } from "./types";
+import { launch } from "./internal/launch";
+import type { LaunchedWallet, WalletSetup } from "./types";
 import { wallets } from "./wallets/index";
 
 /** Onboard the setup's wallet once and cache the profile, returning its directory. */

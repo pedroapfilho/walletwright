@@ -247,24 +247,8 @@ test("log in with Privy via MetaMask", async ({ page, wallet }) => {
 
 You need a Privy **app id** (the public client-side identifier from
 [dashboard.privy.io](https://dashboard.privy.io), no app secret) with wallet login enabled and your
-dapp's origin allowed. The demo page falls back to Privy's shared public test app id, which is fine
-for clicking the flow by hand but too rate-limited to drive a reliable automated run, so the spec
-runs only when you provide your own id, either as an env var or in a local gitignored
-`apps/demo/.env` (see `.env.example`; the Playwright config loads it):
-
-```bash
-pnpm test:cache
-VITE_PRIVY_APP_ID=your-app-id pnpm test:e2e tests/privy.spec.ts
-```
-
-<Callout type="info">
-  Because Privy's connect and SIWE popups can arrive with variable delay, the demo spec drives
-  whatever approval popup is pending until the account appears, rather than assuming a fixed
-  connect-then-sign order. See `apps/demo/tests/privy.spec.ts`.
-</Callout>
-
-The demo app has a runnable version of this recipe (`apps/demo/privy.html` and
-`tests/privy.spec.ts`).
+dapp's origin allowed. Privy's shared public test app id is too rate-limited to drive a reliable
+automated run.
 
 ## Rejecting a request
 
@@ -307,7 +291,7 @@ test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
 <Callout type="info">
   Capabilities are per-wallet. A wallet declares an action only once it has been driven against the
   real extension, so calling one it hasn't declared throws (`[walletwright] Slush does not support
-  settings.lock()`) instead of quietly doing nothing. Every wallet declares `reject`; `settings`,
+  settings.lock()`) instead of quietly doing nothing. Reject works on every wallet; `settings`,
   `network.add`, and `accounts` are MetaMask-only today.
 </Callout>
 
