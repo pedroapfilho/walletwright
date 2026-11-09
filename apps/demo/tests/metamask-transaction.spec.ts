@@ -1,12 +1,12 @@
-import { connectMetamask, metamaskTest } from "./fixtures";
+import { LOCAL_CHAIN, LOCAL_CHAIN_HEX } from "../src/requests";
+
+import { connectEvm, metamaskTest } from "./fixtures";
 
 const test = metamaskTest;
 const { expect } = test;
 
-const RPC_URL = "http://127.0.0.1:8545";
-
 const receiptStatus = async (hash: string): Promise<string | undefined> => {
-  const response = await fetch(RPC_URL, {
+  const response = await fetch(LOCAL_CHAIN.rpcUrl, {
     body: JSON.stringify({
       id: 1,
       jsonrpc: "2.0",
@@ -23,10 +23,10 @@ const receiptStatus = async (hash: string): Promise<string | undefined> => {
 };
 
 test.beforeEach(async ({ page, wallet }) => {
-  await connectMetamask(page, wallet);
+  await connectEvm(page, wallet);
   await page.locator("#switchChainButton").click();
   await wallet.approve();
-  await expect(page.locator("#chainId")).toHaveText("0x7a69");
+  await expect(page.locator("#chainId")).toHaveText(LOCAL_CHAIN_HEX);
 });
 
 test("confirm a transaction and see it mined", async ({ page, wallet }) => {

@@ -34,7 +34,6 @@ const makeWallet = (
     definition: makeDefinition(actions),
     extensionId: "fake-extension-id",
     home,
-    password: "pw",
     step,
     unlock: stubUnlock,
   });
@@ -94,16 +93,7 @@ describe("createWallet", () => {
     await wallet.network.add(config);
 
     expect(networkAdd).toHaveBeenCalledOnce();
-    expect(networkAdd).toHaveBeenCalledWith(
-      {
-        context: stubContext,
-        extensionId: "fake-extension-id",
-        home: stubHome,
-        password: "pw",
-        unlock: stubUnlock,
-      },
-      config,
-    );
+    expect(networkAdd).toHaveBeenCalledWith({ home: stubHome, unlock: stubUnlock }, config);
   });
 
   it("dispatches each capability method to the definition function at the same path", async () => {

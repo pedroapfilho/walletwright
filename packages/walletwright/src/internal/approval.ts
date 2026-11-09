@@ -1,8 +1,8 @@
 import type { BrowserContext, Locator, Page } from "@playwright/test";
 
-import type { ApprovalScreen, WalletDefinition } from "../types";
+import type { ApprovalOptions, ApprovalScreen, WalletDefinition } from "../types";
 
-import { clicksFor } from "./click";
+import { clicksFor, isEnabled, isShowing, labelOf } from "./click";
 import { asksForPassword } from "./unlock-screen";
 import { formatTimeout, sleep, waitUntil } from "./wait";
 
@@ -19,8 +19,6 @@ const BUDGETS = {
   answer: 60_000,
   /** One click, once its control shows enabled; a covered control is retried on the next pass. */
   click: 10_000,
-  /** A read of one control that may unmount under it. */
-  read: 500,
 } as const;
 
 const PASS_INTERVAL_MS = 250;
@@ -33,23 +31,12 @@ const APPROVAL_WINDOW = { height: 592, width: 360 };
 /** Far enough from the edge that a popup this size lands fully on any usable display. */
 const APPROVAL_WINDOW_OFFSET = 50;
 
-export type AnswerOptions = { optional?: boolean };
-
 export type Approvals = {
-  approve: (options?: AnswerOptions) => Promise<void>;
-  reject: (options?: AnswerOptions) => Promise<void>;
+  approve: (options?: ApprovalOptions) => Promise<void>;
+  reject: (options?: ApprovalOptions) => Promise<void>;
 };
 
 type Intent = "cancel" | "confirm";
-
-/** Whether any match shows: a union's first match in DOM order can be a hidden variant. */
-const isShowing = async (control: Locator): Promise<boolean> => {
-  try {
-    return await control.filter({ visible: true }).first().isVisible();
-  } catch {
-    return false; // the page can go while we ask
-  }
-};
 
 /** MetaMask opens requests inline while its extension page owns focus, so the dapp goes in front. */
 export const frontDapp = async (context: BrowserContext): Promise<void> => {
@@ -88,16 +75,13 @@ const nextControl = async (
   clicked: ReadonlySet<string>,
 ): Promise<{ control: Locator; label: string } | undefined> => {
   for (const control of await controls.all()) {
-    const label = await control
-      .textContent({ timeout: BUDGETS.read })
-      .then((text) => text?.trim())
-      .catch(() => undefined);
+    const label = await labelOf(control);
 
     if (label === undefined || clicked.has(label) || !(await isShowing(control))) {
       continue;
     }
 
-    if (await control.isEnabled({ timeout: BUDGETS.read }).catch(() => false)) {
+    if (await isEnabled(control)) {
       return { control, label };
     }
   }
@@ -293,7 +277,7 @@ export const createApprovals = ({
     );
   };
 
-  const answer = async (intent: Intent, { optional = false }: AnswerOptions = {}) => {
+  const answer = async (intent: Intent, { optional = false }: ApprovalOptions = {}) => {
     await frontDapp(context);
     const appear = optional ? BUDGETS.appearOptional : BUDGETS.appear;
     let popup = await acquire(appear);

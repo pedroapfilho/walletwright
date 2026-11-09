@@ -11,7 +11,7 @@ import { runDirectly } from "./controller";
 import { pathExists } from "./fs";
 import { launch } from "./launch";
 import type { EngineSetup } from "./profile";
-import { type Standin, serveStandin, userDataDirOf } from "./standin";
+import { STANDIN_CREDENTIALS, type Standin, serveStandin, userDataDirOf } from "./standin";
 
 let standin: Standin;
 let setup: EngineSetup;
@@ -20,12 +20,7 @@ let profileDir: string;
 beforeAll(async () => {
   standin = await serveStandin();
   const cacheDir = await mkdtemp(path.join(os.tmpdir(), "walletwright-launch-test-"));
-  setup = {
-    cacheDir,
-    password: "stand-in-password",
-    seedPhrase: "stand in seed",
-    wallet: "standin",
-  };
+  setup = { cacheDir, ...STANDIN_CREDENTIALS };
   profileDir = await build(standin.definition, setup, { headless: true });
 }, 60_000);
 

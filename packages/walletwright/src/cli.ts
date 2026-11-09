@@ -8,7 +8,11 @@ import { z } from "zod";
 
 import { buildCache } from "./engine";
 import type { WalletKind, WalletSetup } from "./types";
-import { isWalletKind, walletKinds } from "./wallets/index";
+import { isWalletKind, walletKinds, wallets } from "./wallets/index";
+
+const PINNABLE = walletKinds
+  .flatMap((kind) => (wallets[kind].source.kind === "release" ? [wallets[kind].extensionName] : []))
+  .join(", ");
 
 const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
 
@@ -21,7 +25,7 @@ Options:
   --wallet <kind>    ${walletKinds.join(" | ")}; with --setup, builds only that wallet's setups
   --seed <phrase>    seed phrase to import
   --password <pw>    wallet password
-  --version <v>      pin an extension version (MetaMask)
+  --version <v>      pin an extension version (${PINNABLE})
   --cache-dir <dir>  cache directory (default: .walletwright)
   --headless         build the cache headless
   -h, --help         show this help
@@ -34,28 +38,25 @@ spelling. Setups from one file build one after another.
 test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
-/** `parseArgs` schema; strict mode rejects unknown, missing, or misplaced flag values. */
-const OPTIONS = {
-  "cache-dir": { type: "string" },
-  headless: { type: "boolean" },
-  help: { short: "h", type: "boolean" },
-  password: { type: "string" },
-  seed: { type: "string" },
-  setup: { type: "string" },
-  version: { type: "string" },
-  wallet: { type: "string" },
-} as const;
+/** Strict mode rejects unknown, missing, or misplaced flag values. */
+const parseFlags = (args: Array<string>) =>
+  parseArgs({
+    allowPositionals: true,
+    args,
+    options: {
+      "cache-dir": { type: "string" },
+      headless: { type: "boolean" },
+      help: { short: "h", type: "boolean" },
+      password: { type: "string" },
+      seed: { type: "string" },
+      setup: { type: "string" },
+      version: { type: "string" },
+      wallet: { type: "string" },
+    },
+    strict: true,
+  });
 
-type Flags = {
-  "cache-dir"?: string;
-  headless?: boolean;
-  help?: boolean;
-  password?: string;
-  seed?: string;
-  setup?: string;
-  version?: string;
-  wallet?: string;
-};
+type Flags = ReturnType<typeof parseFlags>["values"];
 
 /** The flags a `--setup` file makes redundant: accepting both silently discarded one of the two. */
 const SETUP_CONFLICTS = ["password", "seed", "version"] as const;
@@ -81,7 +82,7 @@ const walletSetupSchema = z.strictObject({
 const moduleSchema = z.record(z.string(), z.unknown());
 
 const isNonEmptyString = (value: string | undefined): value is string =>
-  value !== undefined && nonEmptyStringSchema.safeParse(value).success;
+  value !== undefined && value !== "";
 
 /** Every `WalletSetup` a module exports, named or default, once each and in export order. */
 const loadSetups = async (file: string): Promise<Array<WalletSetup>> => {
@@ -173,7 +174,7 @@ const parseArgv = async (argv: Array<string>): Promise<Command> => {
   let parsed;
 
   try {
-    parsed = parseArgs({ allowPositionals: true, args: argv, options: OPTIONS, strict: true });
+    parsed = parseFlags(argv);
   } catch (error) {
     // node's ERR_PARSE_ARGS_* messages are good; they just need the prefix everything else here has.
     throw new Error(`[walletwright] ${error instanceof Error ? error.message : String(error)}`, {

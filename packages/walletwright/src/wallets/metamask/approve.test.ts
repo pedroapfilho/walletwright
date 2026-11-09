@@ -6,11 +6,15 @@ import { staleConnectPage } from "./approve";
 const popupAt = (hash: string, enabled: boolean) => {
   const reload = vi.fn(() => Promise.resolve(null));
 
+  const connect = {
+    filter: () => connect,
+    first: () => connect,
+    isEnabled: () => Promise.resolve(enabled),
+    isVisible: () => Promise.resolve(true),
+  };
+
   const popup = {
-    getByTestId: () => ({
-      isEnabled: () => Promise.resolve(enabled),
-      isVisible: () => Promise.resolve(true),
-    }),
+    getByTestId: () => connect,
     reload,
     url: () => `chrome-extension://id/notification.html${hash}`,
   } as unknown as Page;

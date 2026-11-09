@@ -1,16 +1,16 @@
 import type { Page } from "@playwright/test";
 
-import { clicksFor } from "../../internal/click";
+import { showsWithin } from "../../internal/click";
 import { waitUntil } from "../../internal/wait";
+
+import { click, clickIfShown, METAMASK } from "./clicks";
 
 const SRP_RETYPE_TIMEOUT_MS = 40_000;
 const SRP_CONFIRM_TIMEOUT_MS = 5000;
 
-const { click, clickIfShown } = clicksFor("MetaMask");
-
 export const importWallet = async (
   page: Page,
-  seedPhrase: string,
+  seedWords: ReadonlyArray<string>,
   password: string,
 ): Promise<void> => {
   await click(page.getByTestId("onboarding-import-wallet"));
@@ -23,18 +23,17 @@ export const importWallet = async (
     async () => {
       await click(srpField);
       await srpField.fill("");
-      await srpField.pressSequentially(seedPhrase, { delay: 50 });
+      await srpField.pressSequentially(seedWords.join(" "), { delay: 50 });
 
-      return confirmEnabled
-        .waitFor({ state: "visible", timeout: SRP_CONFIRM_TIMEOUT_MS })
-        .then(() => true)
-        .catch(() => undefined);
+      return showsWithin(confirmEnabled, SRP_CONFIRM_TIMEOUT_MS);
     },
     { intervalMs: 0, timeoutMs: SRP_RETYPE_TIMEOUT_MS },
   );
 
   if (accepted === undefined) {
-    throw new Error("[walletwright] MetaMask rejected the seed phrase (confirm stayed disabled)");
+    throw new Error(
+      `[walletwright] ${METAMASK} rejected the seed phrase (confirm stayed disabled)`,
+    );
   }
 
   await click(confirmEnabled);

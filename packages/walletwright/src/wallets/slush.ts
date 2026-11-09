@@ -24,7 +24,9 @@ const WELCOME_CONTROL = { ...FORCED, settleMs: 1000 } as const;
 /** Its approval window reports controls visible about two seconds before their handlers wire up. */
 const APPROVAL_SETTLE_MS = 2000;
 
-const { click } = clicksFor("Slush");
+const SLUSH = "Slush";
+
+const { click } = clicksFor(SLUSH);
 
 const labelled = (page: Page, text: string) => page.getByText(text, { exact: true }).first();
 
@@ -105,7 +107,6 @@ const openPassphraseImport = async (page: Page): Promise<void> => {
     try {
       await click(labelled(page, "Get started"), WELCOME_CONTROL);
       await click(labelled(page, "Skip"), WELCOME_CONTROL);
-      await click(labelled(page, "Maybe later"), WELCOME_CONTROL);
       await click(labelled(page, "Passphrase"), WELCOME_CONTROL);
       // Unforced: the link reports visible while its row is still collapsed, so the click has to
       // wait for the row to open over it.
@@ -122,7 +123,7 @@ const openPassphraseImport = async (page: Page): Promise<void> => {
   }
 
   throw new Error(
-    `[walletwright] Slush never opened the passphrase import screen after ${PASSPHRASE_SCREEN_ATTEMPTS} attempts`,
+    `[walletwright] ${SLUSH} never opened the passphrase import screen after ${PASSPHRASE_SCREEN_ATTEMPTS} attempts`,
     { cause: failure },
   );
 };
@@ -138,15 +139,13 @@ export const slush: WalletDefinition = {
 
   ecosystems: ["sui"],
 
-  extensionName: "Slush",
+  extensionName: SLUSH,
 
-  importWallet: async (page, seedPhrase, password) => {
+  importWallet: async (page, seedWords, password) => {
     await openPassphraseImport(page);
 
-    const words = seedPhrase.trim().split(/\s+/v);
-
-    for (let i = 0; i < words.length; i++) {
-      await page.getByLabel(`Word ${i + 1}`, { exact: true }).fill(words[i] ?? "");
+    for (const [index, word] of seedWords.entries()) {
+      await page.getByLabel(`Word ${index + 1}`, { exact: true }).fill(word);
     }
 
     await click(page.getByRole("button", { exact: true, name: "Import" }));
@@ -158,7 +157,7 @@ export const slush: WalletDefinition = {
     await click(page.getByRole("button", { exact: true, name: "Dive into Slush" }));
     await waitUntilOrThrow(() => atHome(page), {
       intervalMs: 1000,
-      message: `Slush import never reached the wallet home (${HOME_ROUTE})`,
+      message: `${SLUSH} import never reached the wallet home (${HOME_ROUTE})`,
       timeoutMs: IMPORT_HOME_TIMEOUT_MS,
     });
   },

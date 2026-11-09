@@ -4,9 +4,9 @@ import { accounts } from "./metamask/actions/accounts";
 import { network } from "./metamask/actions/network";
 import { settings } from "./metamask/actions/settings";
 import { approval } from "./metamask/approve";
+import { METAMASK } from "./metamask/clicks";
 import { importWallet } from "./metamask/onboarding";
-import { markMetaMaskOnboarded } from "./metamask/onboarding-patch";
-import { isMetaMaskPersisted } from "./metamask/persisted";
+import { isMetaMaskPersisted, markMetaMaskOnboarded } from "./metamask/storage";
 
 /** Release hashes for the pinned default. Add an entry before changing `DEFAULT_VERSION`. */
 const RELEASE_SHA256 = {
@@ -38,7 +38,7 @@ export const metamask: WalletDefinition = {
   actions: { accounts, network, settings },
   approval,
   ecosystems: ["evm", "svm"],
-  extensionName: "MetaMask",
+  extensionName: METAMASK,
   finalizeCache: markMetaMaskOnboarded,
   importWallet,
   isPersisted: isMetaMaskPersisted,

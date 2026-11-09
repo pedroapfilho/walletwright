@@ -22,7 +22,7 @@ your test
 public API            src/index.ts, src/fixtures.ts, src/cli.ts
    │
    ▼
-engine                src/internal/{cache,launch,controller,utils,download,onboarding-patch}.ts
+engine                src/internal/{cache,launch,session,profile,approval,unlock-screen,controller}.ts
    │  drives, per wallet, via one interface
    ▼
 wallet definitions    src/wallets/{metamask,phantom,rabby,solflare,slush}.ts  (+ src/wallets/metamask/*)
@@ -30,7 +30,8 @@ wallet definitions    src/wallets/{metamask,phantom,rabby,solflare,slush}.ts  (+
    ▼
 real extension        MetaMask / Phantom / Rabby / Solflare / Slush, loaded unpacked into Chromium
 
-optional subpackages  @walletwright/core/chain (local EVM node), @walletwright/core/mock (headless provider)
+optional subpackages  @walletwright/core/chain (local EVM node), @walletwright/core/mock and
+                      @walletwright/core/mock-standard (headless providers)
 ```
 
 The engine is generic. Each wallet definition fills in the wallet-specific parts (how to import a
@@ -53,17 +54,20 @@ packages/walletwright/src/
     cache.ts          build: onboard once, persist a profile
     launch.ts         launch: unlock a copy of the profile
     session.ts        openSession(): Chromium + extension on a throwaway profile, both phases
-    profile.ts        profile keys and paths, protected copy, publish and recovery
+    profile.ts        locate(): everything a setup puts on disk; protected copy, publish, recovery
     cache-lock.ts     per-artifact ownership across processes
     extension.ts      the extension archive a setup runs, extension-id derivation
     download.ts       fetch + extract an extension archive
     unlock-screen.ts  the shared unlock flow every wallet's unlockScreen drives
     approval.ts       createApprovals(): every approval, from the window opening to it closing
+    click.ts          clicksFor(), isShowing(), isEnabled(): how wallet code clicks and reads its UI
     controller.ts     createWallet(): names each wallet call and binds actions
+    wait.ts           polling and navigation retries
     page-bridge.ts    installPageBridge(): connects a mock's Node handler to its in-page provider
+    standin.ts        the stand-in wallet the engine tests drive (test-only)
   wallets/
     index.ts          the registry + walletKindsByEcosystem()
-    metamask.ts       MetaMask definition (+ metamask/ for its flows, actions, LevelDB fix)
+    metamask.ts       MetaMask definition (+ metamask/ for its flows, actions, LevelDB state)
     phantom.ts        Phantom definition
     rabby.ts          Rabby definition
     solflare.ts       Solflare definition
@@ -77,10 +81,10 @@ Three phases, each owned by one engine module. A test touches only the first (on
 ```
 buildCache(setup)                       once, ahead of the tests (headless ok)
   wallets[setup.wallet]                 resolved once; the engine only sees the definition
-  extensionArchive                     resolve the concrete release before naming its profile
+  locate(definition, setup)             the archive, profile dir, staging and run copy, once
   openSession(staging + archive)        download/extract, Chromium, then prepareContext
   goto onboarding, retry until registered
-  importWallet(seed, password)          the wallet's own onboarding flow, up to its last screen
+  importWallet(seed words, password)    the wallet's own onboarding flow, up to its last screen
   wait until durable                    isPersisted, or storage changed then still for 2s
   close, finalizeCache, publish         e.g. MetaMask's LevelDB completedOnboarding
         │
@@ -100,8 +104,10 @@ createWallet(...)                       the Wallet you drive in the test
 ```
 
 `buildCache` explicitly rebuilds a profile in private staging, then replaces the prior cache only
-when onboarding, persistence and finalization succeed. The wallet, resolved archive name, seed and
-password determine its directory (`profileKey` in `internal/profile.ts`). A release default bump
+when onboarding, persistence and finalization succeed. The resolved archive name (which names the
+wallet and its release), seed and password determine its directory (`profileKey` in
+`internal/profile.ts`). `locate` resolves it, and both phases call it, so the build and the run
+cannot place a setup differently. A release default bump
 therefore selects a new profile and requires a cache build, just like an explicit version change.
 Web Store wallets keep using their first downloaded extraction until it is removed.
 
@@ -137,7 +143,7 @@ type WalletDefinition = {
     | { kind: "release"; defaultVersion: string; release: (version: string) => ExtensionArchive };
   onboardingPage: string; // extension-relative entry, e.g. "home.html"
   prepareContext?: (context: BrowserContext) => Promise<void>; // adjust the browser before it navigates
-  importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
+  importWallet: (page: Page, seedWords: string[], password: string) => Promise<void>; // seed split once
   isPersisted?: (onboarded: {
     extensionId: string;
     page: Page;
@@ -178,23 +184,30 @@ type WalletDefinition = {
 
 Write a definition, register it in `wallets/index.ts`, and declare the ecosystems it drives. Nothing
 in the engine changes. This is the skeleton; the selectors are discovered by driving the real
-extension, never guessed. Onboarding, unlock, and actions click through `clicksFor`
-(`internal/click.ts`): `click` waits for a control the flow needs and throws a named error if it
-never shows, and `clickIfShown` takes an interstitial that may be skipped.
+extension, never guessed. Onboarding, unlock, and actions click through `clicksFor(NAME)`
+(`internal/click.ts`), bound to the same name as `extensionName`: `click` waits for a control the
+flow needs and throws a named error if it never shows, and `clickIfShown` takes an interstitial that
+may be skipped, and `waitShown` waits for a control without clicking it, with the same named error.
+`isShowing` and `isEnabled` read a control without waiting, for checks the engine polls.
 
 ```ts
 // src/wallets/rabby.ts
-import type { WalletDefinition } from "../types.ts";
+import { clicksFor } from "../internal/click";
+import type { WalletDefinition } from "../types";
+
+const RABBY = "Rabby";
+
+const { click } = clicksFor(RABBY);
 
 export const rabby: WalletDefinition = {
   ecosystems: ["evm"],
-  extensionName: "Rabby",
+  extensionName: RABBY,
 
   source: { kind: "webStore", id: "acmacodkjbdgmoleebolmdjonilkdbch" },
 
   onboardingPage: "index.html#/new-user/guide",
 
-  importWallet: async (page, seedPhrase, password) => {
+  importWallet: async (page, seedWords, password) => {
     // drive Rabby's import-from-seed screens here
   },
 
@@ -202,18 +215,21 @@ export const rabby: WalletDefinition = {
   unlockScreen: { entry: "index.html" },
 
   // The engine finds the window, clicks each control once, and waits for the window to close.
+  // Rabby's window unmounts while Playwright waits on a click, so its clicks run in the page.
   approval: {
-    confirm: (popup) => popup.getByRole("button", { name: /^(?:Connect|Sign|Confirm)$/v }),
-    cancel: (popup) => popup.getByRole("button", { name: /^(?:Cancel|Reject)$/v }),
+    confirm: (popup) => popup.locator("button").filter({ hasText: /^(?:Connect|Sign|Confirm)$/v }),
+    cancel: (popup) => popup.locator("button").filter({ hasText: /^(?:Cancel|Reject)$/v }),
+    click: { kind: "inPage" },
+    headless: true,
   },
 };
 ```
 
 ```ts
 // src/wallets/index.ts
-import { rabby } from "./rabby.ts";
+import { rabby } from "./rabby";
 
-export const wallets = { metamask, phantom, slush, rabby };
+export const wallets = { metamask, phantom, rabby, slush, solflare };
 ```
 
 <Callout type="warn">
@@ -236,15 +252,12 @@ type WalletActions = {
 };
 ```
 
-Each action receives one context object rather than positional arguments, so adding a dependency
-later does not churn every wallet:
+Each action receives the wallet's own page and the engine's unlock flow in one context object,
+ahead of its own arguments:
 
 ```ts
 type WalletActionContext = {
-  context: BrowserContext;
-  extensionId: string;
   home: Page; // the wallet's own extension page, kept open after unlock
-  password: string;
   unlock: () => Promise<void>; // unlock `home` through the wallet's unlockScreen
 };
 ```
@@ -280,17 +293,17 @@ Implement the action against the wallet's own `home` page and attach it to the d
 
 ```ts
 // src/wallets/metamask/actions/settings.ts
-import { clicksFor } from "../../../internal/click.ts";
-import type { SettingsActions } from "../../../types.ts";
-
-const { click } = clicksFor("MetaMask");
+import { passwordField } from "../../../internal/unlock-screen";
+import type { SettingsActions } from "../../../types";
+import { click, waitShown } from "../clicks";
 
 export const settings: SettingsActions = {
   lock: async ({ home }) => {
     await click(home.getByTestId("account-options-menu-button"));
     // The menu renders the item several times (responsive variants), only one of which is visible.
     await click(home.getByTestId("global-menu-lock").filter({ visible: true }).first());
-    await home.locator('input[type="password"]').waitFor({ state: "visible", timeout: 15_000 });
+    // Locked means the same password field the unlock flow fills is back.
+    await waitShown(passwordField(home), { timeoutMs: 15_000 });
   },
 
   // The engine's own unlock flow, through the definition's `unlockScreen`.
@@ -302,7 +315,7 @@ export const settings: SettingsActions = {
 
 ```ts
 // src/wallets/metamask.ts
-import { settings } from "./metamask/actions/settings.ts";
+import { settings } from "./metamask/actions/settings";
 
 export const metamask: WalletDefinition = {
   // ...
@@ -374,10 +387,11 @@ id as a plain string, so nothing downstream depends on browser state.
 ## The cache
 
 `buildCache` writes an onboarded profile to `.walletwright/<profileKey>`, where `profileKey` is the
-first 20 hex characters of `sha256("<wallet>:<resolved-archive-name>:<seed>:<password>")`. The same
-effective release and credentials select the same directory, whether the version is explicit or
-omitted. Calling `buildCache` always onboards a replacement; `launchWallet` reuses the prepared cache.
-Profiles created before this archive-based key need to be rebuilt.
+first 20 hex characters of `sha256("<resolved-archive-name>:<seed>:<password>")`. A release archive
+is named after the wallet and version (`metamask-chrome-13.35.1`), a Web Store archive after its
+extension id (`webstore-<id>`), so the same effective release and credentials select the same
+directory, whether the version is explicit or omitted. Calling `buildCache` always onboards a
+replacement; `launchWallet` reuses the prepared cache.
 
 Recovery, replacement and profile copying share one per-artifact transaction boundary. Downloads and
 onboarding stay outside it in private staging. Extension publication rechecks for a completed winner
@@ -402,9 +416,9 @@ long enough for `finalizeCache` and the publish.
 
 ## The subpackages
 
-Two capabilities are shipped as separate entry points so the core connect/sign flow does not depend
-on them. Both declare their heavy dependency as an optional peer, so a plain
-`pnpm add -D @walletwright/core` pulls in neither.
+Three capabilities are shipped as separate entry points so the core connect/sign flow does not
+depend on them. The chain and the EVM mock declare their heavy dependency as an optional peer, so a
+plain `pnpm add -D @walletwright/core` pulls in neither.
 
 ### `@walletwright/core/chain`
 
@@ -430,6 +444,12 @@ It is a connect/sign stand-in, not an EVM: it does not execute transactions. For
 an actual extension against `@walletwright/core/chain`.
 
 Needs the `viem` package.
+
+### `@walletwright/core/mock-standard`
+
+The same idea for Solana dapps: `installMockStandardWallet(target)` registers a Wallet Standard
+wallet that connects and signs messages with Node's ed25519, through the same page bridge, and
+returns the address and public key so a test can verify signatures. It needs no extra package.
 
 ## Design principles
 

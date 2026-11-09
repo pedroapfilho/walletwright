@@ -4,16 +4,14 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { WalletSetup } from "../types";
 import { wallets } from "../wallets/index";
 
 import { extensionArchive } from "./extension";
-import { copyProfile, profileKey, publishProfile } from "./profile";
+import { copyProfile, type EngineSetup, locate, profileKey, publishProfile } from "./profile";
 
-const baseSetup: WalletSetup = {
+const baseSetup: EngineSetup = {
   password: "correct-horse-battery-staple",
   seedPhrase: "test test test test test test test test test test test junk",
-  wallet: "metamask",
 };
 
 const tempDirs: Array<string> = [];
@@ -43,9 +41,9 @@ describe("profileKey", () => {
     expect(profileKey(baseSetup, archiveName)).toBe(profileKey({ ...baseSetup }, archiveName));
   });
 
-  it("changes when the wallet changes", () => {
-    expect(profileKey({ ...baseSetup, wallet: "phantom" }, archiveName)).not.toBe(
-      profileKey(baseSetup, archiveName),
+  it("gives each wallet its own profile for the same credentials", () => {
+    expect(locate(wallets.phantom, baseSetup).profileDir).not.toBe(
+      locate(wallets.rabby, baseSetup).profileDir,
     );
   });
 
@@ -62,21 +60,21 @@ describe("profileKey", () => {
       throw new Error("expected a release source");
     }
 
-    const current = extensionArchive(definition, baseSetup);
+    const current = extensionArchive(definition, undefined);
 
     const updated = extensionArchive(
       {
         ...definition,
         source: { ...definition.source, defaultVersion: "13.36.0" },
       },
-      baseSetup,
+      undefined,
     );
 
     expect(profileKey(baseSetup, updated.name)).not.toBe(profileKey(baseSetup, current.name));
   });
 
   it("shares the profile for an explicit and default version of the same release", () => {
-    const implicit = extensionArchive(wallets.metamask, baseSetup);
+    const implicit = extensionArchive(wallets.metamask, undefined);
     const source = wallets.metamask.source;
 
     if (source.kind !== "release") {
@@ -84,7 +82,7 @@ describe("profileKey", () => {
     }
 
     const explicitSetup = { ...baseSetup, version: source.defaultVersion };
-    const explicit = extensionArchive(wallets.metamask, explicitSetup);
+    const explicit = extensionArchive(wallets.metamask, explicitSetup.version);
     expect(profileKey(explicitSetup, explicit.name)).toBe(profileKey(baseSetup, implicit.name));
   });
 

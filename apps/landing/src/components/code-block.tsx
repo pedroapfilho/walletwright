@@ -8,7 +8,6 @@ import { CopyButton } from "@/components/copy-button";
 type CodeBlockProps = {
   className?: string;
   code: string;
-  copyLabel?: string;
   filename?: string;
   label?: string;
   lang?: string;
@@ -23,7 +22,6 @@ type CodeBlockProps = {
 const CodeBlock = async ({
   className,
   code,
-  copyLabel,
   filename,
   label,
   lang = "tsx",
@@ -40,7 +38,7 @@ const CodeBlock = async ({
       {filename !== undefined && filename !== "" ? (
         <figcaption className="world-code-head">
           <span>{filename}</span>
-          <CopyButton label={copyLabel ?? `Copy ${filename}`} value={code} />
+          <CopyButton label={`Copy ${filename}`} value={code} />
         </figcaption>
       ) : null}
       <div className={wrap ? "world-code-body world-code-wrap" : "world-code-body"}>

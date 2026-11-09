@@ -14,7 +14,7 @@ export type WalletSetup = {
   /** Cache directory for downloaded extensions and onboarded profiles. Defaults to `.walletwright`. */
   cacheDir?: string;
   password: string;
-  /** 12/24-word seed phrase. Avoid the famous public test seed for Phantom, it blocks connections. */
+  /** 12/24-word seed phrase. Avoid the famous public test seed for Phantom and Slush, they block it. */
   seedPhrase: string;
   /**
    * Pin an extension version. Only wallets downloaded from versioned releases (MetaMask) accept one;
@@ -24,16 +24,10 @@ export type WalletSetup = {
   wallet: WalletKind;
 };
 
-/**
- * Everything an action needs to drive the wallet's own UI (as opposed to an approval popup). Passed
- * as one object so a new dependency doesn't churn every wallet's action signatures.
- */
+/** What an action drives: the wallet's own UI, as opposed to an approval popup. */
 export type WalletActionContext = {
-  context: BrowserContext;
-  extensionId: string;
   /** The wallet's own extension page, kept open after unlock. */
   home: Page;
-  password: string;
   /** Unlock `home` through the wallet's unlock screen, with the setup's password. */
   unlock: () => Promise<void>;
 };
@@ -184,8 +178,11 @@ export type WalletDefinition = {
    * holding the DB), e.g. forcing `completedOnboarding=true` in MetaMask's leveldb.
    */
   finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
-  /** Run the import-from-seed onboarding flow, ending once its last screen shows. */
-  importWallet: (page: Page, seedPhrase: string, password: string) => Promise<void>;
+  /**
+   * Run the import-from-seed onboarding flow, ending once its last screen shows. The engine splits
+   * the setup's seed phrase into its words once, for every wallet.
+   */
+  importWallet: (page: Page, seedWords: ReadonlyArray<string>, password: string) => Promise<void>;
   /**
    * Whether the onboarded wallet is on disk, so the build can close the browser. Polled after
    * `importWallet` until it holds. Without one, the build waits for the extension's storage to change
@@ -231,6 +228,12 @@ export type AccountsApi = {
 };
 
 /**
+ * How a call answers an approval. `optional` waits less and tolerates no window, for a request the
+ * wallet may answer by itself (a site it already trusts).
+ */
+export type ApprovalOptions = { optional?: boolean };
+
+/**
  * Drives an unlocked wallet against a dapp under test. The request-named methods
  * (`connectToDapp`, `confirmSignature`, …) are aliases of `approve`/`reject` that read well in a spec
  * and match Synpress's vocabulary; none of them checks what kind of request the popup holds.
@@ -238,7 +241,7 @@ export type AccountsApi = {
 export type Wallet = {
   accounts: AccountsApi;
   /** Approve whatever approval popup is currently pending (connect, sign, tx…). */
-  approve: (options?: { optional?: boolean }) => Promise<void>;
+  approve: (options?: ApprovalOptions) => Promise<void>;
   /** Approve a pending signature request popup. */
   confirmSignature: () => Promise<void>;
   /** Approve a pending transaction request popup. */
@@ -247,7 +250,7 @@ export type Wallet = {
    * Approve a pending connection request popup. Pass `{ optional: true }` for a site the wallet may
    * already trust, where connecting produces no popup at all.
    */
-  connectToDapp: (options?: { optional?: boolean }) => Promise<void>;
+  connectToDapp: (options?: ApprovalOptions) => Promise<void>;
   /** The loaded extension id. */
   readonly extensionId: string;
   /**
@@ -257,7 +260,7 @@ export type Wallet = {
   readonly home: Page;
   network: NetworkApi;
   /** Reject whatever approval popup is currently pending (connect, sign, tx…). */
-  reject: (options?: { optional?: boolean }) => Promise<void>;
+  reject: (options?: ApprovalOptions) => Promise<void>;
   /** Reject a pending connection request popup. */
   rejectConnection: () => Promise<void>;
   /** Reject a pending signature request popup. */
@@ -265,4 +268,18 @@ export type Wallet = {
   /** Reject a pending transaction request popup. */
   rejectTransaction: () => Promise<void>;
   settings: SettingsApi;
+};
+
+/** An unlocked wallet and the browser it runs in, from `launchWallet`. */
+export type LaunchedWallet = {
+  /** `close()`, so `await using launched = await launchWallet(setup)` cleans up on any exit. */
+  [Symbol.asyncDispose]: () => Promise<void>;
+  /**
+   * Close the browser and remove the throwaway profile copy, in that order. Prefer this over
+   * `context.close()`: the copy is a full onboarded profile (tens of MB), and awaiting its removal is
+   * the only way to know it is gone before the process exits.
+   */
+  close: () => Promise<void>;
+  context: BrowserContext;
+  wallet: Wallet;
 };

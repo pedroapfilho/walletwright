@@ -8,7 +8,7 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { afterEach, assert, describe, expect, it } from "vitest";
 
-import { chromeWebStoreCrxUrl, downloadAndExtractExtension } from "./download";
+import { downloadAndExtractExtension } from "./download";
 
 const serve = async (bytes: Buffer): Promise<{ close: () => Promise<void>; url: string }> => {
   const server: Server = createServer((_req, res) => {
@@ -261,19 +261,5 @@ describe("downloadAndExtractExtension", () => {
     ).rejects.toThrow(/unsupported zip format/v);
 
     expect(existsSync(path.join(outDir, "other.txt"))).toBe(true);
-  });
-});
-
-describe("chromeWebStoreCrxUrl", () => {
-  it("builds the Phantom Web Store CRX url", () => {
-    expect(chromeWebStoreCrxUrl("bfnaelmomeimhlpmgjnjophhpkkoljpa")).toBe(
-      "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3Dbfnaelmomeimhlpmgjnjophhpkkoljpa%26uc",
-    );
-  });
-
-  it("builds the Slush Web Store CRX url", () => {
-    expect(chromeWebStoreCrxUrl("opcgpfmipidbgpenhmajoajpbobppdil")).toBe(
-      "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3Dopcgpfmipidbgpenhmajoajpbobppdil%26uc",
-    );
   });
 });
