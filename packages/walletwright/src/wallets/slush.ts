@@ -107,7 +107,6 @@ const openPassphraseImport = async (page: Page): Promise<void> => {
     try {
       await click(labelled(page, "Get started"), WELCOME_CONTROL);
       await click(labelled(page, "Skip"), WELCOME_CONTROL);
-      await click(labelled(page, "Maybe later"), WELCOME_CONTROL);
       await click(labelled(page, "Passphrase"), WELCOME_CONTROL);
       // Unforced: the link reports visible while its row is still collapsed, so the click has to
       // wait for the row to open over it.

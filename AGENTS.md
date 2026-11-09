@@ -177,8 +177,8 @@ and BTC has no standard, so each Bitcoin wallet injects its own provider.
 ### Slush (SUI), verified
 
 Slush (`src/wallets/slush.ts`) resolves its id via the path (no manifest key). It is a single-page
-app: popup, onboarding, unlock, and approvals all live in `index.html`. Verified against 26.21.1, the
-Web Store build current in October 2026. The parts that took real debugging:
+app: popup, onboarding, unlock, and approvals all live in `index.html`. Verified against 26.22.0, the
+Web Store build current in November 2026. The parts that took real debugging:
 
 - **Its accounts live on Slush's backend.** The wallet's accounts and dapp connections are records
   in Slush's GraphQL API (`api.slush.app`, Relay persisted queries) owned by an anonymous device
@@ -198,8 +198,8 @@ Web Store build current in October 2026. The parts that took real debugging:
   no popup, which is why `tests/slush.spec.ts` connects with `connectToDapp({ optional: true })`. A
   new cache build is a new session.
 - Onboarding runs `#/GetStarted` → "Get started" → `#/SendOTP` (phone or email sign-in) → "Skip" →
-  "Maybe later" in the bottom sheet → `#/CreateAccount` → "Passphrase" (expands its row) → that row's
-  "Import" link (`a[href$="#/ImportPassphrase"]`) → twelve inputs labelled `Word N` → "Import" →
+  `#/CreateAccount` → "Passphrase" (expands its row) → that row's "Import" link
+  (`a[href$="#/ImportPassphrase"]`) → twelve inputs labelled `Word N` → "Import" →
   `#/CreatePassword` (placeholders `Password` and `Re-enter password`) → "Next" →
   `#/RequirePassword` → "Dive into Slush" → `#/tokens`, the home route.
 - **Expand the Passphrase row before clicking its Import link.** Playwright reports the link visible
