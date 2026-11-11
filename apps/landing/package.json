@@ -18,7 +18,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@web3icons/react": "^4.1.22",
     "hast-util-to-jsx-runtime": "^2.3.6",
-    "next": "^16.3.8",
+    "next": "^16.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "shiki": "^4.4.3",
