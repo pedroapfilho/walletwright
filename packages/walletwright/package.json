@@ -39,10 +39,6 @@
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
     },
-    "./chain": {
-      "types": "./dist/chain.d.mts",
-      "default": "./dist/chain.mjs"
-    },
     "./mock": {
       "types": "./dist/mock.d.mts",
       "default": "./dist/mock.mjs"
@@ -56,9 +52,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/cli.ts src/chain.ts src/mock.ts src/mock-standard.ts --platform node --clean",
+    "build": "tsdown src/index.ts src/cli.ts src/mock.ts src/mock-standard.ts --platform node --clean",
     "clean": "rm -rf dist",
-    "dev": "tsdown src/index.ts src/cli.ts src/chain.ts src/mock.ts src/mock-standard.ts --platform node --clean --watch",
+    "dev": "tsdown src/index.ts src/cli.ts src/mock.ts src/mock-standard.ts --platform node --clean --watch",
     "lint": "oxlint src",
     "prepack": "pnpm run build",
     "test": "vitest run",
@@ -76,20 +72,15 @@
     "@repo/typescript-config": "workspace:*",
     "@types/adm-zip": "^0.5.8",
     "@types/node": "^26.6.6",
-    "prool": "^0.2.16",
     "typescript": "^7.0.2",
     "viem": "^2.56.8",
     "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.48 <2",
-    "prool": ">=0.2 <1",
     "viem": ">=2 <3"
   },
   "peerDependenciesMeta": {
-    "prool": {
-      "optional": true
-    },
     "viem": {
       "optional": true
     }

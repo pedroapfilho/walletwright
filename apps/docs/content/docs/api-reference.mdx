@@ -3,7 +3,7 @@ title: API reference
 description: "Every walletwright export: buildCache, createWalletFixtures, launchWallet, the Wallet fixture, the CLI, and the types."
 ---
 
-The core API is exported from the package root; `@walletwright/core/chain`, `@walletwright/core/mock`, and `@walletwright/core/mock-standard` are optional subpath entry points (documented below; `chain` and `mock` each need an optional peer, `mock-standard` needs none).
+The core API is exported from the package root; `@walletwright/core/mock` and `@walletwright/core/mock-standard` are optional subpath entry points (documented below; `mock` needs an optional peer, `mock-standard` needs none).
 
 ```ts
 import {
@@ -184,30 +184,6 @@ MetaMask, Solflare and Slush throw a named error before a browser opens; run tho
 `launchWallet` and `buildCache` take `headless` literally; the fixtures apply it only where the
 wallet supports it.
 
-## `@walletwright/core/chain`
-
-A local EVM node for network and transaction tests, as a separate entry point so the core
-connect/sign flow doesn't depend on it. It needs the `prool` package (optional peer) and Foundry's
-`anvil` binary on `PATH`.
-
-```ts
-import { createLocalChain } from "@walletwright/core/chain";
-
-const chain = await createLocalChain(); // { chainId: 31337, rpcUrl: "http://127.0.0.1:8545" }
-// … run tests against it …
-await chain.stop();
-```
-
-| Option     | Default                       | Description                            |
-| ---------- | ----------------------------- | -------------------------------------- |
-| `chainId`  | `31337`                       | Chain id of the local node.            |
-| `port`     | `8545`                        | Port for the JSON-RPC endpoint.        |
-| `mnemonic` | the public Hardhat/Anvil seed | Seed for the pre-funded accounts.      |
-| `binary`   | `anvil`                       | Binary to launch (resolved on `PATH`). |
-
-The default mnemonic pre-funds `0xf39F…92266` with 10000 ETH, the same account the MetaMask
-`WalletSetup` in these docs imports, so specs can assert against it with no extra funding step.
-
 ## `@walletwright/core/mock`
 
 A headless injected-wallet fake for dapp tests that don't need a real extension, so they run in
@@ -239,7 +215,7 @@ It answers `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, and `personal_s
 `eth_chainId` reports the new chain; a malformed chain id rejects. It emits no events, `chainChanged`
 included, so a dapp that switches should re-read `eth_chainId`. It is a connect/sign stand-in, not an
 EVM: it does not execute transactions. For anything real (transactions, balances, receipts), drive
-an actual extension against `@walletwright/core/chain`.
+an actual extension against a local chain.
 
 ## `@walletwright/core/mock-standard`
 

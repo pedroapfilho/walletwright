@@ -34,9 +34,8 @@ pnpm test:e2e      # connect and sign on each wallet
 ```
 
 The network and transaction specs additionally need a local chain on `127.0.0.1:8545` (chain id
-`31337`) seeded with the public Foundry test mnemonic: start Foundry's `anvil` directly, or via
-`createLocalChain()` from `@walletwright/core/chain` (which spawns the same binary and needs the
-optional `prool` peer).
+`31337`) seeded with the public Foundry test mnemonic, which is what Foundry's `anvil` serves by
+default.
 
 ## Docs and context
 

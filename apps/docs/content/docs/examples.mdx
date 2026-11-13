@@ -299,14 +299,11 @@ test("prompts to unlock after the wallet locks", async ({ page, wallet }) => {
 
 Network and transaction tests need a chain the wallet can actually reach: MetaMask validates a
 custom network's RPC before saving it, and reads balance and nonce off the chain to render its
-popups. `@walletwright/core/chain` boots a local node (Foundry's `anvil` via `prool`) whose default
-mnemonic pre-funds the same account the MetaMask setup imports.
+popups. Foundry's `anvil` is that chain. Its defaults are `http://127.0.0.1:8545`, chain id 31337,
+and the public test mnemonic, which pre-funds the same account the MetaMask setup imports.
 
-```ts
-// global-setup.ts
-import { createLocalChain } from "@walletwright/core/chain";
-
-const chain = await createLocalChain(); // http://127.0.0.1:8545, chain id 31337
+```sh
+anvil
 ```
 
 `network.add` drives the wallet's own add-network form:
@@ -423,28 +420,29 @@ test("rejecting a transaction surfaces an error", async ({ page, wallet }) => {
 
 ## Asserting on-chain state with viem
 
-Approving a popup proves the wallet signed, not that the transaction landed. Pair
-`@walletwright/core/chain` with [viem](https://viem.sh) to read the chain directly and assert the
-receipt. Putting the chain in a fixture starts it with the suite and stops it after.
+Approving a popup proves the wallet signed, not that the transaction landed. Read the chain
+directly with [viem](https://viem.sh) and assert the receipt. Putting the chain in a fixture starts
+it with the suite and stops it after; [prool](https://github.com/wevm/prool) runs `anvil` from Node.
 
 ```ts
 // tests/onchain.spec.ts
 import { createWalletFixtures } from "@walletwright/core";
-import { createLocalChain, type LocalChain } from "@walletwright/core/chain";
+import { Instance } from "prool";
 import { createPublicClient, http } from "viem";
 import { metamask } from "../wallet-setup";
 
-const test = createWalletFixtures(metamask).extend<{ chain: LocalChain }>({
-  chain: async ({}, use) => {
-    const chain = await createLocalChain();
-    await use(chain);
-    await chain.stop();
+const test = createWalletFixtures(metamask).extend<{ rpcUrl: string }>({
+  rpcUrl: async ({}, use) => {
+    const anvil = Instance.anvil({ chainId: 31_337, port: 8545 });
+    await anvil.start();
+    await use(`http://${anvil.host}:${anvil.port}`);
+    await anvil.stop();
   },
 });
 const { expect } = test;
 
-test("the transfer is mined", async ({ page, wallet, chain }) => {
-  const client = createPublicClient({ transport: http(chain.rpcUrl) });
+test("the transfer is mined", async ({ page, wallet, rpcUrl }) => {
+  const client = createPublicClient({ transport: http(rpcUrl) });
 
   await page.goto("/");
   await page.getByTestId("connect").click();
@@ -462,9 +460,9 @@ test("the transfer is mined", async ({ page, wallet, chain }) => {
 ```
 
 <Callout type="warn">
-  `createLocalChain` uses port 8545 by default, and a persistent-context wallet run is `workers: 1`,
-  so one chain per suite is the right granularity. If you run several chain-backed suites, give each
-  a distinct `port` (and point your dapp's config at it) so they don't collide.
+  A persistent-context wallet run is `workers: 1`, so one chain per suite is the right granularity.
+  If you run several chain-backed suites, give each a distinct `port` (and point your dapp's config
+  at it) so they don't collide.
 </Callout>
 
 ## Without an extension: the mock wallet

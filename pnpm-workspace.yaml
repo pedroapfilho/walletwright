@@ -15,8 +15,6 @@ peerDependencyRules:
     "@typescript-eslint/utils>typescript": "7"
 
 overrides:
-  # Force prool's transitive tar to a patched release (dev-only, local-anvil tests) to clear HIGH advisories.
-  tar: "^7.5.20"
   # Security: force patched transitive releases to clear pnpm audit advisories.
   # Each pin is the lowest release that carries the fix.
   ws: "^8.21.0"
