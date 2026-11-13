@@ -1,9 +1,10 @@
+# Written by `standy sync` from the library template and `.github/ci/policy.json`. Change those, never this file.
 name: Test
 on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: 24 4 * * 1
+    - cron: 21 4 * * 1
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -25,19 +26,29 @@ jobs:
         with:
           runtime: node@24
           cache: true
-      # The engine tests drive a stand-in extension in headless Chromium, through the `chromium`
-      # channel: the full browser, not the headless shell that ships by default.
-      - name: Read Playwright version
-        id: playwright
-        run: echo "version=$(pnpm --filter @walletwright/core exec playwright --version | cut -d ' ' -f 2)" >> "$GITHUB_OUTPUT"
-      - name: Restore Chromium
+      - name: Restore Turbo task cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/ms-playwright
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ runner.arch }}-node24-test-${{ github.event.pull_request.number || github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ runner.arch }}-node24-test-${{ github.event.pull_request.number || github.ref_name }}-
+            turbo-${{ runner.os }}-${{ runner.arch }}-node24-test-main-
+      - name: Read Playwright version
+        id: playwright
+        if: ${{ !cancelled() }}
+        run: echo "version=$(pnpm --filter @walletwright/core exec playwright --version | cut -d ' ' -f 2)" >> "$GITHUB_OUTPUT"
+      - name: Restore Chromium
+        if: ${{ !cancelled() }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
-      - run: pnpm --filter @walletwright/core exec playwright install --with-deps chromium
-      # The real-wallet E2E needs a headed browser (see apps/demo) and runs in e2e.yml, not here.
-      - run: node .github/ci/ci.mjs run test -- pnpm test
+          path: ~/.cache/ms-playwright
+      - name: Install Chromium for the engine tests
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @walletwright/core exec playwright install --with-deps chromium
+      - name: Unit tests
+        run: node .github/ci/ci.mjs run test -- pnpm test
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         name: Upload CI evidence
         if: ${{ !cancelled() }}
