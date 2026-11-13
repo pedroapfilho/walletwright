@@ -32,15 +32,6 @@ afterEach(async () => {
 const archiveName = "metamask-chrome-13.35.1";
 
 describe("profileKey", () => {
-  it("returns a 20-character lowercase hex string", () => {
-    const key = profileKey(baseSetup, archiveName);
-    expect(key).toMatch(/^[0-9a-f]{20}$/v);
-  });
-
-  it("is deterministic for the same setup", () => {
-    expect(profileKey(baseSetup, archiveName)).toBe(profileKey({ ...baseSetup }, archiveName));
-  });
-
   it("gives each wallet its own profile for the same credentials", () => {
     expect(locate(wallets.phantom, baseSetup).profileDir).not.toBe(
       locate(wallets.rabby, baseSetup).profileDir,

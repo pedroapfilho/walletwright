@@ -37,12 +37,12 @@ const RUN_OUTPUT = [
   "",
   "Running 4 tests using 1 worker",
   "",
-  pass(1, "metamask.spec.ts:8:1", "MetaMask: connect wallet and sign a message", "6.5s"),
-  pass(2, "phantom.spec.ts:6:1", "Phantom: connect + sign on EVM and Solana", "18.2s"),
-  pass(3, "rabby.spec.ts:8:1", "Rabby: connect wallet and sign a message", "5.5s"),
-  pass(4, "solflare.spec.ts:6:1", "Solflare: connect + sign on Solana", "4.1s"),
+  pass(1, "metamask.spec.ts:6:1", "MetaMask: connect wallet and sign a message", "9.1s"),
+  pass(2, "phantom.spec.ts:6:1", "Phantom: connect + sign on EVM and Solana", "16.5s"),
+  pass(3, "rabby.spec.ts:6:1", "Rabby: connect wallet and sign a message", "4.5s"),
+  pass(4, "solflare.spec.ts:6:1", "Solflare: connect + sign on Solana", "6.4s"),
   "",
-  `  ${GREEN}4 passed${RESET} (34.7s)`,
+  `  ${GREEN}4 passed${RESET} (36.8s)`,
 ].join("\n");
 
 /** Why the captured run shows four wallets while the registry holds five. */
@@ -104,8 +104,8 @@ const FEATURES: Array<Feature> = [
   },
   {
     description:
-      "Approval popups open headed, so run under xvfb on CI. Cache building can run headless, and a couple of retries keeps runs stable.",
-    title: "CI-ready, headed",
+      "Phantom and Rabby run headless. MetaMask, Solflare, and Slush need a real window, so run under xvfb on CI. A couple of retries keeps runs stable.",
+    title: "CI-ready",
   },
   {
     description:

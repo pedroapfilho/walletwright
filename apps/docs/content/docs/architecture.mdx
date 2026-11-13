@@ -46,14 +46,18 @@ packages/walletwright/src/
   engine.ts           buildCache(), launchWallet(): resolve the setup's wallet, run the engine
   cli.ts              `walletwright cache` command
   fixtures.ts         createWalletFixtures(), the Playwright test fixtures
-  types.ts            WalletSetup, WalletDefinition, Wallet, the capability types
+  types.ts            the public types: WalletSetup, Wallet, WalletInfo, the capability types
   chain.ts            @walletwright/core/chain entry point (local EVM node)
   mock.ts             @walletwright/core/mock entry point (headless EVM provider)
   mock-standard.ts    @walletwright/core/mock-standard entry point (headless Solana wallet)
+  mock/               what the two mocks run on: rpc.ts, signer.ts, and page-bridge.ts, whose
+                      installPageBridge() connects a mock's Node handler to its in-page provider
   internal/
+    definition.ts     WalletDefinition: what a wallet declares for the engine to drive it
     cache.ts          build: onboard once, persist a profile
     launch.ts         launch: unlock a copy of the profile
-    session.ts        openSession(): Chromium + extension on a throwaway profile, both phases
+    session.ts        openSession(): Chromium + extension on a throwaway profile, both phases;
+                      gotoExtensionPage(): reach one of the extension's own pages
     profile.ts        locate(): everything a setup puts on disk; protected copy, publish, recovery
     cache-lock.ts     per-artifact ownership across processes
     extension.ts      the extension archive a setup runs, extension-id derivation
@@ -62,11 +66,10 @@ packages/walletwright/src/
     approval.ts       createApprovals(): every approval, from the window opening to it closing
     click.ts          clicksFor(), isShowing(), isEnabled(): how wallet code clicks and reads its UI
     controller.ts     createWallet(): names each wallet call and binds actions
-    wait.ts           polling and navigation retries
-    page-bridge.ts    installPageBridge(): connects a mock's Node handler to its in-page provider
+    wait.ts           polling
     standin.ts        the stand-in wallet the engine tests drive (test-only)
   wallets/
-    index.ts          the registry + walletKindsByEcosystem()
+    index.ts          the registry + walletInfo, its plain-data view
     metamask.ts       MetaMask definition (+ metamask/ for its flows, actions, LevelDB state)
     phantom.ts        Phantom definition
     rabby.ts          Rabby definition
@@ -79,7 +82,7 @@ packages/walletwright/src/
 Three phases, each owned by one engine module. A test touches only the first (once) and the third.
 
 ```
-buildCache(setup)                       once, ahead of the tests (headless ok)
+buildCache(setup, { headless })         once, ahead of the tests
   wallets[setup.wallet]                 resolved once; the engine only sees the definition
   locate(definition, setup)             the archive, profile dir, staging and run copy, once
   openSession(staging + archive)        download/extract, Chromium, then prepareContext
@@ -119,10 +122,11 @@ context closes.
 
 <Callout type="info">
   Both phases launch the `chromium` channel, because Playwright's default headless build is the
-  headless shell, which cannot load an extension. `buildCache` takes `{headless}` and works that way
-  for every wallet; `launchWallet` takes it too and refuses it for a wallet that cannot be driven
-  headless. The fixtures apply Playwright's own `headless` option only where the wallet supports it,
-  which is Phantom and Rabby. See [Continuous integration](/continuous-integration).
+  headless shell, which cannot load an extension. Both open the browser in one place
+  (`openSession`), which refuses `headless` for a wallet not verified that way, so `buildCache` and
+  `launchWallet` answer the same request the same way. The fixtures apply Playwright's own
+  `headless` option only where the wallet supports it, which is Phantom and Rabby. See [Continuous
+  integration](/continuous-integration).
 </Callout>
 
 ## The WalletDefinition
@@ -133,52 +137,22 @@ work; the rest are functions the engine calls at the right moments. The wallet a
 the engine. The registry is internal: a setup names one of these built-in wallets, and adding one
 means adding a definition here.
 
-```ts
-type WalletDefinition = {
-  ecosystems: Ecosystem[]; // ["evm"], ["evm", "svm"], ["sui"], ...
-  extensionName: string; // display name for step titles and errors, e.g. "MetaMask"
-  source:
-    // where the extension comes from
-    | { kind: "webStore"; id: string } // the Web Store build; `version` is refused
-    | { kind: "release"; defaultVersion: string; release: (version: string) => ExtensionArchive };
-  onboardingPage: string; // extension-relative entry, e.g. "home.html"
-  prepareContext?: (context: BrowserContext) => Promise<void>; // adjust the browser before it navigates
-  importWallet: (page: Page, seedWords: string[], password: string) => Promise<void>; // seed split once
-  isPersisted?: (onboarded: {
-    extensionId: string;
-    page: Page;
-    profileDir: string;
-  }) => Promise<boolean>;
-  finalizeCache?: (profileDir: string, extensionId: string) => Promise<void>;
-  unlockScreen: {
-    entry: string; // extension-relative page with the password field, e.g. "home.html"
-    isUnlocked?: (page: Page) => Promise<boolean>; // a warm launch that comes back unlocked
-    submit?: (page: Page, field: Locator) => Promise<void>; // defaults to pressing Enter
-  };
-  approval: {
-    confirm: (popup: Page) => Locator; // every control that approves, across all screens
-    cancel: (popup: Page) => Locator; // every control that rejects
-    click?: { kind: "locator"; settleMs?: number } | { kind: "inPage" };
-    screens?: ApprovalScreen[]; // what the wallet can put in front of the request
-    urlMatch?: string; // window URL token; defaults to "notification.html"
-    headless?: boolean; // its approval window surfaces as a page headless
-  };
-  actions?: WalletActions; // optional capabilities beyond connect/sign
-};
-```
+The type is `WalletDefinition` in `src/internal/definition.ts`, where every member is documented.
+It is not exported: the package publishes what a wallet is as plain data (`walletInfo`), not how it
+is driven.
 
-| Member              | When the engine calls it                                                       |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `source`            | in both phases, to fetch and extract the extension into the cache dir          |
-| `onboardingPage`    | in `buildCache`, to navigate to the first-run screen                           |
-| `prepareContext`    | in both, right after the browser starts and before anything navigates          |
-| `importWallet`      | in `buildCache`, to run the import-from-seed flow                              |
-| `isPersisted`       | in `buildCache`, polled until the onboarded wallet is on disk                  |
-| `finalizeCache`     | after `buildCache` closes the browser (profile DB not held open)               |
-| `unlockScreen`      | in `launchWallet` (and `settings.unlock`), to open the home page and unlock it |
-| `approval`          | in the approval engine, to find, answer, and wait out each approval window     |
-| `approval.headless` | in the fixtures and `launchWallet`, to keep a wallet headed when it must be    |
-| `actions`           | in the controller, to expose optional capabilities on the `Wallet`             |
+| Member           | When the engine calls it                                                       |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `source`         | in both phases, to fetch and extract the extension into the cache dir          |
+| `onboardingPage` | in `buildCache`, to navigate to the first-run screen                           |
+| `prepareContext` | in both, right after the browser starts and before anything navigates          |
+| `importWallet`   | in `buildCache`, to run the import-from-seed flow                              |
+| `isPersisted`    | in `buildCache`, polled until the onboarded wallet is on disk                  |
+| `finalizeCache`  | after `buildCache` closes the browser (profile DB not held open)               |
+| `unlockScreen`   | in `launchWallet` (and `settings.unlock`), to open the home page and unlock it |
+| `approval`       | in the approval engine, to find, answer, and wait out each approval window     |
+| `headless`       | in both phases, to refuse a headless browser the wallet is not verified for    |
+| `actions`        | in the controller, to expose optional capabilities on the `Wallet`             |
 
 ### Adding a wallet
 
@@ -193,7 +167,7 @@ may be skipped, and `waitShown` waits for a control without clicking it, with th
 ```ts
 // src/wallets/rabby.ts
 import { clicksFor } from "../internal/click";
-import type { WalletDefinition } from "../types";
+import type { WalletDefinition } from "../internal/definition";
 
 const RABBY = "Rabby";
 
@@ -220,8 +194,10 @@ export const rabby: WalletDefinition = {
     confirm: (popup) => popup.locator("button").filter({ hasText: /^(?:Connect|Sign|Confirm)$/v }),
     cancel: (popup) => popup.locator("button").filter({ hasText: /^(?:Cancel|Reject)$/v }),
     click: { kind: "inPage" },
-    headless: true,
   },
+
+  // Verified headless, onboarding and approvals both.
+  headless: true,
 };
 ```
 
@@ -361,8 +337,9 @@ load-bearing:
   inline there instead of opening the window the engine drives, so the dapp page goes back in front
   when an action finishes and before every approval.
 - **Headless support is per-wallet.** MetaMask's approval window is created without ever being
-  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `approval.headless` runs
-  headless: the fixtures launch the rest headed, and `launchWallet` refuses them by name. walletwright never opens an approval
+  exposed as a page; Phantom's and Rabby's are. Only a wallet that declares `headless: true` runs
+  headless: the fixtures launch the rest headed, and `buildCache` and `launchWallet` refuse them by
+  name. walletwright never opens an approval
   URL itself: a page the wallet did not open for a request shows its home screen, not the request.
 - **Approval windows get placed.** A window that opens partly off a small or virtual display renders
   fine but cannot be clicked, so the engine pins it to 360x592 and moves it on screen over CDP.
@@ -435,7 +412,7 @@ Needs the `prool` package and the `anvil` binary on `PATH`.
 A headless injected-wallet fake for dapp tests that do not need a real extension.
 `installMockWallet(context)` injects an EIP-1193 provider, announces it over EIP-6963, and answers
 the connect/sign requests, signing with a real `viem` account so signatures verify. The provider
-lives in the page but signs in Node. `internal/page-bridge.ts` connects the two for both mocks: one
+lives in the page but signs in Node. `mock/page-bridge.ts` connects the two for both mocks: one
 Playwright `exposeFunction` binding per install, plus an init script that mounts the provider on it,
 so installing twice on one context never collides. It runs in plain, even headless, Chromium in a
 second or two.

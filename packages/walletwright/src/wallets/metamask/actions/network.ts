@@ -1,10 +1,11 @@
 import type { Page } from "@playwright/test";
 
-import type { NetworkActions, NetworkConfig, WalletActionContext } from "../../../types";
-import { click, waitShown } from "../clicks";
+import { showing } from "../../../internal/click";
+import type { NetworkActions, WalletActionContext } from "../../../internal/definition";
+import type { NetworkConfig } from "../../../types";
+import { click, waitGone, waitShown } from "../clicks";
 
-const closeButton = (home: Page) =>
-  home.getByTestId("modal-header-close-button").filter({ visible: true }).first();
+const closeButton = (home: Page) => showing(home.getByTestId("modal-header-close-button"));
 
 const openNetworkManager = async (home: Page): Promise<void> => {
   await click(home.getByTestId("sort-by-networks"));
@@ -30,7 +31,7 @@ const add = async ({ home }: WalletActionContext, config: NetworkConfig): Promis
   await click(home.getByTestId("page-container-footer-next"));
 
   await click(closeButton(home));
-  await closeButton(home).waitFor({ state: "hidden" });
+  await waitGone(closeButton(home));
 };
 
 export const network: NetworkActions = {

@@ -1,8 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
 
 import { isEnabled, isShowing } from "../../internal/click";
+import type { ApprovalScreen, ApprovalWindow } from "../../internal/definition";
 import { waitUntil } from "../../internal/wait";
-import type { ApprovalScreen, ApprovalWindow } from "../../types";
 
 import { click } from "./clicks";
 

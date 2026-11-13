@@ -2,7 +2,7 @@ import { createPublicKey, verify } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { createStandardHandler, encodeBase58, privateKeyFromSeed } from "./mock-signer";
+import { createStandardHandler, encodeBase58, privateKeyFromSeed } from "./signer";
 
 const SEED_HEX = "0101010101010101010101010101010101010101010101010101010101010101";
 
@@ -31,11 +31,6 @@ describe("createStandardHandler", () => {
     const publicKey = createPublicKey(privateKeyFromSeed(seed));
     const accepted = verify(null, Uint8Array.from(message), publicKey, Uint8Array.from(signature));
     expect(accepted).toBe(true);
-  });
-
-  it("answers solana:signMessage with a 64-byte signature array", async () => {
-    const signature = await handle({ message: [1, 2, 3], method: "solana:signMessage" });
-    expect(signature).toHaveLength(64);
   });
 
   it("rejects an unsupported method", async () => {

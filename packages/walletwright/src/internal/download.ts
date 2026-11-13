@@ -4,9 +4,8 @@ import path from "node:path";
 
 import AdmZip from "adm-zip";
 
-import type { ExtensionArchive } from "../types";
-
 import { withArtifactLock } from "./cache-lock";
+import type { ExtensionArchive } from "./definition";
 import { pathExists } from "./fs";
 
 const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);
@@ -21,7 +20,6 @@ const STAGING_PREFIX = ".staging-";
 /** An extension archive, and the cache directory it unpacks into. */
 export type ExtensionDownload = ExtensionArchive & { cacheDir: string };
 
-/** Download and validate an extension archive, then publish its extraction atomically from staging. */
 export const downloadAndExtractExtension = async (options: ExtensionDownload): Promise<string> => {
   const { cacheDir, format, name, sha256, url } = options;
   const cacheRoot = path.resolve(cacheDir);

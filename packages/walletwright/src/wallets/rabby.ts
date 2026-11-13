@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 
 import { clicksFor } from "../internal/click";
+import type { WalletDefinition } from "../internal/definition";
 import { waitUntil, waitUntilOrThrow } from "../internal/wait";
-import type { WalletDefinition } from "../types";
 
 const ROUTE_TIMEOUT_MS = 30_000;
 const SEED_PASTE_TIMEOUT_MS = 3000;
@@ -83,12 +83,13 @@ export const rabby: WalletDefinition = {
     cancel: (popup) => popup.locator("button").filter({ hasText: /^(?:Cancel|Reject)$/v }),
     click: { kind: "inPage" },
     confirm: (popup) => popup.locator("button").filter({ hasText: /^(?:Connect|Sign|Confirm)$/v }),
-    headless: true,
   },
 
   ecosystems: ["evm"],
 
   extensionName: RABBY,
+
+  headless: true,
 
   importWallet,
 

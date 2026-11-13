@@ -1,4 +1,4 @@
-import type { WalletKind, WalletSetup } from "@walletwright/core";
+import type { WalletSetup } from "@walletwright/core";
 
 const PASSWORD = "Tester@1234";
 
@@ -43,11 +43,3 @@ export const slushSetup: WalletSetup = {
   seedPhrase: FRESH_SEED,
   wallet: "slush",
 };
-
-export const walletSetups = {
-  metamask: metamaskSetup,
-  phantom: phantomSetup,
-  rabby: rabbySetup,
-  slush: slushSetup,
-  solflare: solflareSetup,
-} satisfies Record<WalletKind, WalletSetup>;

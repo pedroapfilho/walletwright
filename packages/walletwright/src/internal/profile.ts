@@ -3,9 +3,10 @@ import { cp, rename, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { WalletDefinition, WalletSetup } from "../types";
+import type { WalletSetup } from "../types";
 
 import { withArtifactLock } from "./cache-lock";
+import type { WalletDefinition } from "./definition";
 import type { ExtensionDownload } from "./download";
 import { extensionArchive } from "./extension";
 import { pathExists, renameIfExists } from "./fs";

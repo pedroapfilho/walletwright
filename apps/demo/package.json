@@ -8,9 +8,8 @@
     "build": "vite build",
     "clean": "rm -rf dist node_modules .walletwright test-results",
     "lint": "oxlint src tests",
-    "test": "tsx --test scripts/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:cache": "tsx scripts/cache.ts",
+    "test:cache": "node node_modules/@walletwright/core/dist/cli.mjs cache --setup wallet-setup.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -19,11 +18,10 @@
   },
   "devDependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "^1.65.0",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.6",
     "@walletwright/core": "workspace:*",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "viem": "^2.56.8",
     "vite": "^8.3.7"

@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 
 import { clicksFor } from "../internal/click";
+import type { WalletDefinition } from "../internal/definition";
 import { sleep, waitUntilOrThrow } from "../internal/wait";
-import type { WalletDefinition } from "../types";
 
 const HOME_ROUTE = "#/tokens";
 
@@ -26,7 +26,7 @@ const APPROVAL_SETTLE_MS = 2000;
 
 const SLUSH = "Slush";
 
-const { click } = clicksFor(SLUSH);
+const { click, waitShown } = clicksFor(SLUSH);
 
 const labelled = (page: Page, text: string) => page.getByText(text, { exact: true }).first();
 
@@ -111,7 +111,7 @@ const openPassphraseImport = async (page: Page): Promise<void> => {
       // Unforced: the link reports visible while its row is still collapsed, so the click has to
       // wait for the row to open over it.
       await click(page.locator('a[href$="#/ImportPassphrase"]'));
-      await firstWord.waitFor({ state: "visible", timeout: PASSPHRASE_SCREEN_TIMEOUT_MS });
+      await waitShown(firstWord, { timeoutMs: PASSPHRASE_SCREEN_TIMEOUT_MS });
 
       return;
     } catch (error) {
@@ -140,6 +140,8 @@ export const slush: WalletDefinition = {
   ecosystems: ["sui"],
 
   extensionName: SLUSH,
+
+  headless: false,
 
   importWallet: async (page, seedWords, password) => {
     await openPassphraseImport(page);

@@ -1,8 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-import type { Wallet, WalletActionContext, WalletDefinition } from "../types";
+import type { Wallet } from "../types";
 
 import { type Approvals, frontDapp } from "./approval";
+import type { WalletActionContext, WalletDefinition } from "./definition";
 
 /**
  * Runs one named wallet call. The Playwright fixtures report each call as a boxed `test.step`;
@@ -25,7 +26,6 @@ type CreateWalletOptions = {
   unlock: () => Promise<void>;
 };
 
-/** Build the runtime controller that drives an unlocked wallet against the dapp under test. */
 export const createWallet = ({
   approvals,
   context,

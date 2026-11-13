@@ -5,8 +5,8 @@ description: Run walletwright tests on CI, headless where the wallet supports it
 
 Phantom and Rabby run headless anywhere, including on a GitHub-hosted runner. MetaMask, Solflare and
 Slush need a real window for their approvals, so a mixed suite is simplest to run under a virtual
-display, which is what this project's own gate does. Cache building is headless for every wallet
-except on a GitHub runner, where MetaMask must be onboarded under the display too.
+display, which is what this project's own gate does. Cache building follows the same rule: headless
+for Phantom and Rabby, under the display for the rest.
 
 ## Headless
 
@@ -18,7 +18,7 @@ the default headless build is the headless _shell_, which cannot load an extensi
 
 ```bash
 pnpm exec playwright install chromium
-pnpm exec tsx scripts/build-cache.ts
+pnpm exec walletwright cache --setup ./wallet-setup.ts
 pnpm exec playwright test
 ```
 
@@ -27,10 +27,8 @@ Pass `--headed` to watch the Phantom and Rabby specs too.
 <Callout type="warn">
   Only Phantom and Rabby declare headless support, because only their approval windows surface as a
   page that way. The fixtures launch the others headed, so on a machine without a display they need
-  one (below). `launchWallet` is stricter: it takes `headless` literally and throws by name for
-  those wallets rather than hanging at the first approval. MetaMask also has documented
-  compatibility problems running headless on GitHub Actions, so onboard it under the display there
-  as well.
+  one (below). `launchWallet` and `buildCache` are stricter: they take `headless` literally and
+  throw by name for those wallets, before a browser opens.
 </Callout>
 
 ## Headed via a virtual display
@@ -63,15 +61,17 @@ jobs:
       - run: pnpm install
       - run: pnpm exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y xvfb
-      - run: xvfb-run --auto-servernum pnpm exec tsx scripts/build-cache.ts
+      - run: xvfb-run --auto-servernum pnpm exec walletwright cache --setup ./wallet-setup.ts
       - run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
             pnpm exec playwright test
 ```
 
-Onboard under the display too, not headless. MetaMask has documented compatibility problems running
-headless on GitHub Actions, and a profile onboarded that way stays broken: its `notification.html`
-then renders the wallet home instead of the pending request, even for specs that run headed.
+Onboard under the display too. `walletwright cache` builds headed unless you pass `--headless`,
+which only Phantom and Rabby accept. Two of the others are known to fail onboarded headless: a
+MetaMask profile built that way on GitHub Actions stays broken (its `notification.html` renders the
+wallet home instead of the pending request, even for specs that run headed), and Slush never opens
+its passphrase import screen.
 
 ## Caching between runs
 

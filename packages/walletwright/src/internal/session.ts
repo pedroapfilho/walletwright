@@ -1,13 +1,16 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { type BrowserContext, chromium } from "@playwright/test";
+import { type BrowserContext, chromium, type Page } from "@playwright/test";
 
-import type { WalletDefinition } from "../types";
-
+import type { WalletDefinition } from "./definition";
 import { downloadAndExtractExtension, type ExtensionDownload } from "./download";
 import { extensionIdFromPath } from "./extension";
 import { copyProfile, type ProfilePlacement } from "./profile";
+import { waitUntilOrThrow } from "./wait";
+
+const NAVIGATION_INTERVAL_MS = 1000;
+const NAVIGATION_TIMEOUT_MS = 15_000;
 
 /** Chromium running the wallet's extension on a throwaway profile directory. */
 export type WalletSession = {
@@ -22,7 +25,7 @@ export type WalletSession = {
 };
 
 type SessionOptions = {
-  definition: Pick<WalletDefinition, "prepareContext">;
+  definition: Pick<WalletDefinition, "extensionName" | "headless" | "prepareContext">;
   extension: ExtensionDownload;
   headless: boolean;
   profile: ProfilePlacement;
@@ -79,13 +82,20 @@ const bindSession = (
 
 /**
  * Open Chromium with the extension on a throwaway profile, apply `prepareContext`, and run `start`.
- * Build and run both open the wallet here, so neither can load it differently. Anything that fails
- * before `start` returns closes the browser and removes the directory.
+ * Build and run both open the wallet here, so neither can load it differently, and both are refused
+ * headless for a wallet not verified that way. Anything that fails before `start` returns closes the
+ * browser and removes the directory.
  */
 export const openSession = async <Started>(
   { definition, extension, headless, profile }: SessionOptions,
   start: (session: WalletSession) => Promise<Started>,
 ): Promise<{ session: WalletSession; started: Started }> => {
+  if (headless && !definition.headless) {
+    throw new Error(
+      `[walletwright] ${definition.extensionName} is not verified to run headless; leave \`headless\` off and give it a display (\`xvfb-run\` on CI).`,
+    );
+  }
+
   await mkdir(profile.parent, { recursive: true });
   const userDataDir = await mkdtemp(path.join(profile.parent, profile.prefix));
 
@@ -114,4 +124,29 @@ export const openSession = async <Started>(
     await (session?.close() ?? removeDir(userDataDir)).catch(() => {});
     throw error;
   }
+};
+
+/**
+ * Open one of the extension's own pages. A `chrome-extension://` URL fails with
+ * `ERR_BLOCKED_BY_CLIENT` until the extension registers, which takes seconds after launch, so
+ * reaching one is a poll rather than a one-shot.
+ */
+export const gotoExtensionPage = async (
+  page: Page,
+  { extensionId, path: pagePath, wallet }: { extensionId: string; path: string; wallet: string },
+): Promise<void> => {
+  const url = `chrome-extension://${extensionId}/${pagePath}`;
+
+  await waitUntilOrThrow(
+    () =>
+      page
+        .goto(url, { waitUntil: "domcontentloaded" })
+        .then(() => true)
+        .catch(() => undefined),
+    {
+      intervalMs: NAVIGATION_INTERVAL_MS,
+      message: `${wallet} ${pagePath} never loaded (${url})`,
+      timeoutMs: NAVIGATION_TIMEOUT_MS,
+    },
+  );
 };

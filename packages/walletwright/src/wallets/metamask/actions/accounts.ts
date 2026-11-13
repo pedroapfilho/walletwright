@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
-import type { AccountActions, WalletActionContext } from "../../../types";
-import { click, waitShown } from "../clicks";
+import type { AccountActions, WalletActionContext } from "../../../internal/definition";
+import { click, waitGone, waitShown } from "../clicks";
 
 const openAccountMenu = async (home: Page): Promise<void> => {
   await click(home.getByTestId("account-menu-icon"));
@@ -34,7 +34,7 @@ const importPrivateKey = async (
   await waitShown(confirm);
   await home.locator("input").first().fill(privateKey);
   await click(confirm);
-  await confirm.waitFor({ state: "hidden", timeout: 15_000 });
+  await waitGone(confirm, { timeoutMs: 15_000 });
   await closeAccountMenu(home);
 };
 
@@ -53,16 +53,7 @@ const rename = async (
 const switchTo = async ({ home }: WalletActionContext, index: number): Promise<void> => {
   await openAccountMenu(home);
   await click(home.getByTestId("account-cell-avatar").nth(index));
-
-  const menuClosed = await home
-    .getByTestId("add-multichain-account-button")
-    .waitFor({ state: "hidden", timeout: 10_000 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!menuClosed) {
-    throw new Error(`[walletwright] accounts.switch(${index}) did not switch (menu stayed open)`);
-  }
+  await waitGone(home.getByTestId("add-multichain-account-button"), { timeoutMs: 10_000 });
 };
 
 export const accounts: AccountActions = {

@@ -4,10 +4,9 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, it } from "vitest";
 
-import type { WalletDefinition } from "../types";
-
 import { build } from "./cache";
 import { runDirectly } from "./controller";
+import type { WalletDefinition } from "./definition";
 import { pathExists } from "./fs";
 import { launch } from "./launch";
 import type { EngineSetup } from "./profile";
@@ -73,14 +72,9 @@ describe.concurrent("launch", { timeout: 60_000 }, () => {
     );
   });
 
-  it("refuses headless for a wallet without verified headless approvals", async ({ expect }) => {
-    await expect(
-      launchHeadless({
-        ...standin.definition,
-        approval: { ...standin.definition.approval, headless: false },
-      }),
-    ).rejects.toThrow(
-      "[walletwright] Stand-in has no verified headless approval flow; run this suite headed",
+  it("refuses headless for a wallet not verified headless", async ({ expect }) => {
+    await expect(launchHeadless({ ...standin.definition, headless: false })).rejects.toThrow(
+      "[walletwright] Stand-in is not verified to run headless; leave `headless` off",
     );
   });
 

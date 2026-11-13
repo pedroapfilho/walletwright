@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import type { ExtensionArchive, WalletDefinition } from "../types";
+import type { ExtensionArchive, WalletDefinition } from "./definition";
 
 const chromeWebStoreCrxUrl = (extensionId: string): string =>
   `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${extensionId}%26uc`;

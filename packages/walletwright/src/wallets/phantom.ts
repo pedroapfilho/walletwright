@@ -1,21 +1,22 @@
 import { clicksFor, isShowing } from "../internal/click";
+import type { WalletDefinition } from "../internal/definition";
 import { sleep } from "../internal/wait";
-import type { WalletDefinition } from "../types";
 
 const PHANTOM = "Phantom";
 
-const { click, waitShown } = clicksFor(PHANTOM);
+const { click, waitGone, waitShown } = clicksFor(PHANTOM);
 
 export const phantom: WalletDefinition = {
   approval: {
     cancel: (popup) => popup.getByTestId("secondary-button"),
     confirm: (popup) => popup.getByTestId("primary-button"),
-    headless: true,
   },
 
   ecosystems: ["evm", "svm"],
 
   extensionName: PHANTOM,
+
+  headless: true,
 
   importWallet: async (page, seedWords, password) => {
     const testId = (id: string) => page.locator(`[data-testid="${id}"]`);
@@ -38,7 +39,7 @@ export const phantom: WalletDefinition = {
     await testId("onboarding-form-confirm-password-input").fill(password);
     await click(testId("onboarding-form-terms-of-service-checkbox"));
     await click(testId("onboarding-form-submit-button"));
-    await testId("onboarding-form-password-input").waitFor({ state: "hidden", timeout: 30_000 });
+    await waitGone(testId("onboarding-form-password-input"));
   },
 
   onboardingPage: "onboarding.html",
