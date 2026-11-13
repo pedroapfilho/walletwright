@@ -90,7 +90,6 @@ const onClick = (selector: string, handler: () => Promise<void>) => {
   });
 };
 
-/** Wire a section's connect and sign buttons, and return its current connection. */
 const wireSection = (
   ids: SectionIds,
   connect: () => Promise<Connection>,

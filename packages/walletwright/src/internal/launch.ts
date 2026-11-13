@@ -8,7 +8,6 @@ import { type EngineSetup, locate } from "./profile";
 import { openSession } from "./session";
 import { createUnlockScreen } from "./unlock-screen";
 
-/** Close Chromium's blank tab and the extension's auto-opened tab. */
 const closeStrayPages = async (context: BrowserContext, home: Page): Promise<void> => {
   const isStray = (page: Page): boolean =>
     page !== home &&

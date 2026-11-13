@@ -115,7 +115,6 @@ const loadSetups = async (file: string): Promise<Array<WalletSetup>> => {
   return setups;
 };
 
-/** `--wallet`, narrowed to a supported kind; absent or empty means unset. */
 const walletFlag = (value: string | undefined): WalletKind | undefined => {
   if (!isNonEmptyString(value)) {
     return undefined;
