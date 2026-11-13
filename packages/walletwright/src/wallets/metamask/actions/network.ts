@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 
 import { showing } from "../../../internal/click";
-import type { NetworkActions, NetworkConfig, WalletActionContext } from "../../../types";
+import type { NetworkActions, WalletActionContext } from "../../../internal/definition";
+import type { NetworkConfig } from "../../../types";
 import { click, waitGone, waitShown } from "../clicks";
 
 const closeButton = (home: Page) => showing(home.getByTestId("modal-header-close-button"));

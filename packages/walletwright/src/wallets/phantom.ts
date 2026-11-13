@@ -1,6 +1,6 @@
 import { clicksFor, isShowing } from "../internal/click";
+import type { WalletDefinition } from "../internal/definition";
 import { sleep } from "../internal/wait";
-import type { WalletDefinition } from "../types";
 
 const PHANTOM = "Phantom";
 
@@ -10,12 +10,13 @@ export const phantom: WalletDefinition = {
   approval: {
     cancel: (popup) => popup.getByTestId("secondary-button"),
     confirm: (popup) => popup.getByTestId("primary-button"),
-    headless: true,
   },
 
   ecosystems: ["evm", "svm"],
 
   extensionName: PHANTOM,
+
+  headless: true,
 
   importWallet: async (page, seedWords, password) => {
     const testId = (id: string) => page.locator(`[data-testid="${id}"]`);

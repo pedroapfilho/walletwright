@@ -36,14 +36,15 @@ packages/
   walletwright/        the library (npm: `@walletwright/core`)
     src/index.ts         public API surface
     src/engine.ts        buildCache(), launchWallet(): resolve the setup's wallet, run the engine
-    src/types.ts         WalletSetup, WalletDefinition, Wallet
+    src/types.ts         the public types: WalletSetup, Wallet, WalletInfo
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
     src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts, solflare.ts) + registry
     src/mock.ts, src/mock-standard.ts
                          the two extension-free mock entry points; src/mock/ holds what they run on
                          (rpc, signer, page-bridge)
-    src/internal/        engine: cache (build), launch, session, profile, extension, download,
+    src/internal/        engine: definition (WalletDefinition, the contract a wallet file fills in,
+                         not exported), cache (build), launch, session, profile, extension, download,
                          unlock-screen, approval, controller; standin.ts + standin/ is the test-only
                          stand-in wallet the engine tests drive
   config-typescript/   @repo/typescript-config (tsconfig presets)
@@ -139,10 +140,11 @@ engine drives; onboarding is a function, and `isPersisted` an optional check tha
 wallet is on disk (item 24). `approval` names the window's URL token (`urlMatch`), its
 `confirm` and `cancel` controls (every one the request can show, which is also how the engine tells
 a request from the wallet's idle UI), how to click them (`click`: Playwright's click with an
-optional `settleMs`, or `inPage`), any `screens` the wallet puts in front of the request, and
-whether the window surfaces headless (`headless`). Each definition declares its `ecosystems`
-(`evm`/`svm`/`sui`/`dot`/`btc`), and `walletKindsByEcosystem(eco)` lists the wallets that drive a
-chain.
+optional `settleMs`, or `inPage`), and any `screens` the wallet puts in front of the request. Each
+definition declares its `ecosystems` (`evm`/`svm`/`sui`; the type grows when a wallet for another
+chain is verified) and `headless`, whether it is verified to run headless, onboarding and approvals
+both. The package exports none of this: `walletInfo` in `wallets/index.ts` is the plain-data view
+(name, ecosystems, headless, pinnable) that the CLI help and consumers read.
 
 The engine tests (`internal/{cache,launch,approval}.test.ts`) run `build`, `launch`, and the
 `Wallet` against a stand-in wallet, headless: a dependency-free MV3 extension in
@@ -155,8 +157,8 @@ answers `re-issued` if Sign is clicked twice (Rabby), `reauth` asks for the pass
 (Slush) while `refuse` never takes it, and `notice` covers the request until a declared screen
 accepts it (item 17). `home.html?settle=reload` renders nothing until reloaded (item 10), and
 `onboarding.html?persist=late` shows its last screen 3s before it writes the wallet (item 24). Its
-approval window surfaces as a page headless, so it declares `approval.headless`. Cover a new engine behaviour
-by teaching the stand-in to reproduce it, not by stubbing Playwright.
+approval window surfaces as a page headless, so it declares `headless: true`. Cover a new engine
+behaviour by teaching the stand-in to reproduce it, not by stubbing Playwright.
 
 ## Supported wallets and roadmap
 
@@ -235,7 +237,9 @@ Web Store build current in November 2026. The parts that took real debugging:
   unlock clicks this way. The approval engine reads instantly too, but inside a poll over the
   window, so a late mount is read on a later pass.
 - **Headed only.** Opening `index.html?isPopup=1` in a tab (the trick that reaches approvals headless
-  elsewhere) drops the query and lands on `#/tokens`, so there is no approval to drive.
+  elsewhere) drops the query and lands on `#/tokens`, so there is no approval to drive. Its
+  onboarding fails headless too: two headless builds in a row ended in "never opened the passphrase
+  import screen after 3 attempts" on macOS in November 2026, and the headed build right after passed.
 - Verified end-to-end via `apps/demo` (the SUI section uses `@wallet-standard/app`, the spec is
   `tests/slush.spec.ts`).
 
@@ -258,8 +262,8 @@ window, which is what `approval.urlMatch` keys on. Worth knowing:
   `tests/solflare.spec.ts`.
 - **Headed only.** Headless, the dapp gets `Connection rejected` about two seconds after the connect
   click, before any approval UI exists and whether or not the engine opens `confirm_popup.html`, so
-  the rejection is Solflare's own. It does not declare `approval.headless`, so the fixtures always
-  launch it headed.
+  the rejection is Solflare's own. It declares `headless: false`, so the fixtures always launch it
+  headed.
 
 ### Rabby (EVM), verified
 
@@ -302,10 +306,12 @@ Each item below cost real debugging time. Don't "simplify" them away.
    all, so `openSession` (`internal/session.ts`) passes `channel: "chromium"` (the full
    browser) for both the build and the run. Second, **whether a wallet's approval window surfaces
    as a page headless is a property of that wallet**: Phantom's and Rabby's do, MetaMask's is
-   created but never exposed. So a wallet declares `approval.headless: true` once verified, and
-   `launchWallet` refuses headless for the rest rather than hanging at the first approval.
-   The fixtures instead launch with `headless && approval.headless`, so a suite runs on Playwright's
-   default `headless: true`. They cannot just change the built-in option's default: Playwright
+   created but never exposed. So a wallet declares `headless: true` once verified, onboarding and
+   approvals both, and `openSession` refuses a headless browser for the rest by name. The build and
+   the run both open there, so `buildCache`, `walletwright cache --headless` and `launchWallet`
+   answer alike, rather than hanging at the first approval or caching a profile that cannot work.
+   The fixtures instead launch with `headless && definition.headless`, so a suite runs on
+   Playwright's default `headless: true`. They cannot just change the built-in option's default: Playwright
    re-applies the config's `use` only after a fixture list that declares the key `{ option: true }`,
    and its types forbid `option` when overriding a built-in, so a plain override silently beats the
    user's config and `--headed`.
@@ -324,7 +330,10 @@ Each item below cost real debugging time. Don't "simplify" them away.
    reads as a button timeout rather than a layout problem. Synpress carries the same workaround.
    **CI runs under `xvfb`, for both the cache build and the run.** MetaMask has a documented
    headless-on-GitHub-Actions bug, and a profile onboarded headless there stays broken: a later
-   headed run from it still lands on home. Give the display a real size (`-screen 0 1920x1080x24`)
+   headed run from it still lands on home. On macOS a headless MetaMask or Solflare build does
+   produce a working profile (checked November 2026: the headed spec passed from each), which is
+   not enough to declare them: they need a window for approvals anyway, so a headed build costs
+   nothing a machine that can run them lacks. Give the display a real size (`-screen 0 1920x1080x24`)
    and the suite a Playwright `timeout` of 300s.
 2. **Derive the extension id; don't query it.** `chrome://extensions` is blocked headless and the MV3
    service worker starts lazily, so `getExtensionId` would race. Compute it instead

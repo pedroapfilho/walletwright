@@ -1,4 +1,5 @@
-import type { Ecosystem, WalletDefinition, WalletKind } from "../types";
+import type { WalletDefinition } from "../internal/definition";
+import type { WalletInfo, WalletKind } from "../types";
 
 import { metamask } from "./metamask";
 import { phantom } from "./phantom";
@@ -17,9 +18,25 @@ export const wallets = {
 /** Narrow an arbitrary string (CLI flag, setup file field) to a supported wallet. */
 export const isWalletKind = (value: string): value is WalletKind => Object.hasOwn(wallets, value);
 
-/** Every supported wallet, in registry order. */
 export const walletKinds: ReadonlyArray<WalletKind> = Object.keys(wallets).filter(isWalletKind);
 
-/** Wallet kinds that can drive the given ecosystem (e.g. `"evm"` → MetaMask, Phantom). */
-export const walletKindsByEcosystem = (ecosystem: Ecosystem): Array<WalletKind> =>
-  walletKinds.filter((kind) => wallets[kind].ecosystems.includes(ecosystem));
+const describe = ({
+  ecosystems,
+  extensionName,
+  headless,
+  source,
+}: WalletDefinition): WalletInfo => ({
+  ecosystems,
+  headless,
+  name: extensionName,
+  pinnable: source.kind === "release",
+});
+
+/** Every supported wallet as plain data, read off the definitions the engine drives. */
+export const walletInfo: Readonly<Record<WalletKind, WalletInfo>> = {
+  metamask: describe(metamask),
+  phantom: describe(phantom),
+  rabby: describe(rabby),
+  slush: describe(slush),
+  solflare: describe(solflare),
+};

@@ -5,8 +5,8 @@ import path from "node:path";
 import { ClassicLevel } from "classic-level";
 import { z } from "zod";
 
+import type { OnboardedWallet } from "../../internal/definition";
 import { extensionStateDir } from "../../internal/profile";
-import type { OnboardedWallet } from "../../types";
 
 const stateSchema = z.record(z.string(), z.json());
 

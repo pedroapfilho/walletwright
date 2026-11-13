@@ -1,4 +1,4 @@
-import type { ExtensionArchive, WalletDefinition } from "../types";
+import type { ExtensionArchive, WalletDefinition } from "../internal/definition";
 
 import { accounts } from "./metamask/actions/accounts";
 import { network } from "./metamask/actions/network";
@@ -40,6 +40,7 @@ export const metamask: WalletDefinition = {
   ecosystems: ["evm", "svm"],
   extensionName: METAMASK,
   finalizeCache: markMetaMaskOnboarded,
+  headless: false,
   importWallet,
   isPersisted: isMetaMaskPersisted,
   onboardingPage: "home.html",
