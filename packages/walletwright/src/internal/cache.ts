@@ -1,8 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { OnboardedWallet, WalletDefinition } from "../types";
-
+import type { OnboardedWallet, WalletDefinition } from "./definition";
 import {
   type EngineSetup,
   extensionIndexedDbDir,

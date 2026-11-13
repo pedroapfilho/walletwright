@@ -4,9 +4,8 @@ import path from "node:path";
 
 import AdmZip from "adm-zip";
 
-import type { ExtensionArchive } from "../types";
-
 import { withArtifactLock } from "./cache-lock";
+import type { ExtensionArchive } from "./definition";
 import { pathExists } from "./fs";
 
 const ZIP_SIGNATURE = Buffer.from([80, 75, 3, 4]);

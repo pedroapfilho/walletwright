@@ -8,11 +8,12 @@ import { z } from "zod";
 
 import { buildCache } from "./engine";
 import type { WalletKind, WalletSetup } from "./types";
-import { isWalletKind, walletKinds, wallets } from "./wallets/index";
+import { isWalletKind, walletInfo, walletKinds } from "./wallets/index";
 
-const PINNABLE = walletKinds
-  .flatMap((kind) => (wallets[kind].source.kind === "release" ? [wallets[kind].extensionName] : []))
-  .join(", ");
+const namesWhere = (property: "headless" | "pinnable"): string =>
+  walletKinds
+    .flatMap((kind) => (walletInfo[kind][property] ? [walletInfo[kind].name] : []))
+    .join(", ");
 
 const HELP = `walletwright: build the onboarded wallet cache for Playwright tests
 
@@ -25,9 +26,9 @@ Options:
   --wallet <kind>    ${walletKinds.join(" | ")}; with --setup, builds only that wallet's setups
   --seed <phrase>    seed phrase to import
   --password <pw>    wallet password
-  --version <v>      pin an extension version (${PINNABLE})
+  --version <v>      pin an extension version (${namesWhere("pinnable")})
   --cache-dir <dir>  cache directory (default: .walletwright)
-  --headless         build the cache headless
+  --headless         build the cache headless (${namesWhere("headless")})
   -h, --help         show this help
 
 --setup carries the credentials, so it cannot be combined with --seed/--password/--version;
@@ -38,7 +39,6 @@ spelling. Setups from one file build one after another.
 test-only values, or prefer --setup <file> to keep them out of argv.
 `;
 
-/** Strict mode rejects unknown, missing, or misplaced flag values. */
 const parseFlags = (args: Array<string>) =>
   parseArgs({
     allowPositionals: true,

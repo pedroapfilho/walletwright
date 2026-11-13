@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import type { AccountActions, WalletActionContext } from "../../../types";
+import type { AccountActions, WalletActionContext } from "../../../internal/definition";
 import { click, waitGone, waitShown } from "../clicks";
 
 const openAccountMenu = async (home: Page): Promise<void> => {

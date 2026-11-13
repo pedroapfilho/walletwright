@@ -1,9 +1,10 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-import type { LaunchedWallet, WalletDefinition } from "../types";
+import type { LaunchedWallet } from "../types";
 
 import { createApprovals } from "./approval";
 import { createWallet, type StepRunner } from "./controller";
+import type { WalletDefinition } from "./definition";
 import { type EngineSetup, locate } from "./profile";
 import { openSession } from "./session";
 import { createUnlockScreen } from "./unlock-screen";
@@ -25,25 +26,14 @@ const closeStrayPages = async (context: BrowserContext, home: Page): Promise<voi
   await Promise.allSettled(closing);
 };
 
-/** Whether the wallet's approval window surfaces as a page headless, as verified for it. */
-export const runsHeadless = (definition: Pick<WalletDefinition, "approval">): boolean =>
-  definition.approval.headless === true;
-
 /**
  * Launch and unlock a disposable copy of the cached profile, reporting wallet calls through `step`.
- * Headless mode requires the definition's verified support.
  */
 export const launch = async (
   definition: WalletDefinition,
   setup: EngineSetup,
   { headless, step }: { headless: boolean; step: StepRunner },
 ): Promise<LaunchedWallet> => {
-  if (headless && !runsHeadless(definition)) {
-    throw new Error(
-      `[walletwright] ${definition.extensionName} has no verified headless approval flow; run this suite headed (\`use: { headless: false }\`, or \`--headed\`).`,
-    );
-  }
-
   const { extension, run } = locate(definition, setup);
   const screen = createUnlockScreen(definition, setup.password);
 

@@ -4,7 +4,10 @@ import { launch } from "./internal/launch";
 import type { LaunchedWallet, WalletSetup } from "./types";
 import { wallets } from "./wallets/index";
 
-/** Onboard the setup's wallet once and cache the profile, returning its directory. */
+/**
+ * Onboard the setup's wallet and cache the profile, replacing an earlier one, and return its
+ * directory. Headless mode requires verified wallet support.
+ */
 const buildCache = (setup: WalletSetup, options?: { headless?: boolean }): Promise<string> =>
   build(wallets[setup.wallet], setup, options);
 

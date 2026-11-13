@@ -7,8 +7,7 @@ import { fileURLToPath } from "node:url";
 import type { BrowserContext, Page } from "@playwright/test";
 import AdmZip from "adm-zip";
 
-import type { WalletDefinition } from "../types";
-
+import type { WalletDefinition } from "./definition";
 import type { EngineSetup } from "./profile";
 
 const FIXTURE_DIR = fileURLToPath(new URL("standin", import.meta.url));
@@ -104,7 +103,6 @@ export const serveStandin = async (): Promise<Standin> => {
     approval: {
       cancel: (popup) => popup.getByRole("button", { name: "Reject" }),
       confirm: (popup) => popup.getByRole("button", { name: /^(?:Approve|Sign|Confirm)$/v }),
-      headless: true,
       screens: [
         {
           pass: (popup) => notice(popup).click(),
@@ -114,6 +112,7 @@ export const serveStandin = async (): Promise<Standin> => {
     },
     ecosystems: ["evm"],
     extensionName: "Stand-in",
+    headless: true,
     importWallet: async (page, seedWords, password) => {
       await page.getByLabel("Secret recovery phrase").fill(seedWords.join(" "));
       await page.getByLabel("Password").fill(password);

@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 
 import { clicksFor } from "../internal/click";
+import type { WalletDefinition } from "../internal/definition";
 import { sleep, waitUntilOrThrow } from "../internal/wait";
-import type { WalletDefinition } from "../types";
 
 const HOME_ROUTE = "#/tokens";
 
@@ -140,6 +140,8 @@ export const slush: WalletDefinition = {
   ecosystems: ["sui"],
 
   extensionName: SLUSH,
+
+  headless: false,
 
   importWallet: async (page, seedWords, password) => {
     await openPassphraseImport(page);

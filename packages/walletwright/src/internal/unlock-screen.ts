@@ -1,8 +1,7 @@
 import type { BrowserContext, Locator, Page } from "@playwright/test";
 
-import type { WalletDefinition } from "../types";
-
 import { isShowing } from "./click";
+import type { WalletDefinition } from "./definition";
 import { gotoExtensionPage } from "./session";
 import { formatTimeout, waitUntil } from "./wait";
 

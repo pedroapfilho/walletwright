@@ -53,6 +53,17 @@ describe.concurrent("build", { timeout: 60_000 }, () => {
     );
   });
 
+  it("refuses a headless build for a wallet not verified headless, and leaves no cache", async ({
+    expect,
+  }) => {
+    const setup = await makeSetup();
+
+    await expect(
+      build({ ...standin.definition, headless: false }, setup, { headless: true }),
+    ).rejects.toThrow("[walletwright] Stand-in is not verified to run headless");
+    expect(await listCache(setup.cacheDir)).toEqual([]);
+  });
+
   it("waits for a wallet that writes its state long after its last screen", async ({ expect }) => {
     const setup = await makeSetup();
 

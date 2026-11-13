@@ -1,8 +1,9 @@
 import type { BrowserContext, Locator, Page } from "@playwright/test";
 
-import type { ApprovalOptions, ApprovalScreen, WalletDefinition } from "../types";
+import type { ApprovalOptions } from "../types";
 
 import { clicksFor, isEnabled, isShowing, labelOf } from "./click";
+import type { ApprovalScreen, WalletDefinition } from "./definition";
 import { asksForPassword } from "./unlock-screen";
 import { formatTimeout, sleep, waitUntil } from "./wait";
 

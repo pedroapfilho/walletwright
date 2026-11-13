@@ -1,10 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
-import type { WalletDefinition } from "../types";
-
 import type { Approvals } from "./approval";
 import { createWallet, runDirectly, type StepRunner } from "./controller";
+import type { WalletDefinition } from "./definition";
 
 const stubContext = { pages: () => [] } as unknown as BrowserContext;
 

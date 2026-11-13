@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { clicksFor } from "../internal/click";
-import type { WalletDefinition } from "../types";
+import type { WalletDefinition } from "../internal/definition";
 
 /** Quick setup only shows once Solflare has checked the seed's accounts for SOL over the network. */
 const BALANCE_CHECK_TIMEOUT_MS = 60_000;
@@ -46,6 +46,8 @@ export const solflare: WalletDefinition = {
   ecosystems: ["svm"],
 
   extensionName: SOLFLARE,
+
+  headless: false,
 
   importWallet,
 

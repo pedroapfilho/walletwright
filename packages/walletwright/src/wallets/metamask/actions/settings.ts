@@ -1,6 +1,6 @@
 import { showing } from "../../../internal/click";
+import type { SettingsActions } from "../../../internal/definition";
 import { passwordField } from "../../../internal/unlock-screen";
-import type { SettingsActions } from "../../../types";
 import { click, waitShown } from "../clicks";
 
 export const settings: SettingsActions = {

@@ -103,8 +103,9 @@ const page = await launched.context.newPage();
 ## Requirements and notes
 
 - **Headless works for Phantom and Rabby**, whose approval windows surface as pages that way. The
-  fixtures open a real window for MetaMask, Solflare and Slush whatever `headless` says, so give CI
-  a virtual display: `xvfb-run --auto-servernum pnpm exec playwright test`.
+  fixtures open a real window for MetaMask, Solflare and Slush whatever `headless` says, and
+  `buildCache`, `launchWallet` and `walletwright cache --headless` refuse those three, so give CI a
+  virtual display: `xvfb-run --auto-servernum pnpm exec playwright test`.
 - MetaMask is pinned to a known-good version (override it with `WalletSetup.version`). Phantom,
   Rabby, Solflare, and Slush use the Web Store build current at their first download, which cannot
   be pinned, so they refuse a `version`.

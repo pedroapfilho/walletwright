@@ -617,8 +617,8 @@ test("connect and sign through the page object", async ({ page, wallet }) => {
 
 Instead of a separate `walletwright cache` step, onboard every wallet from Playwright's `globalSetup`
 so a single `playwright test` does everything. `buildCache` always onboards a replacement, so every
-run pays for onboarding again. Build the cache headless; it is faster and the tests pick their own
-mode.
+run pays for onboarding again. A wallet builds headless only if it is verified that way, which
+`walletInfo` says.
 
 ```ts
 // playwright.config.ts
@@ -636,12 +636,12 @@ export default defineConfig({
 
 ```ts
 // global-setup.ts
-import { buildCache } from "@walletwright/core";
+import { buildCache, walletInfo } from "@walletwright/core";
 import { metamask, phantom, slush } from "./wallet-setup";
 
 const globalSetup = async () => {
   for (const setup of [metamask, phantom, slush]) {
-    await buildCache(setup, { headless: true });
+    await buildCache(setup, { headless: walletInfo[setup.wallet].headless });
   }
 };
 
@@ -685,5 +685,5 @@ console.log("connected; extension id:", wallet.extensionId);
 <Callout type="warn">
   `launchWallet` needs a cache already built for the same setup (via `buildCache` or the CLI). It
   launches headed unless you pass `{ headless: true }`, which Phantom and Rabby support; MetaMask,
-  Solflare and Slush need a display, real or virtual (`xvfb-run`).
+  Solflare and Slush refuse it and need a display, real or virtual (`xvfb-run`).
 </Callout>

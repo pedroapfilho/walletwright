@@ -1,7 +1,7 @@
 import { test as base } from "@playwright/test";
 
 import type { StepRunner } from "./internal/controller";
-import { launch, runsHeadless } from "./internal/launch";
+import { launch } from "./internal/launch";
 import type { LaunchedWallet, Wallet, WalletSetup } from "./types";
 import { wallets } from "./wallets/index";
 
@@ -22,8 +22,8 @@ const reportAsStep: StepRunner = (title, body) => base.step(title, body, { box: 
 
 /**
  * Create Playwright fixtures backed by one unlocked wallet launch per test. `headless` applies only
- * to wallets that can be driven that way (Phantom, Rabby); the rest launch headed, so a suite runs
- * under Playwright's defaults. `launchWallet` is the strict form that refuses them headless instead.
+ * to wallets verified headless (`walletInfo[kind].headless`); the rest launch headed, so a suite runs
+ * under Playwright's defaults. `launchWallet` and `buildCache` refuse them headless instead.
  */
 export const createWalletFixtures = (setup: WalletSetup) => {
   const definition = wallets[setup.wallet];
@@ -44,7 +44,7 @@ export const createWalletFixtures = (setup: WalletSetup) => {
     walletLaunch: [
       async ({ headless }, use) => {
         const launched = await launch(definition, setup, {
-          headless: headless && runsHeadless(definition),
+          headless: headless && definition.headless,
           step: reportAsStep,
         });
 

@@ -3,8 +3,7 @@ import path from "node:path";
 
 import { type BrowserContext, chromium, type Page } from "@playwright/test";
 
-import type { WalletDefinition } from "../types";
-
+import type { WalletDefinition } from "./definition";
 import { downloadAndExtractExtension, type ExtensionDownload } from "./download";
 import { extensionIdFromPath } from "./extension";
 import { copyProfile, type ProfilePlacement } from "./profile";
@@ -26,7 +25,7 @@ export type WalletSession = {
 };
 
 type SessionOptions = {
-  definition: Pick<WalletDefinition, "prepareContext">;
+  definition: Pick<WalletDefinition, "extensionName" | "headless" | "prepareContext">;
   extension: ExtensionDownload;
   headless: boolean;
   profile: ProfilePlacement;
@@ -83,13 +82,20 @@ const bindSession = (
 
 /**
  * Open Chromium with the extension on a throwaway profile, apply `prepareContext`, and run `start`.
- * Build and run both open the wallet here, so neither can load it differently. Anything that fails
- * before `start` returns closes the browser and removes the directory.
+ * Build and run both open the wallet here, so neither can load it differently, and both are refused
+ * headless for a wallet not verified that way. Anything that fails before `start` returns closes the
+ * browser and removes the directory.
  */
 export const openSession = async <Started>(
   { definition, extension, headless, profile }: SessionOptions,
   start: (session: WalletSession) => Promise<Started>,
 ): Promise<{ session: WalletSession; started: Started }> => {
+  if (headless && !definition.headless) {
+    throw new Error(
+      `[walletwright] ${definition.extensionName} is not verified to run headless; leave \`headless\` off and give it a display (\`xvfb-run\` on CI).`,
+    );
+  }
+
   await mkdir(profile.parent, { recursive: true });
   const userDataDir = await mkdtemp(path.join(profile.parent, profile.prefix));
 
