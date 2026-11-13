@@ -1,5 +1,55 @@
 # @walletwright/core
 
+## 0.8.0
+
+### Minor Changes
+
+- 5bc8e61: **Breaking.** `@walletwright/core/chain` is gone, and the optional `prool` peer dependency with it. `createLocalChain()` passed its options to prool's `Instance.anvil` and returned the URL, nothing else, and nothing in this repository ran on it: the demo suite and CI start `anvil` themselves.
+
+  Migrating: start the node yourself. `anvil` with no arguments serves what `createLocalChain()` defaulted to (`http://127.0.0.1:8545`, chain id 31337, the public test mnemonic). To keep starting it from the suite, call prool directly and keep `prool` in your own `devDependencies`:
+
+  ```ts
+  import { Instance } from "prool";
+
+  const anvil = Instance.anvil({ chainId: 31_337, port: 8545 });
+  await anvil.start();
+  const rpcUrl = `http://${anvil.host}:${anvil.port}`;
+  // … run tests against it …
+  await anvil.stop();
+  ```
+
+- 1926c89: **Breaking.** The package no longer publishes how it drives a wallet, and `headless` now means the same thing for the cache build as for the run.
+
+  `wallets`, `walletKindsByEcosystem` and the `WalletDefinition` type are gone from the package root. `wallets` exposed every wallet's onboarding flow, selectors and approval window, which no caller could use (a setup can only name a built-in wallet), and four releases (0.3.0, 0.5.0, 0.6.0, 0.7.0) carried breaking notes only because an engine refactor changed that type. In their place, `walletInfo` describes each wallet as plain data, with the `WalletInfo` type:
+
+  ```ts
+  import { walletInfo, walletKinds } from "@walletwright/core";
+
+  walletInfo.phantom;
+  // { ecosystems: ["evm", "svm"], headless: true, name: "Phantom", pinnable: false }
+  ```
+
+  Migrating:
+
+  - `wallets[kind].ecosystems` becomes `walletInfo[kind].ecosystems`, and `wallets[kind].extensionName` becomes `walletInfo[kind].name`.
+  - `wallets[kind].approval.headless` becomes `walletInfo[kind].headless`.
+  - `wallets[kind].source.kind === "release"` becomes `walletInfo[kind].pinnable`.
+  - `walletKindsByEcosystem("evm")` becomes `walletKinds.filter((kind) => walletInfo[kind].ecosystems.includes("evm"))`.
+  - Anything else read from a definition (`importWallet`, `approval`, `unlockScreen`, `actions`) has no replacement. It was never a supported way to drive a wallet.
+  - `Ecosystem` is `"evm" | "svm" | "sui"`. `"dot"` and `"btc"` named chains no wallet drives, and come back when one does.
+
+  `buildCache(setup, { headless: true })` and `walletwright cache --headless` now refuse a wallet that is not verified headless, with the error `launchWallet` already gave: MetaMask, Solflare and Slush throw ``[walletwright] <Wallet> is not verified to run headless; leave `headless` off and give it a display (`xvfb-run` on CI).`` before a browser opens. They used to try. Slush's onboarding never got past its welcome screen that way, and a MetaMask profile onboarded headless on a GitHub-hosted runner is cached broken, showing the wallet home in place of every later request. Phantom and Rabby build and run headless as before, and the fixtures still launch the other three headed whatever Playwright's `headless` says.
+
+  Migrating: drop `headless: true` (or `--headless`) when building MetaMask's, Solflare's or Slush's cache, and build under a display, which those wallets already need to run. To build a mixed list, pass `{ headless: walletInfo[setup.wallet].headless }`.
+
+  `launchWallet`'s refusal has the new wording; code that matched "has no verified headless approval flow" should match "is not verified to run headless".
+
+### Patch Changes
+
+- 7017781: Internal: the modules behind `@walletwright/core/mock` and `@walletwright/core/mock-standard` moved out of the engine's folder, and comments that restated the code next to them are gone. The built files change only in module order and comments.
+- cbc2f8b: A wallet action that waits for a control to go away now fails the way a missing control does, naming the wallet, the control and how long it waited: `[walletwright] MetaMask still showed getByTestId('import-account-confirm-button') (gave up after 15s)`. `accounts.switch` used to report any failure there as "did not switch (menu stayed open)", and `network.add` waited on its dialog with no budget of its own.
+- 8ce3e87: Require zod ^4.6.7. Earlier 4.x releases can exhaust memory while validating oversized constrained collections (GHSA-mrhx-c7xc-m3w5).
+
 ## 0.7.0
 
 ### Minor Changes
