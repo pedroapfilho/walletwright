@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  agentRules: false,
   allowedDevOrigins: ["walletwright.landing.localhost", "*.walletwright.landing.localhost"],
   headers: () =>
     Promise.resolve([
