@@ -10,8 +10,8 @@ import {
   locate,
   publishProfile,
 } from "./profile";
-import { openSession, type WalletSession } from "./session";
-import { gotoExtensionPage, waitUntilOrThrow } from "./wait";
+import { gotoExtensionPage, openSession, type WalletSession } from "./session";
+import { waitUntilOrThrow } from "./wait";
 
 const PERSIST_TIMEOUT_MS = 60_000;
 const PERSIST_INTERVAL_MS = 500;

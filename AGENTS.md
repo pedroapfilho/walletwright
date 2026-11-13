@@ -40,6 +40,9 @@ packages/
     src/fixtures.ts      createWalletFixtures(), the Playwright test fixtures
     src/cli.ts           `walletwright cache` CLI
     src/wallets/         per-wallet definitions (metamask.ts, phantom.ts, rabby.ts, slush.ts, solflare.ts) + registry
+    src/mock.ts, src/mock-standard.ts
+                         the two extension-free mock entry points; src/mock/ holds what they run on
+                         (rpc, signer, page-bridge)
     src/internal/        engine: cache (build), launch, session, profile, extension, download,
                          unlock-screen, approval, controller; standin.ts + standin/ is the test-only
                          stand-in wallet the engine tests drive
