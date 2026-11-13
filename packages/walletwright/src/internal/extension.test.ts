@@ -30,8 +30,8 @@ describe("extensionArchive", () => {
       sha256: undefined,
       url: "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3Dbfnaelmomeimhlpmgjnjophhpkkoljpa%26uc",
     });
-    expect(extensionArchive(wallets.slush, undefined).url).toBe(
-      "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3Dopcgpfmipidbgpenhmajoajpbobppdil%26uc",
+    expect(extensionArchive(wallets.slush, undefined).name).toBe(
+      "webstore-opcgpfmipidbgpenhmajoajpbobppdil",
     );
   });
 

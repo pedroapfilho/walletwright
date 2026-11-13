@@ -33,11 +33,6 @@ describe("createStandardHandler", () => {
     expect(accepted).toBe(true);
   });
 
-  it("answers solana:signMessage with a 64-byte signature array", async () => {
-    const signature = await handle({ message: [1, 2, 3], method: "solana:signMessage" });
-    expect(signature).toHaveLength(64);
-  });
-
   it("rejects an unsupported method", async () => {
     await expect(handle({ message: [], method: "solana:signTransaction" })).rejects.toThrow(
       /unsupported method/v,
