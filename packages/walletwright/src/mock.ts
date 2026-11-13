@@ -1,9 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import { privateKeyToAccount } from "viem/accounts";
 
-import { createRpcHandler, type Rpc, type RpcResult } from "./internal/mock-rpc";
-import type { BridgeCall } from "./internal/page-bridge";
-import { installPageBridge } from "./internal/page-bridge";
+import type { BridgeCall } from "./mock/page-bridge";
+import { installPageBridge } from "./mock/page-bridge";
+import { createRpcHandler, type Rpc, type RpcResult } from "./mock/rpc";
 
 /** Headless EIP-6963 and EIP-1193 mock that signs with a real key. */
 type MockWalletOptions = {

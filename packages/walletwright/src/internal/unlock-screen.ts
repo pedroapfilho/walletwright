@@ -3,7 +3,8 @@ import type { BrowserContext, Locator, Page } from "@playwright/test";
 import type { WalletDefinition } from "../types";
 
 import { isShowing } from "./click";
-import { formatTimeout, gotoExtensionPage, waitUntil } from "./wait";
+import { gotoExtensionPage } from "./session";
+import { formatTimeout, waitUntil } from "./wait";
 
 const FIRST_SETTLE_TIMEOUT_MS = 20_000;
 const RELOAD_ATTEMPTS = 5;

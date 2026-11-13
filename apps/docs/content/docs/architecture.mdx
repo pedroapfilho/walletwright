@@ -50,10 +50,13 @@ packages/walletwright/src/
   chain.ts            @walletwright/core/chain entry point (local EVM node)
   mock.ts             @walletwright/core/mock entry point (headless EVM provider)
   mock-standard.ts    @walletwright/core/mock-standard entry point (headless Solana wallet)
+  mock/               what the two mocks run on: rpc.ts, signer.ts, and page-bridge.ts, whose
+                      installPageBridge() connects a mock's Node handler to its in-page provider
   internal/
     cache.ts          build: onboard once, persist a profile
     launch.ts         launch: unlock a copy of the profile
-    session.ts        openSession(): Chromium + extension on a throwaway profile, both phases
+    session.ts        openSession(): Chromium + extension on a throwaway profile, both phases;
+                      gotoExtensionPage(): reach one of the extension's own pages
     profile.ts        locate(): everything a setup puts on disk; protected copy, publish, recovery
     cache-lock.ts     per-artifact ownership across processes
     extension.ts      the extension archive a setup runs, extension-id derivation
@@ -62,8 +65,7 @@ packages/walletwright/src/
     approval.ts       createApprovals(): every approval, from the window opening to it closing
     click.ts          clicksFor(), isShowing(), isEnabled(): how wallet code clicks and reads its UI
     controller.ts     createWallet(): names each wallet call and binds actions
-    wait.ts           polling and navigation retries
-    page-bridge.ts    installPageBridge(): connects a mock's Node handler to its in-page provider
+    wait.ts           polling
     standin.ts        the stand-in wallet the engine tests drive (test-only)
   wallets/
     index.ts          the registry + walletKindsByEcosystem()
@@ -435,7 +437,7 @@ Needs the `prool` package and the `anvil` binary on `PATH`.
 A headless injected-wallet fake for dapp tests that do not need a real extension.
 `installMockWallet(context)` injects an EIP-1193 provider, announces it over EIP-6963, and answers
 the connect/sign requests, signing with a real `viem` account so signatures verify. The provider
-lives in the page but signs in Node. `internal/page-bridge.ts` connects the two for both mocks: one
+lives in the page but signs in Node. `mock/page-bridge.ts` connects the two for both mocks: one
 Playwright `exposeFunction` binding per install, plus an init script that mounts the provider on it,
 so installing twice on one context never collides. It runs in plain, even headless, Chromium in a
 second or two.

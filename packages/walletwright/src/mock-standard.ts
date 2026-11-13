@@ -1,13 +1,13 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
+import type { BridgeCall } from "./mock/page-bridge";
+import { installPageBridge } from "./mock/page-bridge";
 import {
   createStandardHandler,
   encodeBase58,
   rawPublicKey,
   type StandardRequest,
-} from "./internal/mock-signer";
-import type { BridgeCall } from "./internal/page-bridge";
-import { installPageBridge } from "./internal/page-bridge";
+} from "./mock/signer";
 
 /** Headless Wallet-Standard Solana mock that signs messages with Node's ed25519 implementation. */
 type MockStandardWalletOptions = {
