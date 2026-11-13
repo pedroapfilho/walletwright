@@ -1,2 +1,2 @@
-pnpm build --filter="./packages/*" --output-logs=errors-only
+pnpm build:packages --output-logs=errors-only
 pnpm lint-staged
