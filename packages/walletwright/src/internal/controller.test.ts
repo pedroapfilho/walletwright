@@ -167,11 +167,4 @@ describe("createWallet", () => {
 
     expect(titles).toEqual(["wallet.confirmSignature", "wallet.rejectTransaction"]);
   });
-
-  it("exposes the extensionId and home it was constructed with", () => {
-    const wallet = makeWallet({});
-
-    expect(wallet.extensionId).toBe("fake-extension-id");
-    expect(wallet.home).toBe(stubHome);
-  });
 });

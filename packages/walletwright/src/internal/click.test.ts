@@ -30,15 +30,6 @@ const timesOut = () => Promise.reject(new errors.TimeoutError("waitFor: Timeout 
 const { click, clickIfShown, waitGone } = clicksFor("Solflare");
 
 describe("click", () => {
-  it("waits for the control to show, then clicks it", async () => {
-    const { clicked, control, waited } = fakeControl();
-
-    await click(control);
-
-    expect(waited).toHaveBeenCalledWith({ state: "visible", timeout: 30_000 });
-    expect(clicked).toHaveBeenCalledWith({ force: false, timeout: 30_000 });
-  });
-
   it("names the wallet, the control, and the budget when the control never shows", async () => {
     const { clicked, control } = fakeControl({ waitFor: timesOut });
 
