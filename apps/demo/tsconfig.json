@@ -4,5 +4,5 @@
   "compilerOptions": {
     "types": ["node", "vite/client"]
   },
-  "include": ["src", "tests", "scripts", "wallet-setup.ts", "*.config.ts"]
+  "include": ["src", "tests", "wallet-setup.ts", "*.config.ts"]
 }
