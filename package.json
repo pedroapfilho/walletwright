@@ -5,6 +5,7 @@
   "scripts": {
     "start": "turbo run start",
     "build": "turbo run build",
+    "build:packages": "turbo run build --filter=\"./packages/*\"",
     "dev": "node scripts/dev.mjs",
     "lint": "turbo run lint",
     "format": "oxfmt",
