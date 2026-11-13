@@ -30,8 +30,8 @@ wallet definitions    src/wallets/{metamask,phantom,rabby,solflare,slush}.ts  (+
    ▼
 real extension        MetaMask / Phantom / Rabby / Solflare / Slush, loaded unpacked into Chromium
 
-optional subpackages  @walletwright/core/chain (local EVM node), @walletwright/core/mock and
-                      @walletwright/core/mock-standard (headless providers)
+optional subpackages  @walletwright/core/mock and @walletwright/core/mock-standard
+                      (headless providers)
 ```
 
 The engine is generic. Each wallet definition fills in the wallet-specific parts (how to import a
@@ -47,7 +47,6 @@ packages/walletwright/src/
   cli.ts              `walletwright cache` command
   fixtures.ts         createWalletFixtures(), the Playwright test fixtures
   types.ts            the public types: WalletSetup, Wallet, WalletInfo, the capability types
-  chain.ts            @walletwright/core/chain entry point (local EVM node)
   mock.ts             @walletwright/core/mock entry point (headless EVM provider)
   mock-standard.ts    @walletwright/core/mock-standard entry point (headless Solana wallet)
   mock/               what the two mocks run on: rpc.ts, signer.ts, and page-bridge.ts, whose
@@ -393,19 +392,9 @@ long enough for `finalizeCache` and the publish.
 
 ## The subpackages
 
-Three capabilities are shipped as separate entry points so the core connect/sign flow does not
-depend on them. The chain and the EVM mock declare their heavy dependency as an optional peer, so a
-plain `pnpm add -D @walletwright/core` pulls in neither.
-
-### `@walletwright/core/chain`
-
-A local EVM node for network and transaction tests. `createLocalChain()` starts Foundry's `anvil`
-through `prool` and returns `{ chainId, rpcUrl, stop }`. Transaction tests need a real chain: MetaMask
-reads balance, nonce, and gas off it to render the confirmation, and validates a custom network's RPC
-before saving it. The default mnemonic pre-funds the same account the MetaMask setup imports, so
-tests assert against a funded account with no extra step.
-
-Needs the `prool` package and the `anvil` binary on `PATH`.
+The two mocks are shipped as separate entry points so the core connect/sign flow does not depend
+on them. The EVM mock declares `viem` as an optional peer, so a plain
+`pnpm add -D @walletwright/core` does not pull it in.
 
 ### `@walletwright/core/mock`
 
@@ -418,7 +407,8 @@ so installing twice on one context never collides. It runs in plain, even headle
 second or two.
 
 It is a connect/sign stand-in, not an EVM: it does not execute transactions. For anything real, drive
-an actual extension against `@walletwright/core/chain`.
+an actual extension against a local chain. Transaction tests need one: MetaMask reads balance, nonce,
+and gas off it to render the confirmation, and validates a custom network's RPC before saving it.
 
 Needs the `viem` package.
 
