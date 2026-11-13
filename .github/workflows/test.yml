@@ -1,8 +1,6 @@
 name: Test
 on:
   pull_request:
-  # Dispatched by release.yml for the changeset-release/main PR, whose
-  # pull_request runs are parked unexecuted behind an approval gate.
   workflow_dispatch:
   schedule:
     - cron: 24 4 * * 1
@@ -39,7 +37,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
       - run: pnpm --filter @walletwright/core exec playwright install --with-deps chromium
       # The real-wallet E2E needs a headed browser (see apps/demo) and runs in e2e.yml, not here.
-      - run: node .github/ci/ci.mjs run test -- pnpm turbo run test --filter=@walletwright/core
+      - run: node .github/ci/ci.mjs run test -- pnpm test
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         name: Upload CI evidence
         if: ${{ !cancelled() }}
