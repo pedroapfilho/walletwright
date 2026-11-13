@@ -15,7 +15,6 @@ export const sleep = (ms: number): Promise<void> =>
 /** Render a timeout for an error message, so what a failure claims matches what it waited. */
 export const formatTimeout = (ms: number): string => `${Math.round(ms / 100) / 10}s`;
 
-/** Poll until `check` returns a value, or `undefined` when the timeout expires. */
 export const waitUntil = async <T>(
   check: () => Promise<T | false | undefined> | T | false | undefined,
   { intervalMs = DEFAULT_INTERVAL_MS, timeoutMs }: WaitOptions,

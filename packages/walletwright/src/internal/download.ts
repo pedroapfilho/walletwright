@@ -21,7 +21,6 @@ const STAGING_PREFIX = ".staging-";
 /** An extension archive, and the cache directory it unpacks into. */
 export type ExtensionDownload = ExtensionArchive & { cacheDir: string };
 
-/** Download and validate an extension archive, then publish its extraction atomically from staging. */
 export const downloadAndExtractExtension = async (options: ExtensionDownload): Promise<string> => {
   const { cacheDir, format, name, sha256, url } = options;
   const cacheRoot = path.resolve(cacheDir);

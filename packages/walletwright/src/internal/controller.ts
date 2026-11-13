@@ -25,7 +25,6 @@ type CreateWalletOptions = {
   unlock: () => Promise<void>;
 };
 
-/** Build the runtime controller that drives an unlocked wallet against the dapp under test. */
 export const createWallet = ({
   approvals,
   context,
