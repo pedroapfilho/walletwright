@@ -43,6 +43,8 @@ default.
   `pnpm --filter docs dev`. It covers getting started, the wallets, CI, and how the engine works.
 - [`AGENTS.md`](./AGENTS.md), symlinked as `CLAUDE.md`, is the guide for contributors and agents. It
   covers the wallet-automation gotchas that took real debugging to find.
+- [`docs/open-decisions.md`](./docs/open-decisions.md) lists the choices that are still open, each
+  with its options and a recommendation.
 
 This repo was generated from a turborepo template (pnpm, turbo, tsdown, oxlint/oxfmt, changesets,
 vitest).
