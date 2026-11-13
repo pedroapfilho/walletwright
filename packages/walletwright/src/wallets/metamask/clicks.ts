@@ -2,6 +2,6 @@ import { clicksFor } from "../../internal/click";
 
 const METAMASK = "MetaMask";
 
-const { click, clickIfShown, waitShown } = clicksFor(METAMASK);
+const { click, clickIfShown, waitGone, waitShown } = clicksFor(METAMASK);
 
-export { click, clickIfShown, METAMASK, waitShown };
+export { click, clickIfShown, METAMASK, waitGone, waitShown };

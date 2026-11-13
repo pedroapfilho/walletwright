@@ -39,28 +39,17 @@ export const metamask: WalletSetup = {
 
 ## Step 3: Build the cache
 
-Onboarding runs once and is saved to disk (`.walletwright/` by default). The simplest way is a small
-script that imports your setup module, which also works as a Playwright global setup later:
-
-```ts
-// scripts/build-cache.ts
-import { buildCache } from "@walletwright/core";
-import { metamask } from "../wallet-setup";
-
-await buildCache(metamask);
-```
+Onboarding runs once and is saved to disk (`.walletwright/` by default). Point the CLI at your setup
+module and it builds every `WalletSetup` the module exports, named or default; add `--wallet` to
+build just one:
 
 ```bash
-pnpm exec tsx scripts/build-cache.ts
+pnpm exec walletwright cache --setup ./wallet-setup.ts
+pnpm exec walletwright cache --setup ./wallet-setup.ts --wallet metamask
 ```
 
-There is also a CLI. Point it at the same setup module and it builds every `WalletSetup` the module
-exports, named or default; add `--wallet` to build just one:
-
-```bash
-walletwright cache --setup ./wallet-setup.ts
-walletwright cache --setup ./wallet-setup.ts --wallet metamask
-```
+[`buildCache(setup)`](/api-reference) is the same build from code, for a script of your own or a
+Playwright [global setup](/examples).
 
 Add the cache directory to `.gitignore`:
 
@@ -117,7 +106,7 @@ export default defineConfig({
 Run it:
 
 ```bash
-pnpm exec tsx scripts/build-cache.ts   # once
+pnpm exec walletwright cache --setup ./wallet-setup.ts   # once
 pnpm exec playwright test
 ```
 

@@ -73,9 +73,6 @@ importers:
       '@walletwright/core':
         specifier: workspace:*
         version: link:../../packages/walletwright
-      tsx:
-        specifier: ^4.23.15
-        version: 4.23.15
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -9634,6 +9631,7 @@ snapshots:
       esbuild: 0.28.2
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   turbo@2.11.3:
     optionalDependencies:
