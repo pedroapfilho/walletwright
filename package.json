@@ -22,7 +22,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build && changeset publish",
+    "release": "pnpm build:packages && changeset publish",
     "prepare": "husky",
     "check:shadcn": "node .github/ci/check-shadcn.mjs"
   },
