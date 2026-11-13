@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 applyPortlessUrls(["NEXT_PUBLIC_DOCS_URL"]);
 
 const nextConfig: NextConfig = {
+  agentRules: false,
   headers: () =>
     Promise.resolve([
       {
