@@ -117,7 +117,8 @@ A wallet-agnostic engine driven by per-wallet `WalletDefinition`s:
   needs: it waits for it to show, clicks, and throws `[walletwright] <Wallet> never showed <control>`
   on timeout. `clickIfShown` is an interstitial a run may skip: absence within its budget resolves
   `false`, but a control that shows and then refuses the click throws. `waitShown` waits for a
-  control without clicking it and fails with the same error as `click`. `force` and `settleMs` are
+  control without clicking it and fails with the same error as `click`; `waitGone` waits for one
+  the flow dismissed to go, and throws `[walletwright] <Wallet> still showed <control>` if it stays. `force` and `settleMs` are
   options, and the budgets (30s required, 10s optional) live in that module. Approval clicks go
   through it too, unless the wallet declares the in-page click strategy (Rabby). Checks the engine
   polls (an approval screen's `shows`, `isUnlocked`) read through its `isShowing` and `isEnabled`,
