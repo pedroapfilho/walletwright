@@ -56,9 +56,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown src/index.ts src/cli.ts src/chain.ts src/mock.ts src/mock-standard.ts --platform node --clean",
     "clean": "rm -rf dist",
-    "dev": "tsdown --watch",
+    "dev": "tsdown src/index.ts src/cli.ts src/chain.ts src/mock.ts src/mock-standard.ts --platform node --clean --watch",
     "lint": "oxlint src",
     "prepack": "pnpm run build",
     "test": "vitest run",
