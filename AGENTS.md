@@ -63,10 +63,10 @@ its `wallets` job and the docs app's instant-navigation suite (`pnpm --filter do
 its `docs` job.
 
 Run the demo end-to-end from `apps/demo`: `pnpm exec playwright install chromium`, then
-`pnpm test:cache` to onboard the wallets (or `pnpm test:cache slush` for one), then `pnpm test:e2e`
-to connect and sign. `test:cache` derives its wallet list from `wallet-setup.ts`, and CI calls the
-same script. It builds Slush first and alone, since its headed onboarding needs the display to
-itself on the CI runner, then the rest in parallel. Run it headed
+`pnpm test:cache` to onboard the wallets (or `pnpm test:cache --wallet slush` for one), then
+`pnpm test:e2e` to connect and sign. `test:cache` is the package's own CLI, `walletwright cache
+--setup wallet-setup.ts`, run from its built `dist` (so build the package first), and CI calls the
+same script. It builds every `WalletSetup` the file exports, one after another. Run it headed
 (see below). The network and transaction specs also need a local chain on `127.0.0.1:8545` (chain
 id `31337`), e.g. Foundry's `anvil` seeded with the public test mnemonic.
 
@@ -445,7 +445,7 @@ Each item below cost real debugging time. Don't "simplify" them away.
     than a retry count (`wallets/metamask/onboarding.ts`).
 26. **Phantom's onboarding pauses 1s and 1.5s between its first two screens.** The pauses date from
     the first version and were never measured against a wait on the next screen. Remove them only
-    after a headed `pnpm test:cache phantom` passes without them, several times.
+    after a headed `pnpm test:cache --wallet phantom` passes without them, several times.
 27. **Slush reopens its welcome screen when a welcome click lands too early.** On a slow runner a
     click can land before Slush responds and leave the page where it was, so opening the passphrase
     import reloads the welcome screen and starts over, up to three times (`openPassphraseImport`).

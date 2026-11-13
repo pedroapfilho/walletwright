@@ -616,8 +616,9 @@ test("connect and sign through the page object", async ({ page, wallet }) => {
 ## Build the cache in Playwright global setup
 
 Instead of a separate `walletwright cache` step, onboard every wallet from Playwright's `globalSetup`
-so a single `playwright test` does everything. Build the cache headless; it is faster and the tests
-pick their own mode.
+so a single `playwright test` does everything. `buildCache` always onboards a replacement, so every
+run pays for onboarding again. Build the cache headless; it is faster and the tests pick their own
+mode.
 
 ```ts
 // playwright.config.ts
