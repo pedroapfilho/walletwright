@@ -4,7 +4,7 @@ import type { WalletDefinition } from "../types";
 
 const PHANTOM = "Phantom";
 
-const { click, waitShown } = clicksFor(PHANTOM);
+const { click, waitGone, waitShown } = clicksFor(PHANTOM);
 
 export const phantom: WalletDefinition = {
   approval: {
@@ -38,7 +38,7 @@ export const phantom: WalletDefinition = {
     await testId("onboarding-form-confirm-password-input").fill(password);
     await click(testId("onboarding-form-terms-of-service-checkbox"));
     await click(testId("onboarding-form-submit-button"));
-    await testId("onboarding-form-password-input").waitFor({ state: "hidden", timeout: 30_000 });
+    await waitGone(testId("onboarding-form-password-input"));
   },
 
   onboardingPage: "onboarding.html",

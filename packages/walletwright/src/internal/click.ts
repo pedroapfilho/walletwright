@@ -37,17 +37,19 @@ type Clicks = {
    * clicked. A control that shows and then refuses the click still throws.
    */
   clickIfShown: (control: Locator, options?: ClickOptions) => Promise<boolean>;
+  /** Wait for a control the flow dismissed to go, without clicking it. Throws if it stays. */
+  waitGone: (control: Locator, options?: Pick<ClickOptions, "timeoutMs">) => Promise<void>;
   /** Wait for a control the flow needs to show, without clicking it. Throws if it never does. */
   waitShown: (control: Locator, options?: Pick<ClickOptions, "timeoutMs">) => Promise<void>;
 };
 
-/**
- * Whether any match shows right now, for a poll that must not wait: a union's first match in DOM
- * order can be a hidden variant, and the page can go while we ask.
- */
+/** The first match that shows: a locator's first match in DOM order can be a hidden variant. */
+const showing = (control: Locator): Locator => control.filter({ visible: true }).first();
+
+/** Whether any match shows right now, for a poll that must not wait: the page can go while we ask. */
 const isShowing = async (control: Locator): Promise<boolean> => {
   try {
-    return await control.filter({ visible: true }).first().isVisible();
+    return await showing(control).isVisible();
   } catch {
     return false;
   }
@@ -70,7 +72,7 @@ const labelOf = async (control: Locator): Promise<string | undefined> => {
  */
 const isEnabled = async (control: Locator): Promise<boolean> => {
   try {
-    return await control.filter({ visible: true }).first().isEnabled({ timeout: READ_TIMEOUT_MS });
+    return await showing(control).isEnabled({ timeout: READ_TIMEOUT_MS });
   } catch {
     return false;
   }
@@ -194,7 +196,25 @@ const clicksFor = (wallet: string): Clicks => {
     }
   };
 
-  return { click, clickIfShown, waitShown };
+  const waitGone: Clicks["waitGone"] = async (
+    control,
+    { timeoutMs = REQUIRED_TIMEOUT_MS } = {},
+  ) => {
+    try {
+      await control.waitFor({ state: "hidden", timeout: timeoutMs });
+    } catch (error) {
+      if (!(error instanceof errors.TimeoutError)) {
+        throw error;
+      }
+
+      throw new Error(
+        `[walletwright] ${wallet} still showed ${String(control)} (gave up after ${formatTimeout(timeoutMs)})`,
+        { cause: error },
+      );
+    }
+  };
+
+  return { click, clickIfShown, waitGone, waitShown };
 };
 
-export { clicksFor, isEnabled, isShowing, labelOf, showsWithin };
+export { clicksFor, isEnabled, isShowing, labelOf, showing, showsWithin };

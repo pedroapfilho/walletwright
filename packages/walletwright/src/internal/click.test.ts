@@ -25,9 +25,9 @@ const fakeControl = ({
   return { clicked, control, waited };
 };
 
-const neverShows = () => Promise.reject(new errors.TimeoutError("waitFor: Timeout exceeded"));
+const timesOut = () => Promise.reject(new errors.TimeoutError("waitFor: Timeout exceeded"));
 
-const { click, clickIfShown } = clicksFor("Solflare");
+const { click, clickIfShown, waitGone } = clicksFor("Solflare");
 
 describe("click", () => {
   it("waits for the control to show, then clicks it", async () => {
@@ -40,7 +40,7 @@ describe("click", () => {
   });
 
   it("names the wallet, the control, and the budget when the control never shows", async () => {
-    const { clicked, control } = fakeControl({ waitFor: neverShows });
+    const { clicked, control } = fakeControl({ waitFor: timesOut });
 
     await expect(click(control, { timeoutMs: 60_000 })).rejects.toThrow(
       `[walletwright] Solflare never showed ${SELECTOR} (gave up after 60s)`,
@@ -94,7 +94,7 @@ describe("clickIfShown", () => {
   });
 
   it("treats a control that never shows as absent", async () => {
-    const { clicked, control } = fakeControl({ waitFor: neverShows });
+    const { clicked, control } = fakeControl({ waitFor: timesOut });
 
     await expect(clickIfShown(control)).resolves.toBe(false);
     expect(clicked).not.toHaveBeenCalled();
@@ -108,6 +108,23 @@ describe("clickIfShown", () => {
     await expect(clickIfShown(control)).rejects.toThrow(
       `[walletwright] Solflare showed ${SELECTOR} but it took no click`,
     );
+  });
+});
+
+describe("waitGone", () => {
+  it("names the wallet, the control, and the budget when the control stays", async () => {
+    const { control } = fakeControl({ waitFor: timesOut });
+
+    await expect(waitGone(control, { timeoutMs: 15_000 })).rejects.toThrow(
+      `[walletwright] Solflare still showed ${SELECTOR} (gave up after 15s)`,
+    );
+  });
+
+  it("surfaces a failure other than a timeout as itself", async () => {
+    const closed = new Error("Target page, context or browser has been closed");
+    const { control } = fakeControl({ waitFor: () => Promise.reject(closed) });
+
+    await expect(waitGone(control)).rejects.toBe(closed);
   });
 });
 
