@@ -1,6 +1,7 @@
 ---
 title: 'pnpm does not link the walletwright bin into apps/demo on a fresh install'
 severity: 'minor'
+issue: 'pedroapfilho/walletwright#204'
 ---
 
 ## Expected Behavior
