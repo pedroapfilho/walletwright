@@ -1,7 +1,6 @@
 "use client";
 
-import { useDocsSearch } from "fumadocs-core/search/client";
-import { staticClient } from "fumadocs-core/search/client/orama-static";
+import { useStaticSearch } from "fumadocs-core/search/client/orama-static";
 import {
   SearchDialog,
   SearchDialogClose,
@@ -14,13 +13,11 @@ import {
 } from "fumadocs-ui/components/dialog/search";
 import type { SharedProps } from "fumadocs-ui/contexts/search";
 
-const client = staticClient();
-
 const StaticSearchDialog = (props: SharedProps) => {
-  const { query, search, setSearch } = useDocsSearch({ client });
+  const { data, isLoading, onSearchChange, search } = useStaticSearch();
 
   return (
-    <SearchDialog isLoading={query.isLoading} onSearchChange={setSearch} search={search} {...props}>
+    <SearchDialog isLoading={isLoading} onSearchChange={onSearchChange} search={search} {...props}>
       <SearchDialogOverlay />
       <SearchDialogContent>
         <SearchDialogHeader>
@@ -28,7 +25,7 @@ const StaticSearchDialog = (props: SharedProps) => {
           <SearchDialogInput />
           <SearchDialogClose />
         </SearchDialogHeader>
-        <SearchDialogList items={query.data === "empty" ? null : query.data} />
+        <SearchDialogList items={data ? data.items : null} />
       </SearchDialogContent>
     </SearchDialog>
   );
