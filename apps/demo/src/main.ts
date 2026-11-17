@@ -57,7 +57,7 @@ const element = <T extends HTMLElement>(selector: string, type: new () => T): T 
   const found = document.querySelector(selector);
 
   if (!(found instanceof type)) {
-    throw new Error(`Missing element: ${selector}`);
+    throw new TypeError(`Missing element: ${selector}`);
   }
 
   return found;

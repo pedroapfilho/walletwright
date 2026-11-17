@@ -83,7 +83,10 @@ describe("installPageBridge", () => {
     const page = await openPage(context);
 
     const outcome = await page.evaluate(() =>
-      (window as ProbeWindow).probes?.failing?.call("x").then(() => "resolved", String),
+      (window as ProbeWindow).probes?.failing
+        ?.call("x")
+        .then(() => "resolved")
+        .catch(String),
     );
 
     expect(outcome).toContain("[test] handler failed");
