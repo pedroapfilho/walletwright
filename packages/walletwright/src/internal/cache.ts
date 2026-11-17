@@ -34,10 +34,9 @@ const listStorage = async (profileDir: string, extensionId: string): Promise<str
 
       return Promise.all(
         names.map(async (name) => {
-          const size = await stat(path.join(dir, name)).then(
-            (file) => file.size,
-            () => -1,
-          );
+          const size = await stat(path.join(dir, name))
+            .then((file) => file.size)
+            .catch(() => -1);
 
           return `${dir}/${name}:${size}`;
         }),
