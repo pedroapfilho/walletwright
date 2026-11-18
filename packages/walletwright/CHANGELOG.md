@@ -1,5 +1,11 @@
 # @walletwright/core
 
+## 0.8.1
+
+### Patch Changes
+
+- 7f6ffef: Handle a failed extension storage `stat` with `catch` instead of a rejection handler on `then`.
+
 ## 0.8.0
 
 ### Minor Changes
